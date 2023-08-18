@@ -18,7 +18,7 @@ TurboA_Descriptor::TurboA_Descriptor()
         "PokemonSwSh:TurboA",
         "Nintendo Switch", "Turbo A",
         "ComputerControl/blob/master/Wiki/Programs/NintendoSwitch/TurboA.md",
-        "Endlessly mash A.",
+        "Modified script that will endlessly farm the TableTurf minigame in Splatoon3. Starts it with the minigame opened, you'll need at least 3 diferents card sets for it to work.",
         FeedbackType::NONE,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
         PABotBaseLevel::PABOTBASE_12KB
@@ -37,7 +37,10 @@ void TurboA::program(SingleSwitchProgramEnvironment& env, BotBaseContext& contex
     }
 
     while (true){
-        pbf_press_button(context, BUTTON_A, 5, 5);
+        pbf_press_dpad(context, DPAD_DOWN, 5, 20);
+        pbf_press_dpad(context, DPAD_DOWN, 5, 20);
+        pbf_press_button(context, BUTTON_A, 5, 20);
+        pbf_press_button(context, BUTTON_A, 5, 1250);
     }
 }
 
