@@ -242,6 +242,13 @@ raw_image = image.copy()
 # add_infer_box_to_image(raw_image, 0.157, 0.783, 0.212, 0.042, image) # Nature box
 # add_infer_box_to_image(raw_image, 0.158, 0.838, 0.213, 0.042, image) # Ability box
 
+# ==================================================================
+# Pokemon BDSP Contest detection
+
+# add_infer_box_to_image(raw_image, 0.342, 0.84, 0.001, 0.001, image) # White part of the pokeball image
+
+
+
 viewer = ImageViewer(image)
 viewer.run()
 
