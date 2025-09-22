@@ -1,6 +1,6 @@
 /*  Outbreak Finder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,34 +9,31 @@
 #include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
-//#include "CommonFramework/ImageMatch/ImageCropper.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
-#include "CommonFramework/Tools/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "Pokemon/Resources/Pokemon_PokemonNames.h"
 #include "Pokemon/Inference/Pokemon_NameReader.h"
-#include "PokemonLA/Inference/PokemonLA_DialogDetector.h"
+#include "PokemonLA/PokemonLA_TravelLocations.h"
 #include "PokemonLA/Inference/Map/PokemonLA_MapDetector.h"
 #include "PokemonLA/Inference/Map/PokemonLA_SelectedRegionDetector.h"
 #include "PokemonLA/Inference/Map/PokemonLA_OutbreakReader.h"
-#include "PokemonLA/Inference/Map/PokemonLA_MapMissionTabReader.h"
-#include "PokemonLA/Inference/Map/PokemonLA_MapZoomLevelReader.h"
-#include "PokemonLA/Inference/Map/PokemonLA_MMOSpriteStarSymbolDetector.h"
-#include "PokemonLA/Inference/Map/PokemonLA_PokemonMapSpriteReader.h"
+#include "PokemonLA/PokemonLA_Settings.h"
 #include "PokemonLA/Programs/PokemonLA_GameEntry.h"
 #include "PokemonLA/Programs/PokemonLA_GameSave.h"
+#include "PokemonLA/Programs/PokemonLA_RegionNavigation.h"
 #include "PokemonLA/Resources/PokemonLA_AvailablePokemon.h"
 #include "PokemonLA/Resources/PokemonLA_PokemonSprites.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_ButtonDetector.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_MMOQuestionMarkDetector.h"
+#include "PokemonLA_MMORoutines.h"
 #include "PokemonLA_OutbreakFinder.h"
-#include "PokemonLA/Programs/PokemonLA_RegionNavigation.h"
-#include "PokemonLA/PokemonLA_Settings.h"
+
 
 #include <sstream>
 
@@ -102,45 +99,15 @@ const StringSelectDatabase& MMO_DATABASE(){
 }
 
 
-
-namespace{
-
-
-
-std::vector<std::string> load_mmo_names(){
-    return {
-        "fieldlands-mmo",
-        "mirelands-mmo",
-        "coastlands-mmo",
-        "highlands-mmo",
-        "icelands-mmo"
-    };
-}
-
-// The name of each MMO event happening at each region. Their slugs are:
-// - "fieldlands-mmo"
-// - "mirelands-mmo"
-// - "coastlands-mmo"
-// - "highlands-mmo"
-// - "icelands-mmo"
-const std::vector<std::string>& MMO_NAMES(){
-    const static std::vector<std::string> mmo_names = load_mmo_names();
-    return mmo_names;
-}
-
-
-} // anonymous namespace
-
-
 OutbreakFinder_Descriptor::OutbreakFinder_Descriptor()
     : SingleSwitchProgramDescriptor(
         "PokemonLA:OutbreakFinder",
         STRING_POKEMON + " LA", "Outbreak Finder",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/OutbreakFinder.md",
         "Search for an outbreak for a specific " + STRING_POKEMON,
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 class OutbreakFinder_Descriptor::Stats : public StatsTracker{
@@ -181,6 +148,13 @@ std::unique_ptr<StatsTracker> OutbreakFinder_Descriptor::make_stats() const{
 
 OutbreakFinder::OutbreakFinder()
     : GO_HOME_WHEN_DONE(false)
+    , RESET_GAME_AND_CONTINUE_SEARCHING(
+        "<b>Reset Game and Skip Outbreak at Start</b><br>If the last outbreak found by the program does not yield what you want, check "
+        "this option to let the program reset the game and skip the ongoing outbreaks at start, before continuing the search.<br>"
+        "Note: you must have saved at Jubilife Village front gate beforehand.",
+        LockMode::LOCK_WHILE_RUNNING,
+        false
+    )
     , LANGUAGE(
         "<b>Game Language:</b>",
         Pokemon::PokemonNameReader::instance().languages(),
@@ -217,6 +191,7 @@ OutbreakFinder::OutbreakFinder()
         &NOTIFICATION_ERROR_FATAL,
     })
 {
+    PA_ADD_OPTION(RESET_GAME_AND_CONTINUE_SEARCHING);
     PA_ADD_OPTION(GO_HOME_WHEN_DONE);
     PA_ADD_OPTION(LANGUAGE);
     PA_ADD_OPTION(DESIRED_MO_SLUGS);
@@ -231,7 +206,7 @@ OutbreakFinder::OutbreakFinder()
 
 
 std::set<std::string> OutbreakFinder::read_travel_map_outbreaks(
-    SingleSwitchProgramEnvironment& env, BotBaseContext& context,
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
     const std::set<std::string>& desired_events
 ){
     OutbreakFinder_Descriptor::Stats& stats = env.current_stats<OutbreakFinder_Descriptor::Stats>();
@@ -332,14 +307,18 @@ std::set<std::string> OutbreakFinder::read_travel_map_outbreaks(
 }
 
 
-void OutbreakFinder::goto_region_and_return(SingleSwitchProgramEnvironment& env, BotBaseContext& context, 
-    bool inside_travel_map
+void OutbreakFinder::goto_region_and_return(
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
+    bool inside_travel_map,
+    bool fresh_from_reset
 ){
+    env.log("Go to a random region and back to refresh outbreaks...");
+    env.console.overlay().add_log("Refresh outbreaks");
     OutbreakFinder_Descriptor::Stats& stats = env.current_stats<OutbreakFinder_Descriptor::Stats>();
 
     if (inside_travel_map == false){
         // Move to guard to open map
-        open_travel_map_from_jubilife(env, env.console, context);
+        open_travel_map_from_jubilife(env, env.console, context, fresh_from_reset);
         context.wait_for(std::chrono::milliseconds(500));
     }
 
@@ -365,8 +344,9 @@ void OutbreakFinder::goto_region_and_return(SingleSwitchProgramEnvironment& env,
     if (is_wild_land(current_region) == false){
         dump_image(env.console.logger(), env.program_info(), "FindRegion", env.console.video().snapshot());
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Unable to find a wild land."
+            ErrorReport::SEND_ERROR_REPORT,
+            "Unable to find a wild land.",
+            env.console
         );
     }
 
@@ -401,9 +381,9 @@ void OutbreakFinder::goto_region_and_return(SingleSwitchProgramEnvironment& env,
             ButtonType::ButtonA, ImageFloatBox(0.50, 0.50, 0.30, 0.30),
             std::chrono::milliseconds(200), true
         );
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [](BotBaseContext& context){
+            [](ProControllerContext& context){
                 for (size_t c = 0; c < 10; c++){
                     pbf_press_button(context, BUTTON_A, 20, 125);
                 }
@@ -423,254 +403,20 @@ void OutbreakFinder::goto_region_and_return(SingleSwitchProgramEnvironment& env,
     mash_A_to_change_region(env, env.console, context);
 }
 
-std::set<std::string> OutbreakFinder::enter_region_and_read_MMO(
-    SingleSwitchProgramEnvironment& env, BotBaseContext& context,
-    const std::string& mmo_name,
-    const std::set<std::string>& desired_MMOs,
-    const std::set<std::string>& desired_star_MMOs
-){
-    OutbreakFinder_Descriptor::Stats& stats = env.current_stats<OutbreakFinder_Descriptor::Stats>();
 
-    MapRegion region = MapRegion::NONE;
-    TravelLocation location = TravelLocations::instance().Fieldlands_Fieldlands;
-    Camp camp = Camp::FIELDLANDS_FIELDLANDS;
-    for(size_t i = 0; i < 5; i++){
-        if (mmo_name == MMO_NAMES()[i]){
-            switch (i){
-            case 0:
-                region = MapRegion::FIELDLANDS;
-                location = TravelLocations::instance().Fieldlands_Fieldlands;
-                camp = Camp::FIELDLANDS_FIELDLANDS;
-                break;
-            case 1:
-                region = MapRegion::MIRELANDS;
-                location = TravelLocations::instance().Mirelands_Mirelands;
-                camp = Camp::MIRELANDS_MIRELANDS;
-                break;
-            case 2:
-                region = MapRegion::COASTLANDS;
-                location = TravelLocations::instance().Coastlands_Beachside;
-                camp = Camp::COASTLANDS_BEACHSIDE;
-                break;
-            case 3:
-                region = MapRegion::HIGHLANDS;
-                location = TravelLocations::instance().Highlands_Highlands;
-                camp = Camp::HIGHLANDS_HIGHLANDS;
-                break;
-            case 4:
-                region = MapRegion::ICELANDS;
-                location = TravelLocations::instance().Icelands_Snowfields;
-                camp = Camp::ICELANDS_SNOWFIELDS;
-                break;
-            }
-        }
-    }
-    if (region == MapRegion::NONE){
-        throw InternalProgramError(&env.console.logger(), PA_CURRENT_FUNCTION, "No MMO region name found.");
-    }
-
-    env.log("Go to " + std::string(MAP_REGION_NAMES[int(region)]) + " to check MMO.");
-    goto_camp_from_jubilife(env, env.console, context, location);
-
-    // Open map
-    pbf_press_button(context, BUTTON_MINUS, 50, 100);
-    context.wait_for_all_requests();
-
-    // Take a photo of the map before 
-    VideoSnapshot question_mark_image = env.console.video().snapshot();
-
-    // Fix zoom level:
-    const int zoom_level = read_map_zoom_level(question_mark_image);
-    if (zoom_level < 0){
-        OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Canot read map zoom level."
-        );
-    }
-
-    if (zoom_level == 0){
-        pbf_press_button(context, BUTTON_ZR, 50, 50);
-        context.wait_for_all_requests();
-        question_mark_image = env.console.video().snapshot();
-    }else if (zoom_level == 2){
-        pbf_press_button(context, BUTTON_ZL, 50, 50);
-        context.wait_for_all_requests();
-        question_mark_image = env.console.video().snapshot();
-    }
-
-    // Move cursor away so that it does not show a text box that occludes MMO sprites.
-    pbf_move_left_joystick(context, 0, 0, 300, 30);
-    context.wait_for_all_requests();
-
-    // Fix Missions & Requests tab:
-    if (is_map_mission_tab_raised(question_mark_image)){
-        pbf_press_button(context, BUTTON_R, 50, 100);
-        context.wait_for_all_requests();
-        question_mark_image = env.console.video().snapshot();
-    }
-
-    // Now detect question marks:
-    MMOQuestionMarkDetector question_mark_detector(env.logger());
-
-    const auto quest_results = question_mark_detector.detect_MMOs_on_region_map(question_mark_image);
-    env.log("Detected MMO question marks:");
-    for(const auto& box : quest_results){
-        std::ostringstream os;
-        os << "- " << box.center_x() << ", " << box.center_y() << " " << box.width() << " x " << box.height();
-        env.log(os.str());
-    }
-
-    // Clean the detected boxes, make them square.
-    std::vector<ImagePixelBox> new_boxes;
-    for (size_t i = 0; i < quest_results.size(); i++){
-        const auto& box = quest_results[i];
-
-        pxint_t radius = (pxint_t)((box.width() + box.height()) / 4 + 0.5);
-        pxint_t center_x = (pxint_t)box.center_x();
-        pxint_t center_y = (pxint_t)box.center_y();
-        auto new_box = ImagePixelBox(center_x - radius, center_y - radius, center_x + radius, center_y + radius);
-        new_boxes.push_back(new_box);
-    }
-
-    // Leave map view, back to overworld
-    pbf_press_button(context, BUTTON_B, 20, 50);
-
-    // Now go to Mai to see the reviewed map
-    goto_Mai_from_camp(env.logger(), context, camp);
-
-    pbf_mash_button(context, BUTTON_A, 350);
-    context.wait_for_all_requests();
-
-    // Wait for the last dialog box before the MMO pokemon sprites are revealed.
-    {
-        EventDialogDetector event_dialog_detector(env.logger(), env.console.overlay(), true);
-        int ret = wait_until(env.console, context, std::chrono::seconds(10), {{event_dialog_detector}});
-        if (ret < 0){
-            OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Dialog box not detected when waiting for MMO map."
-            );
-        }
-    }
-    pbf_press_button(context, BUTTON_B, 50, 50);
-
-    while (true){
-        EventDialogDetector event_dialog_detector(env.logger(), env.console.overlay(), true);
-        MapDetector map_detector;
-        context.wait_for_all_requests();
-        int ret = wait_until(
-            env.console, context, std::chrono::seconds(10),
-            {event_dialog_detector, map_detector}
-        );
-        switch (ret){
-        case 0:
-            env.console.log("Detected dialog.");
-            pbf_press_button(context, BUTTON_B, 20, 105);
-            continue;
-        case 1:
-            env.console.log("Found revealed map thanks to Munchlax!");
-            break;
-        default:
-            OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Map not detected after talking to Mai."
-            );
-        }
-        break;
-    }
-
-#if 0
-    MapDetector map_detector;
-    ret = wait_until(env.console, context, std::chrono::seconds(5), {{map_detector}});
-    if (ret < 0){
-        OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Map not detected after talking to Mai.",
-            true
-        );
-    }
-    env.console.log("Found revealed map thanks to Munchlax!");
-#endif
-
-    VideoOverlaySet mmo_sprites_overlay(env.console);
-    for (size_t i = 0; i < new_boxes.size(); i++){
-        mmo_sprites_overlay.add(COLOR_BLUE, pixelbox_to_floatbox(question_mark_image, new_boxes[i]));
-    }
-
-    // Move cursor away so that it does not show a text box that occludes MMO sprites.
-    pbf_move_left_joystick(context, 0, 0, 300, 30);
-    context.wait_for_all_requests();
-
-    std::set<std::string> found;
-
-    // Check MMO results:
-    std::vector<std::string> sprites;
-    VideoSnapshot sprites_screen = env.console.video().snapshot();
-    for (size_t i = 0; i < new_boxes.size(); i++){
-        auto result = match_sprite_on_map(env.logger(), sprites_screen, new_boxes[i], region, DEBUG_MODE);
-        env.console.log("Found MMO sprite " + result.slug);
-        stats.mmo_pokemon++;
-
-        sprites.push_back(result.slug);
-        if (desired_MMOs.find(result.slug) != desired_MMOs.end()){
-            found.insert(result.slug);
-        }
-    }
-
-    // Check star MMO results:
-    std::vector<ImagePixelBox> star_boxes;
-    for (size_t i = 0; i < new_boxes.size(); i++){
-        const auto& sprite_box = new_boxes[i];
-        pxint_t radius = (pxint_t)sprite_box.width() / 2;
-        pxint_t center_x = (pxint_t)sprite_box.center_x();
-        pxint_t center_y = (pxint_t)sprite_box.center_y();
-        ImagePixelBox star_box(
-            center_x + radius/10,
-            center_y - radius*16/10,
-            center_x + radius * 5/4,
-            center_y
-        );
-        star_boxes.push_back(std::move(star_box));
-    }
-
-    MMOSpriteStarSymbolDetector star_detector(sprites_screen, star_boxes);
-
-    env.log("Detect star symbols...");
-    wait_until(env.console, context, std::chrono::seconds(5), {{star_detector}});
-    for (size_t i = 0; i < new_boxes.size(); i++){
-        std::ostringstream os;
-        os << "- " << sprites[i] << " box [" << star_boxes[i].min_x << ", " << star_boxes[i].min_y
-           << star_boxes[i].max_x << ", " << star_boxes[i].max_y << "]"
-           <<  " motion: " << star_detector.animation_value(i)
-           << " color: " << star_detector.symbol_color(i);
-        if (star_detector.is_star(i)){
-            stats.stars++;
-            os << ", has star";
-            if (desired_star_MMOs.find(sprites[i]) != desired_star_MMOs.end()){
-                found.insert(sprites[i]);
-            }
-        }
-        env.log(os.str());
-    }
-
-    env.update_stats();
-
-    return found;
-}
-
-
-bool OutbreakFinder::run_iteration(
-    SingleSwitchProgramEnvironment& env, BotBaseContext& context,
+std::vector<std::string> OutbreakFinder::run_iteration(
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
     const std::set<std::string>& desired_hisui_map_events,
     const std::set<std::string>& desired_outbreaks,
     const std::set<std::string>& desired_MMOs,
-    const std::set<std::string>& desired_star_MMOs
+    const std::set<std::string>& desired_star_MMOs,
+    bool& fresh_from_reset
 ){
     OutbreakFinder_Descriptor::Stats& stats = env.current_stats<OutbreakFinder_Descriptor::Stats>();
 
     //  Enter map.
     try{
-        open_travel_map_from_jubilife(env, env.console, context);
+        open_travel_map_from_jubilife(env, env.console, context, fresh_from_reset);
     }catch (OperationFailedException&){
         stats.errors++;
         throw;
@@ -697,12 +443,14 @@ bool OutbreakFinder::run_iteration(
                 os << "Found following desired outbreak" << (desired_outbreaks_found.size() > 1 ? "s: " : ": ");
                 for(const auto& outbreak: desired_outbreaks_found){
                     os << outbreak << ", ";
+                    env.console.overlay().add_log("Found " + outbreak, COLOR_GREEN);
                 }
-                env.log(os.str());
-                return true;
-            }else{
-                env.log("No desired outbreak.");
+                env.log(os.str(), COLOR_GREEN);
+
+                return desired_outbreaks_found;
             }
+            
+            env.log("No desired outbreak.");
         }
 
         // What we found is MMO symbols for MMO pokemon.
@@ -713,37 +461,56 @@ bool OutbreakFinder::run_iteration(
         pbf_press_button(context, BUTTON_B, 50, 50);
         // Leave the guard.
         pbf_move_left_joystick(context, 128, 0, 100, 50);
-        // Checking MMO costs Aguav berries.
+        // Checking MMO costs Aguav Berries.
         // To not waste them, save here so that we can reset to get berries back.
         save_game_from_overworld(env, env.console, context);
 
-        for(const auto& mmo_name: found_hisui_map_events){
-            std::set<std::string> found_pokemon = enter_region_and_read_MMO(env, context, mmo_name, desired_MMOs, desired_star_MMOs);
+        for (const auto& mmo_name: found_hisui_map_events){
+            int num_new_mmo_pokemon_found = 0;
+            int num_new_star_mmo_found = 0;
+            std::set<std::string> found_pokemon = enter_region_and_read_MMO(
+                env, context,
+                mmo_name,
+                desired_MMOs,
+                desired_star_MMOs,
+                DEBUG_MODE,
+                num_new_mmo_pokemon_found,
+                num_new_star_mmo_found,
+                fresh_from_reset
+            );
+            stats.mmo_pokemon += num_new_mmo_pokemon_found;
+            stats.stars += num_new_star_mmo_found;
+            env.update_stats();
+
             if (found_pokemon.size() > 0){
                 stats.matches += found_pokemon.size();
                 std::ostringstream os;
                 os << "Found desired MMO pokemon (including desired MMO pokemon with star symbols): ";
                 for (const auto& pokemon : found_pokemon){
                     os << pokemon << ", ";
+                    env.console.overlay().add_log("Found " + pokemon, COLOR_GREEN);
                 }
-                env.log(os.str());
-                return true;
+                env.log(os.str(), COLOR_GREEN);
+                return std::vector<std::string>(found_pokemon.begin(), found_pokemon.end());
             }
 
             env.log("No target MMO sprite found. Reset game...");
-            pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
-            reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
+            env.console.overlay().add_log("No target MMO");
+            pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
+            fresh_from_reset = reset_game_from_home(
+                env, env.console, context,
+                ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST
+            );
         }
     }
 
     env.update_stats();
     send_program_status_notification(env, NOTIFICATION_STATUS);
 
-    //  Go to region and return.
-    env.log("Go to a random region and back to refresh outbreaks...");
-    goto_region_and_return(env, context, inside_travel_map);
+    //  Go to an arbitrary region and return to refresh outbreaks.
+    goto_region_and_return(env, context, inside_travel_map, fresh_from_reset);
 
-    return false;
+    return std::vector<std::string>();
 }
 
 
@@ -755,11 +522,25 @@ std::set<std::string> OutbreakFinder::to_set(const StringSelectTableOption& opti
     return ret;
 }
 
-void OutbreakFinder::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
-//    OutbreakFinder_Descriptor::Stats& stats = env.current_stats<OutbreakFinder_Descriptor::Stats>();
+void OutbreakFinder::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    // press a random button to let Switch register the wired controller
+    pbf_press_button(context, BUTTON_ZL, 10ms, 30ms);
 
-    // goto_Mai_from_camp(env.logger(), context, Camp::HIGHLANDS_HIGHLANDS);
-    // return;
+    bool fresh_from_reset = false;
+    if (RESET_GAME_AND_CONTINUE_SEARCHING){
+        // the outbreak found by the last program run did not yield what the user wants.
+        // so we reset the game now and skip the ongoing outbreaks
+        env.log("Reset game and skip ongoing outbreaks");
+        pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
+        fresh_from_reset = reset_game_from_home(
+            env, env.console, context,
+            ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST
+        );
+
+        //  Go to region and return.
+        bool inside_travel_map = false;
+        goto_region_and_return(env, context, inside_travel_map, fresh_from_reset);
+    }
 
     std::set<std::string> desired_outbreaks = to_set(DESIRED_MO_SLUGS);
     std::set<std::string> desired_MMO_pokemon = to_set(DESIRED_MMO_SLUGS);
@@ -813,9 +594,17 @@ void OutbreakFinder::program(SingleSwitchProgramEnvironment& env, BotBaseContext
         desired_hisui_map_events.insert(p.first);
     }
 
+    std::vector<std::string> found_outbreaks;
     while (true){
-        if (run_iteration(env, context, desired_hisui_map_events, desired_outbreaks, desired_MMO_pokemon, 
-            desired_star_MMO_pokemon))
+        found_outbreaks = run_iteration(
+            env, context,
+            desired_hisui_map_events,
+            desired_outbreaks,
+            desired_MMO_pokemon,
+            desired_star_MMO_pokemon,
+            fresh_from_reset
+        );
+        if (found_outbreaks.size() > 0)
         {
             break;
         }
@@ -823,11 +612,17 @@ void OutbreakFinder::program(SingleSwitchProgramEnvironment& env, BotBaseContext
 
     env.update_stats();
 
-    send_program_notification(
+    os.str("");  // clear ostringstream
+    os << "Found ";
+    for (size_t i = 0; i < found_outbreaks.size(); i++){
+        os << found_outbreaks[i];
+        if (i + 1 != found_outbreaks.size()){
+            os << ", ";
+        }
+    }
+    send_program_finished_notification(
         env, NOTIFICATION_MATCHED,
-        COLOR_GREEN,
-        "Found Outbreak",
-        {}, "",
+        os.str(),
         env.console.video().snapshot()
     );
 

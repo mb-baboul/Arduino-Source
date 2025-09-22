@@ -1,15 +1,14 @@
 /*  Shiny Hunt - Shaymin Runaway
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "NintendoSwitch/NintendoSwitch_Settings.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "PokemonSwSh/ShinyHuntTracker.h"
-#include "PokemonBDSP/PokemonBDSP_Settings.h"
 #include "PokemonBDSP/Inference/Battles/PokemonBDSP_StartBattleDetector.h"
 #include "PokemonBDSP/Inference/Battles/PokemonBDSP_BattleMenuDetector.h"
 #include "PokemonBDSP/Inference/ShinyDetection/PokemonBDSP_ShinyEncounterDetector.h"
@@ -27,9 +26,9 @@ ShinyHuntShaymin_Descriptor::ShinyHuntShaymin_Descriptor()
         STRING_POKEMON + " BDSP", "Shiny Hunt - Shaymin",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/ShinyHunt-Shaymin.md",
         "Shiny hunt Shaymin using the runaway method.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 std::unique_ptr<StatsTracker> ShinyHuntShaymin_Descriptor::make_stats() const{
@@ -53,11 +52,10 @@ ShinyHuntShaymin::ShinyHuntShaymin()
     , m_advanced_options(
         "<font size=4><b>Advanced Options:</b> You should not need to touch anything below here.</font>"
     )
-    , EXIT_BATTLE_TIMEOUT(
+    , EXIT_BATTLE_TIMEOUT0(
         "<b>Exit Battle Timeout:</b><br>After running, wait this long to return to overworld.",
         LockMode::LOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "10 * TICKS_PER_SECOND"
+        "10 s"
     )
 {
     PA_ADD_OPTION(GO_HOME_WHEN_DONE);
@@ -68,24 +66,23 @@ ShinyHuntShaymin::ShinyHuntShaymin()
 
     PA_ADD_STATIC(m_advanced_options);
 //    PA_ADD_OPTION(WATCHDOG_TIMER);
-    PA_ADD_OPTION(EXIT_BATTLE_TIMEOUT);
+    PA_ADD_OPTION(EXIT_BATTLE_TIMEOUT0);
 }
 
 
 
-bool ShinyHuntShaymin::start_encounter(SingleSwitchProgramEnvironment& env, BotBaseContext& context) const{
+bool ShinyHuntShaymin::start_encounter(SingleSwitchProgramEnvironment& env, ProControllerContext& context) const{
     context.wait_for_all_requests();
     {
         BattleMenuWatcher battle_menu_detector(BattleType::STANDARD);
         ShortDialogWatcher dialog_detector;
-        int result = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [&](BotBaseContext& context){
-                while (true){
-                    for (size_t c = 0; c < 5; c++){
-                        pbf_press_button(context, BUTTON_ZL, 20, 105);
-                    }
-//                    pbf_mash_button(context, BUTTON_ZL, 5 * TICKS_PER_SECOND);
+            [&](ProControllerContext& context){
+                ssf_press_dpad(context, DPAD_UP, 0ms, 10s, 0ms);
+                for (size_t c = 0; c < 10; c++){
+                    pbf_press_button(context, BUTTON_ZL, 200ms, 300ms);
+                    pbf_mash_button(context, BUTTON_B, 400ms);
                 }
             },
             {
@@ -93,7 +90,7 @@ bool ShinyHuntShaymin::start_encounter(SingleSwitchProgramEnvironment& env, BotB
                 {dialog_detector},
             }
         );
-        switch (result){
+        switch (ret){
         case 0:
             env.console.log("Unexpected Battle.", COLOR_RED);
             return false;
@@ -105,14 +102,13 @@ bool ShinyHuntShaymin::start_encounter(SingleSwitchProgramEnvironment& env, BotB
     {
         BattleMenuWatcher battle_menu_detector(BattleType::STANDARD);
         StartBattleDetector start_battle_detector(env.console);
-        int result = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [&](BotBaseContext& context){
-                while (true){
-                    for (size_t c = 0; c < 5; c++){
-                        pbf_press_button(context, BUTTON_ZL, 20, 105);
-                    }
-//                    pbf_mash_button(context, BUTTON_ZL, 5 * TICKS_PER_SECOND);
+            [&](ProControllerContext& context){
+                ssf_press_dpad(context, DPAD_UP, 0ms, 10s, 0ms);
+                for (size_t c = 0; c < 10; c++){
+                    pbf_press_button(context, BUTTON_ZL, 200ms, 400ms);
+                    pbf_mash_button(context, BUTTON_B, 400ms);
                 }
             },
             {
@@ -120,7 +116,7 @@ bool ShinyHuntShaymin::start_encounter(SingleSwitchProgramEnvironment& env, BotB
                 {start_battle_detector},
             }
         );
-        switch (result){
+        switch (ret){
         case 0:
             env.console.log("Unexpected Battle.", COLOR_RED);
             return false;
@@ -132,7 +128,7 @@ bool ShinyHuntShaymin::start_encounter(SingleSwitchProgramEnvironment& env, BotB
     return true;
 }
 
-void ShinyHuntShaymin::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void ShinyHuntShaymin::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     PokemonSwSh::ShinyHuntTracker& stats = env.current_stats<PokemonSwSh::ShinyHuntTracker>();
     env.update_stats();
 
@@ -153,7 +149,7 @@ void ShinyHuntShaymin::program(SingleSwitchProgramEnvironment& env, BotBaseConte
         bool battle = start_encounter(env, context);
         if (!battle){
             stats.add_error();
-            handler.run_away_due_to_error(EXIT_BATTLE_TIMEOUT);
+            handler.run_away_due_to_error(EXIT_BATTLE_TIMEOUT0);
             continue;
         }
 
@@ -169,7 +165,7 @@ void ShinyHuntShaymin::program(SingleSwitchProgramEnvironment& env, BotBaseConte
             ENCOUNTER_BOT_OPTIONS.USE_SOUND_DETECTION
         );
 
-        bool stop = handler.handle_standard_encounter_end_battle(result_wild, EXIT_BATTLE_TIMEOUT);
+        bool stop = handler.handle_standard_encounter_end_battle(result_wild, EXIT_BATTLE_TIMEOUT0);
         if (stop){
             break;
         }
@@ -181,7 +177,7 @@ void ShinyHuntShaymin::program(SingleSwitchProgramEnvironment& env, BotBaseConte
         //  Hop on bike, ride down to seabreak path
 //        SHORTCUT.run(env.console, 0);
         pbf_move_left_joystick(context, 128, 255, 360, 0);
-        pbf_move_left_joystick(context, 128, 0, 370, 0);
+        pbf_move_left_joystick(context, 128, 0, 400, 0);
     }
 
     send_program_finished_notification(env, NOTIFICATION_PROGRAM_FINISH);

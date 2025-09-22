@@ -1,6 +1,6 @@
 /*  Apply Grits
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -26,11 +26,11 @@ class ApplyGrits : public SingleSwitchProgramInstance{
 public:
     ApplyGrits();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
 
-    void ApplyGritsOnOnePokemon(SingleSwitchProgramEnvironment& env, BotBaseContext& context, size_t pokemon_index);
+    void ApplyGritsOnOnePokemon(SingleSwitchProgramEnvironment& env, ProControllerContext& context, size_t pokemon_index);
 
     IntegerEnumDropdownOption NUM_POKEMON;
 

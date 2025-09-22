@@ -1,6 +1,6 @@
 /*  Pokemon Scarlet/Violet Ingredients
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,7 +10,7 @@
 #include <vector>
 #include <map>
 #include "CommonFramework/Language.h"
-#include "CommonFramework/Resources/SpriteDatabase.h"
+#include "CommonTools/Resources/SpriteDatabase.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

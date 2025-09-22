@@ -1,6 +1,6 @@
 /*  Generate IV Checker OCR Data
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,6 +9,7 @@
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSwSh_GenerateIVCheckerOCR.h"
+#include "PokemonSwSh/Inference/PokemonSwSh_IvJudgeReader.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -33,9 +34,10 @@ GenerateIVCheckerOCR_Descriptor::GenerateIVCheckerOCR_Descriptor()
         STRING_POKEMON + " SwSh", "Generate IV Checker OCR Data",
         "",
         "Generate IV Checker OCR Data",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        {}
     )
 {}
 
@@ -64,7 +66,7 @@ GenerateIVCheckerOCR::GenerateIVCheckerOCR()
 }
 
 
-void GenerateIVCheckerOCR::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void GenerateIVCheckerOCR::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     IvJudgeReaderScope reader(env.console, LANGUAGE);
 
     std::string path = "IVCheckerOCR/";
@@ -81,7 +83,7 @@ void GenerateIVCheckerOCR::program(SingleSwitchProgramEnvironment& env, BotBaseC
 
     std::string now = now_to_filestring();
     
-    const EnumDatabase<IvJudgeValue>& database = IvJudgeValue_Database();
+    const EnumDropdownDatabase<IvJudgeValue>& database = IvJudgeValue_Database();
     images[0].save(path + database.find(HP)->display + "-" + now + "a.png");
     images[1].save(path + database.find(ATTACK)->display + "-" + now + "b.png");
     images[2].save(path + database.find(DEFENSE)->display + "-" + now + "c.png");

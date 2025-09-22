@@ -1,6 +1,6 @@
 /*  Fatal Program Exception
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -20,7 +20,7 @@ public:
         : ScreenshotException(
             e.m_send_error_report,
             std::move(e.m_message),
-            e.m_console,
+            e.m_stream,
             std::move(e.m_screenshot)
         )
     {}

@@ -1,17 +1,16 @@
 /*  Overworld Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
-//#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
 #include "PokemonLA_OverworldDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

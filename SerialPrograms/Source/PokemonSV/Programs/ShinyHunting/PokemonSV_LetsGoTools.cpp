@@ -1,6 +1,6 @@
 /*  Let's Go Tools
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,14 +9,12 @@
 #include "CommonFramework/Exceptions/ProgramFinishedException.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Exceptions/FatalProgramException.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Tools/ProgramEnvironment.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
-//#include "Pokemon/Pokemon_Strings.h"
 #include "Pokemon/Pokemon_Notification.h"
 #include "PokemonSV/Options/PokemonSV_EncounterBotCommon.h"
 #include "PokemonSV/Inference/PokemonSV_SweatBubbleDetector.h"
-//#include "PokemonSV/Inference/Overworld/PokemonSV_OverworldDetector.h"
 #include "PokemonSV/Programs/Battles/PokemonSV_Battles.h"
 #include "PokemonSV/Programs/Battles/PokemonSV_BasicCatcher.h"
 #include "PokemonSV_LetsGoTools.h"
@@ -153,178 +151,42 @@ void DiscontiguousTimeTracker::add_block(WallClock start, WallClock end){
 
 
 LetsGoEncounterBotTracker::LetsGoEncounterBotTracker(
-    ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
+    ProgramEnvironment& env,
+    VideoStream& stream,
     LetsGoEncounterBotStats& stats,
-    OCR::LanguageOCROption& language
+    LetsGoKillSoundDetector& kill_sound
 )
-    : m_env(env)
-    , m_console(console)
-    , m_context(context)
-    , m_stats(stats)
-    , m_language(language)
-    , m_kill_sound(console, [&](float){
-        console.log("Detected kill.");
+    : m_kill_sound(kill_sound)
+{
+    m_kill_sound.set_detected_callback([&](float){
+        stream.log("Detected kill.");
         m_encounter_rate.report_kill();
         stats.m_kills++;
         env.update_stats();
         return false;
-    })
-    , m_session(context, console, {m_kill_sound})
-{}
-void LetsGoEncounterBotTracker::process_battle(
-    bool& caught, bool& should_save,
-    EncounterWatcher& watcher, EncounterBotCommonOptions& settings
-){
-    m_encounter_rate.report_encounter();
-    m_stats.m_encounters++;
-
-    Language language = m_language;
-
-    std::set<std::string> slugs;
-    if (language != Language::None){
-        slugs = read_singles_opponent(m_env.program_info(), m_console, m_context, language);
-        m_encounter_frequencies += slugs;
-        m_env.log(m_encounter_frequencies.dump_sorted_map("Encounter Stats:\n"));
-    }
-
-    bool is_shiny = (bool)watcher.shiny_screenshot();
-    if (is_shiny){
-        m_stats.m_shinies++;
-        if (settings.VIDEO_ON_SHINY){
-            m_context.wait_for(std::chrono::seconds(3));
-            pbf_press_button(m_context, BUTTON_CAPTURE, 2 * TICKS_PER_SECOND, 0);
-        }
-    }
-    m_env.update_stats();
-
-    send_encounter_notification(
-        m_env,
-        settings.NOTIFICATION_NONSHINY,
-        settings.NOTIFICATION_SHINY,
-        language != Language::None,
-        is_shiny,
-        {{slugs, is_shiny ? ShinyType::UNKNOWN_SHINY : ShinyType::NOT_SHINY}},
-        watcher.lowest_error_coefficient(),
-        watcher.shiny_screenshot(),
-        &m_encounter_frequencies
-    );
-
-    //  Set default action: stop program if shiny, otherwise run away.
-    EncounterActionsEntry action;
-    action.action = is_shiny
-        ? EncounterActionsAction::STOP_PROGRAM
-        : EncounterActionsAction::RUN_AWAY;
-
-    //  Iterate the actions table. If found an entry matches the pokemon species,
-    //  set the action to be what specified in the entry.
-    for (EncounterActionsEntry& entry : settings.ACTIONS_TABLE.snapshot()){
-        if (language == Language::None){
-            throw UserSetupError(m_console, "You must set the game language to use the actions table.");
-        }
-
-        //  See if Pokemon name matches.
-        auto iter = slugs.find(entry.pokemon);
-        if (iter == slugs.end()){
-            continue;
-        }
-
-        switch (entry.shininess){
-        case EncounterActionsShininess::ANYTHING:
-            break;
-        case EncounterActionsShininess::NOT_SHINY:
-            if (is_shiny){
-                continue;
-            }
-            break;
-        case EncounterActionsShininess::SHINY:
-            if (!is_shiny){
-                continue;
-            }
-            break;
-        }
-
-        action = std::move(entry);
-    }
-
-    //  Run the chosen action.
-    switch (action.action){
-    case EncounterActionsAction::RUN_AWAY:
-        try{
-            run_from_battle(m_env.program_info(), m_console, m_context);
-        }catch (OperationFailedException& e){
-            throw FatalProgramException(std::move(e));
-        }
-        caught = false;
-        should_save = false;
-        return;
-    case EncounterActionsAction::STOP_PROGRAM:
-        throw ProgramFinishedException();
-//        throw ProgramFinishedException(m_console, "", true);
-    case EncounterActionsAction::THROW_BALLS:
-    case EncounterActionsAction::THROW_BALLS_AND_SAVE:
-        if (language == Language::None){
-            throw InternalProgramError(&m_console.logger(), PA_CURRENT_FUNCTION, "Language is not set.");
-        }
-
-        CatchResults result = basic_catcher(
-            m_console, m_context,
-            language,
-            action.ball, action.ball_limit,
-            settings.USE_FIRST_MOVE_IF_CANNOT_THROW_BALL
-        );
-        send_catch_notification(
-            m_env,
-            settings.NOTIFICATION_CATCH_SUCCESS,
-            settings.NOTIFICATION_CATCH_FAILED,
-            &slugs,
-            action.ball,
-            result.balls_used,
-            result.result
-        );
-
-        switch (result.result){
-        case CatchResult::POKEMON_CAUGHT:
-        case CatchResult::POKEMON_FAINTED:
-            break;
-        default:
-            throw_and_log<FatalProgramException>(
-                m_console, ErrorReport::NO_ERROR_REPORT,
-                "Unable to recover from failed catch.",
-                m_console
-            );
-        }
-
-        caught = result.result == CatchResult::POKEMON_CAUGHT;
-        should_save = caught && action.action == EncounterActionsAction::THROW_BALLS_AND_SAVE;
-        return;
-    }
-
-    caught = false;
-    should_save = false;
+    });
 }
 
 
 
 
 
-
-
 bool use_lets_go_to_clear_in_front(
-    ConsoleHandle& console, BotBaseContext& context,
+    VideoStream& stream, ProControllerContext& context,
     LetsGoEncounterBotTracker& tracker,
     bool throw_ball_if_bubble,
-    std::function<void(BotBaseContext& context)>&& command
+    std::function<void(ProControllerContext& context)>&& command
 ){
 //    ShinyHuntAreaZeroPlatform_Descriptor::Stats& stats = env.current_stats<ShinyHuntAreaZeroPlatform_Descriptor::Stats>();
 
 //    static int calls = 0;
-    console.log("Clearing what's in front with Let's Go...");
+    stream.log("Clearing what's in front with Let's Go...");
 //    cout << calls++ << endl;
 
     SweatBubbleWatcher bubble(COLOR_GREEN);
-    int ret = run_until(
-        console, context,
-        [](BotBaseContext& context){
+    int ret = run_until<ProControllerContext>(
+        stream, context,
+        [](ProControllerContext& context){
             pbf_press_button(context, BUTTON_R, 20, 200);
         },
         {bubble}
@@ -332,13 +194,13 @@ bool use_lets_go_to_clear_in_front(
 //    cout << "asdf" << endl;
     if (ret == 0){
         if (throw_ball_if_bubble){
-            console.log("Detected sweat bubble. Throwing ball...");
+            stream.log("Detected sweat bubble. Throwing ball...");
             pbf_mash_button(context, BUTTON_ZR, 5 * TICKS_PER_SECOND);
         }else{
-            console.log("Detected sweat bubble. Will not throw ball.");
+            stream.log("Detected sweat bubble. Will not throw ball.");
         }
     }else{
-        console.log("Did not detect sweat bubble.");
+        stream.log("Did not detect sweat bubble.");
     }
 
     WallClock last_kill = tracker.last_kill();
@@ -362,7 +224,7 @@ bool use_lets_go_to_clear_in_front(
 //        cout << "found kill" << endl;
         last_kill = tracker.last_kill();
     }
-    console.log("Nothing left to clear...");
+    stream.log("Nothing left to clear...");
     tracker.throw_if_no_sound();
     return tracker.last_kill() != WallClock::min();
 }

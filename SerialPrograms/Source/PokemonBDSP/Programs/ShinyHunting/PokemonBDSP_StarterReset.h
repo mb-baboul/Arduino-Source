@@ -1,6 +1,6 @@
 /*  Starter Reset
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -30,11 +30,11 @@ public:
 class StarterReset : public SingleSwitchProgramInstance{
 public:
     StarterReset();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 
 private:
-    void run_trigger(BotBaseContext& context) const;
+    void run_trigger(ProControllerContext& context) const;
     bool find_encounter(SingleSwitchProgramEnvironment& env) const;
 
 private:

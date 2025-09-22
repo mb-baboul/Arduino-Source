@@ -1,18 +1,18 @@
 /*  Egg Hatcher
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/FatalProgramException.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSV/Inference/Boxes/PokemonSV_BoxDetection.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
 #include "PokemonSV/Programs/Eggs/PokemonSV_EggRoutines.h"
 #include "PokemonSV/Programs/Boxes/PokemonSV_BoxRoutines.h"
 #include "PokemonSV_EggHatcher.h"
@@ -30,9 +30,9 @@ EggHatcher_Descriptor::EggHatcher_Descriptor()
         STRING_POKEMON + " SV", "Egg Hatcher",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/EggHatcher.md",
         "Automatically hatch eggs from boxes.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct EggHatcher_Descriptor::Stats : public StatsTracker{
@@ -94,7 +94,7 @@ EggHatcher::EggHatcher()
     PA_ADD_OPTION(NOTIFICATIONS);
 }
 
-void EggHatcher::hatch_one_box(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void EggHatcher::hatch_one_box(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     EggHatcher_Descriptor::Stats& stats = env.current_stats<EggHatcher_Descriptor::Stats>();
 
     for(uint8_t column_index = 0; column_index < 6; column_index++){
@@ -119,20 +119,20 @@ void EggHatcher::hatch_one_box(SingleSwitchProgramEnvironment& env, BotBaseConte
             if (num_non_egg_pokemon == 0){
                 // nothing in this column
                 env.log("Nothing in column " + std::to_string(column_index+1) + ".");
-                env.console.overlay().add_log("Empty column", COLOR_WHITE);
+                env.console.overlay().add_log("Empty column");
                 continue;
             }
 
             // we have only non-egg pokemon in the column
             // Move them back
             env.log("Only non-egg pokemon in column, move them back.");
-            env.console.overlay().add_log("No egg in column", COLOR_WHITE);
+            env.console.overlay().add_log("No egg in column");
             unload_one_column_from_party(env, env.console, context, NOTIFICATION_ERROR_RECOVERABLE, column_index, HAS_CLONE_RIDE_POKEMON);
             continue;
         }
         
         env.log("Loaded " + std::to_string(num_eggs) + " eggs to party.");
-        env.console.overlay().add_log("Load " + std::to_string(num_eggs) + " eggs", COLOR_WHITE);
+        env.console.overlay().add_log("Load " + std::to_string(num_eggs) + " eggs");
         leave_box_system_to_overworld(env.program_info(), env.console, context);
 
         auto hatched_callback = [&](uint8_t){  
@@ -173,7 +173,7 @@ void EggHatcher::hatch_one_box(SingleSwitchProgramEnvironment& env, BotBaseConte
     context.wait_for_all_requests();
 }
 
-void EggHatcher::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void EggHatcher::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
     EggHatcher_Descriptor::Stats& stats = env.current_stats<EggHatcher_Descriptor::Stats>();
@@ -203,7 +203,7 @@ void EggHatcher::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
 
             hatch_one_box(env, context);
         }
-    } catch(OperationFailedException&){
+    } catch(Exception&){
         stats.m_errors++;
         env.update_stats();
         throw;

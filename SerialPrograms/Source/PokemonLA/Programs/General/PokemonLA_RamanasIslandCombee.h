@@ -1,6 +1,6 @@
 /*  Combee Finder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,8 +8,8 @@
 #define PokemonAutomation_PokemonLA_RamanasIslandCombee_H
 
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
 #include "PokemonLA/Options/PokemonLA_ShinyDetectedAction.h"
 
@@ -30,16 +30,19 @@ public:
 class RamanasCombeeFinder: public SingleSwitchProgramInstance{
 public:
     RamanasCombeeFinder();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    void run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    void grouped_path(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    void check_tree_no_stop(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    bool check_tree(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    bool handle_battle(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    void disable_shiny_sound(BotBaseContext& context);
-    void enable_shiny_sound(BotBaseContext& context);
+    void run_iteration(
+        SingleSwitchProgramEnvironment& env, ProControllerContext& context,
+        bool fresh_from_reset
+    );
+    void grouped_path(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    void check_tree_no_stop(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    bool check_tree(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    bool handle_battle(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    void disable_shiny_sound(ProControllerContext& context);
+    void enable_shiny_sound(ProControllerContext& context);
 
 private:
     class RunRoute;
@@ -47,7 +50,7 @@ private:
     std::atomic<bool> m_enable_shiny_sound{true};
 
     OCR::LanguageOCROption LANGUAGE;
-    ShinyDetectedActionOption SHINY_DETECTED_ENROUTE;
+    OverworldShinyDetectedActionOption SHINY_DETECTED_ENROUTE;
 
     EventNotificationOption NOTIFICATION_STATUS;
     EventNotificationsOption NOTIFICATIONS;

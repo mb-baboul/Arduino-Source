@@ -1,20 +1,20 @@
 /*  Blueberry Catch Photo
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
 #include "CommonFramework/Exceptions/ProgramFinishedException.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "NintendoSwitch/Programs/NintendoSwitch_GameEntry.h"
+#include "NintendoSwitch/Programs/DateSpam/NintendoSwitch_HomeToDateTime.h"
+#include "NintendoSwitch/Programs/DateSpam/NintendoSwitch_RollDateForward1.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-#include "PokemonSwSh/Commands/PokemonSwSh_Commands_DateSpam.h"
-#include "PokemonSwSh/Programs/PokemonSwSh_GameEntry.h"
 #include "PokemonSV/PokemonSV_Settings.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
@@ -23,8 +23,8 @@
 #include "PokemonSV/Inference/PokemonSV_MainMenuDetector.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_OverworldDetector.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
-#include "PokemonSwSh/Commands/PokemonSwSh_Commands_DateSpam.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV/Programs/Battles/PokemonSV_BasicCatcher.h"
 #include "PokemonSV/Programs/PokemonSV_Terarium.h"
 #include "PokemonSV_BlueberryQuests.h"
@@ -36,7 +36,12 @@ namespace PokemonAutomation{
 namespace NintendoSwitch{
 namespace PokemonSV{
 
-CameraAngle quest_photo_navi(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context, const BBQOption& BBQ_OPTIONS, BBQuests current_quest){
+CameraAngle quest_photo_navi(
+    const ProgramInfo& info,
+    ConsoleHandle& console, ProControllerContext& context,
+    const BBQOption& BBQ_OPTIONS,
+    BBQuests current_quest
+){
     CameraAngle angle = CameraAngle::none;
 
     //Navigate to target
@@ -77,9 +82,9 @@ CameraAngle quest_photo_navi(const ProgramInfo& info, ConsoleHandle& console, Bo
 
             //Jump down
             pbf_press_button(context, BUTTON_L | BUTTON_PLUS, 20, 105);
-            ssf_press_button(context, BUTTON_B, 0, 100);
-            ssf_press_button(context, BUTTON_B, 0, 20, 10);
-            ssf_press_button(context, BUTTON_B, 0, 20);
+            ssf_press_button(context, BUTTON_B, 0ms, 800ms);
+            ssf_press_button(context, BUTTON_B, 0ms, 160ms, 80ms);
+            ssf_press_button(context, BUTTON_B, 0ms, 160ms);
 
             pbf_wait(context, 100);
             context.wait_for_all_requests();
@@ -121,7 +126,11 @@ CameraAngle quest_photo_navi(const ProgramInfo& info, ConsoleHandle& console, Bo
 
             pbf_press_button(context, BUTTON_L, 20, 50);
             pbf_move_left_joystick(context, 128, 0, 100, 50);
-            pbf_move_left_joystick(context, 0, 0, 20, 50);
+
+            //Turn slightly for switch 1
+            if (console.state().console_type() == ConsoleType::Switch1) {
+                pbf_move_left_joystick(context, 0, 0, 20, 50);
+            }
 
             break;
         case BBQuests::photo_bug: case BBQuests::photo_rock:
@@ -174,8 +183,8 @@ CameraAngle quest_photo_navi(const ProgramInfo& info, ConsoleHandle& console, Bo
             pbf_press_button(context, BUTTON_L, 20, 50);
 
             break;
-        case BBQuests::photo_flying: case BBQuests::photo_dark:
-            console.log("Photo: Dark/Flying");
+        case BBQuests::photo_flying:
+            console.log("Photo: Flying");
 
             //Vullaby/Mandibuzz
             central_to_savanna_plaza(info, console, context);
@@ -219,18 +228,21 @@ CameraAngle quest_photo_navi(const ProgramInfo& info, ConsoleHandle& console, Bo
             context.wait_for_all_requests();
 
             break;
-        case BBQuests::photo_poison:
-            console.log("Photo: Poison");
+        case BBQuests::photo_poison: case BBQuests::photo_dark:
+            console.log("Photo: Poison/Dark");
 
             //Muk-A - area a bit laggy but consistently so
             central_to_coastal_plaza(info, console, context);
             pbf_move_left_joystick(context, 0, 128, 20, 50);
 
             pbf_press_button(context, BUTTON_L | BUTTON_PLUS, 20, 105);
-            jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 1000, 1400, 300);
 
+            if (console.state().console_type() == ConsoleType::Switch1) {
+                jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 1000, 1400, 300);
+            } else { //Switch 2
+                jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 1000, 1300, 300);
+            }
             pbf_press_button(context, BUTTON_PLUS, 20, 105);
-
             pbf_move_left_joystick(context, 128, 0, 150, 50);
             pbf_move_left_joystick(context, 180, 0, 20, 50);
             pbf_wait(context, 200); //Give it time to spawn/load.
@@ -247,7 +259,12 @@ CameraAngle quest_photo_navi(const ProgramInfo& info, ConsoleHandle& console, Bo
             pbf_move_left_joystick(context, 0, 128, 20, 50);
 
             pbf_press_button(context, BUTTON_L | BUTTON_PLUS, 20, 105);
-            jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 200, 575, 200);
+
+            if (console.state().console_type() == ConsoleType::Switch1) {
+                jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 200, 575, 200);
+            } else { //Switch 2
+                jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 200, 500, 200);
+            }
 
             pbf_press_button(context, BUTTON_PLUS, 20, 105);
             pbf_move_left_joystick(context, 0, 128, 20, 50);
@@ -256,8 +273,9 @@ CameraAngle quest_photo_navi(const ProgramInfo& info, ConsoleHandle& console, Bo
             break;
         default:
             OperationFailedException::fire(
-                console, ErrorReport::SEND_ERROR_REPORT,
-                "Invalid photo quest."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Invalid photo quest.",
+                console
             );
             break;
     }
@@ -265,22 +283,27 @@ CameraAngle quest_photo_navi(const ProgramInfo& info, ConsoleHandle& console, Bo
     return angle;
 }
 
-void quest_photo(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context, const BBQOption& BBQ_OPTIONS, BBQuests current_quest){
+void quest_photo(
+    const ProgramInfo& info,
+    ConsoleHandle& console, ProControllerContext& context,
+    const BBQOption& BBQ_OPTIONS,
+    BBQuests current_quest
+){
     bool took_photo = false;
     CameraAngle move_camera = CameraAngle::none;
 
     while(!took_photo){
         EncounterWatcher encounter_watcher(console, COLOR_RED);
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             console, context,
-            [&](BotBaseContext& context){
+            [&](ProControllerContext& context){
 
                 move_camera = quest_photo_navi(info, console, context, BBQ_OPTIONS, current_quest);
 
                 //Take photo.
                 console.log("Taking photo.");
                 PromptDialogWatcher photo_prompt(COLOR_RED);
-                OverworldWatcher overworld(console, COLOR_BLUE);
+                OverworldWatcher overworld(console.logger(), COLOR_BLUE);
 
                 pbf_press_dpad(context, DPAD_DOWN, 50, 20);
                 pbf_wait(context, 100);
@@ -305,9 +328,9 @@ void quest_photo(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext
                 }
 
                 //Mash B until overworld
-                int exit = run_until(
+                int exit = run_until<ProControllerContext>(
                     console, context,
-                    [&](BotBaseContext& context){
+                    [&](ProControllerContext& context){
                         pbf_mash_button(context, BUTTON_B, 2000);
                     },
                     {{ overworld }}
@@ -345,8 +368,9 @@ void quest_photo(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext
                 }catch (...){
                     console.log("Unable to flee.");
                     OperationFailedException::fire(
-                        console, ErrorReport::SEND_ERROR_REPORT,
-                        "Unable to flee!"
+                        ErrorReport::SEND_ERROR_REPORT,
+                        "Unable to flee!",
+                        console
                     );
                 }
             }
@@ -356,7 +380,12 @@ void quest_photo(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext
     return_to_plaza(info, console, context);
 }
 
-void quest_catch_navi(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context, const BBQOption& BBQ_OPTIONS, BBQuests current_quest){
+void quest_catch_navi(
+    const ProgramInfo& info,
+    ConsoleHandle& console, ProControllerContext& context,
+    const BBQOption& BBQ_OPTIONS,
+    BBQuests current_quest
+){
     switch (current_quest){
         case BBQuests::catch_any: case BBQuests::catch_normal: case BBQuests::catch_fire:
             console.log("Catch: Any/Normal/Fire");
@@ -364,7 +393,6 @@ void quest_catch_navi(const ProgramInfo& info, ConsoleHandle& console, BotBaseCo
             //Savanna Plaza - Pride Rock
             central_to_savanna_plaza(info, console, context);
 
-            //pbf_move_left_joystick(context, 255, 255, 10, 20);
             pbf_move_left_joystick(context, 220, 255, 10, 20);
             pbf_press_button(context, BUTTON_L | BUTTON_PLUS, 20, 105);
 
@@ -375,8 +403,12 @@ void quest_catch_navi(const ProgramInfo& info, ConsoleHandle& console, BotBaseCo
 
             pbf_press_button(context, BUTTON_L, 20, 50);
             pbf_move_left_joystick(context, 128, 0, 100, 50);
-            pbf_move_left_joystick(context, 0, 0, 20, 50);
-            pbf_press_button(context, BUTTON_L, 20, 50);
+
+            //Turn slightly for switch 1
+            if (console.state().console_type() == ConsoleType::Switch1) {
+                pbf_move_left_joystick(context, 0, 0, 20, 50);
+                pbf_press_button(context, BUTTON_L, 20, 50);
+            }
 
             break;
 
@@ -405,9 +437,9 @@ void quest_catch_navi(const ProgramInfo& info, ConsoleHandle& console, BotBaseCo
 
             //Jump down
             pbf_press_button(context, BUTTON_L | BUTTON_PLUS, 20, 105);
-            ssf_press_button(context, BUTTON_B, 0, 100);
-            ssf_press_button(context, BUTTON_B, 0, 20, 10);
-            ssf_press_button(context, BUTTON_B, 0, 20);
+            ssf_press_button(context, BUTTON_B, 0ms, 800ms);
+            ssf_press_button(context, BUTTON_B, 0ms, 160ms, 80ms);
+            ssf_press_button(context, BUTTON_B, 0ms, 160ms);
 
             pbf_wait(context, 100);
             context.wait_for_all_requests();
@@ -479,8 +511,8 @@ void quest_catch_navi(const ProgramInfo& info, ConsoleHandle& console, BotBaseCo
 
             jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 1000, 1650, 500);
             break;
-        case BBQuests::catch_dark: case BBQuests::catch_flying:
-            console.log("Catch: Dark/Flying");
+        case BBQuests::catch_flying:
+            console.log("Catch: Flying");
 
             //Vullaby/Mandibuzz
             central_to_savanna_plaza(info, console, context);
@@ -494,13 +526,22 @@ void quest_catch_navi(const ProgramInfo& info, ConsoleHandle& console, BotBaseCo
             pbf_move_left_joystick(context, 255, 0, 10, 20);
             pbf_press_button(context, BUTTON_L, 20, 50);
 
-            pbf_move_left_joystick(context, 128, 0, 200, 20);
+            if (console.state().console_type() == ConsoleType::Switch1) {
+                pbf_move_left_joystick(context, 128, 0, 200, 20);
+            } else {
+                pbf_move_left_joystick(context, 128, 0, 170, 20);
+            }
+
             pbf_press_button(context, BUTTON_L, 20, 50);
 
             pbf_move_left_joystick(context, 0, 0, 10, 20);
             pbf_press_button(context, BUTTON_L, 20, 50);
 
-            pbf_move_left_joystick(context, 128, 0, 100, 20);
+            if (console.state().console_type() == ConsoleType::Switch1) {
+                pbf_move_left_joystick(context, 128, 0, 100, 20);
+            } else {
+                pbf_move_left_joystick(context, 128, 0, 120, 20);
+            }
             pbf_wait(context, 400);
             context.wait_for_all_requests();
 
@@ -530,7 +571,12 @@ void quest_catch_navi(const ProgramInfo& info, ConsoleHandle& console, BotBaseCo
             pbf_move_left_joystick(context, 0, 128, 20, 50);
 
             pbf_press_button(context, BUTTON_L | BUTTON_PLUS, 20, 105);
-            jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 200, 590, 200);
+
+            if (console.state().console_type() == ConsoleType::Switch1) {
+                jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 200, 575, 200);
+            } else { //Switch 2
+                jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 200, 500, 200);
+            }
 
             pbf_press_button(context, BUTTON_PLUS, 20, 105);
             pbf_move_left_joystick(context, 0, 128, 20, 50);
@@ -538,31 +584,36 @@ void quest_catch_navi(const ProgramInfo& info, ConsoleHandle& console, BotBaseCo
             pbf_move_left_joystick(context, 128, 0, 50, 50);
 
             break;
-        case BBQuests::catch_poison:
-            console.log("Catch: Poison");
+        case BBQuests::catch_poison: case BBQuests::catch_dark: 
+            console.log("Catch: Poison/Dark");
 
             //Muk-A - area a bit laggy but consistently so
             central_to_coastal_plaza(info, console, context);
             pbf_move_left_joystick(context, 0, 128, 20, 50);
 
             pbf_press_button(context, BUTTON_L | BUTTON_PLUS, 20, 105);
-            jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 1000, 1800, 300);
+
+            if (console.state().console_type() == ConsoleType::Switch1) {
+                jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 1000, 1800, 300);
+            } else {
+                jump_glide_fly(console, context, BBQ_OPTIONS.INVERTED_FLIGHT, 1000, 1600, 300);
+            }
 
             pbf_press_button(context, BUTTON_PLUS, 20, 105);
 
             //Extra throws for this one
-            ssf_press_button(context, BUTTON_ZR, 0, 200);
-            ssf_press_button(context, BUTTON_ZL, 100, 50);
-            ssf_press_button(context, BUTTON_ZL, 150, 50);
+            ssf_press_button(context, BUTTON_ZR, 0ms, 1600ms);
+            ssf_press_button(context, BUTTON_ZL, 800ms, 400ms);
+            ssf_press_button(context, BUTTON_ZL, 1200ms, 400ms);
             pbf_wait(context, 200);
             context.wait_for_all_requests();
             pbf_press_button(context, BUTTON_ZR, 20, 50); //Withdraw pokemon
 
             pbf_move_left_joystick(context, 255, 128, 20, 50);
             pbf_press_button(context, BUTTON_L, 20, 50);
-            ssf_press_button(context, BUTTON_ZR, 0, 200);
-            ssf_press_button(context, BUTTON_ZL, 100, 50);
-            ssf_press_button(context, BUTTON_ZL, 150, 50);
+            ssf_press_button(context, BUTTON_ZR, 0ms, 1600ms);
+            ssf_press_button(context, BUTTON_ZL, 800ms, 400ms);
+            ssf_press_button(context, BUTTON_ZL, 1200ms, 400ms);
             pbf_wait(context, 200);
             context.wait_for_all_requests();
             pbf_press_button(context, BUTTON_ZR, 20, 50); //Withdraw pokemon
@@ -589,23 +640,29 @@ void quest_catch_navi(const ProgramInfo& info, ConsoleHandle& console, BotBaseCo
             break;
         default:
             OperationFailedException::fire(
-                console, ErrorReport::SEND_ERROR_REPORT,
-                "Invalid catch quest."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Invalid catch quest.",
+                console
             );
             break;
     }
 
     //Lock on and throw ball
-    ssf_press_button(context, BUTTON_ZR, 0, 200);
-    ssf_press_button(context, BUTTON_ZL, 100, 50);
-    ssf_press_button(context, BUTTON_ZL, 150, 50);
+    ssf_press_button(context, BUTTON_ZR, 0ms, 1600ms);
+    ssf_press_button(context, BUTTON_ZL, 800ms, 400ms);
+    ssf_press_button(context, BUTTON_ZL, 1200ms, 400ms);
 
     pbf_wait(context, 300);
     context.wait_for_all_requests();
 
 }
 
-void quest_catch_throw_ball(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context, Language language, const std::string& selected_ball){
+void quest_catch_throw_ball(
+    const ProgramInfo& info,
+    ConsoleHandle& console, ProControllerContext& context,
+    Language language,
+    const std::string& selected_ball
+){
     BattleBallReader reader(console, language);
     std::string ball_reader = "";
     WallClock start = current_time();
@@ -615,8 +672,9 @@ void quest_catch_throw_ball(const ProgramInfo& info, ConsoleHandle& console, Bot
         if (current_time() - start > std::chrono::minutes(2)){
             console.log("Timed out trying to read ball after 2 minutes.", COLOR_RED);
             OperationFailedException::fire(
-                console, ErrorReport::SEND_ERROR_REPORT,
-                "Timed out trying to read ball after 2 minutes."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Timed out trying to read ball after 2 minutes.",
+                console
             );
         }
 
@@ -637,8 +695,9 @@ void quest_catch_throw_ball(const ProgramInfo& info, ConsoleHandle& console, Bot
     if (quantity == 0){
         console.log("Unable to find ball.");
         OperationFailedException::fire(
-            console, ErrorReport::SEND_ERROR_REPORT,
-            "Unable to find ball."
+            ErrorReport::SEND_ERROR_REPORT,
+            "Unable to find ball.",
+            console
         );
     }
     if (quantity < 0){
@@ -654,20 +713,25 @@ void quest_catch_throw_ball(const ProgramInfo& info, ConsoleHandle& console, Bot
     context.wait_for_all_requests();
 }
 
-void quest_catch_handle_battle(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context, const BBQOption& BBQ_OPTIONS, BBQuests current_quest){
+void quest_catch_handle_battle(
+    const ProgramInfo& info,
+    ConsoleHandle& console, ProControllerContext& context,
+    const BBQOption& BBQ_OPTIONS,
+    BBQuests current_quest
+){
     console.log("Catching Pokemon.");
     AdvanceDialogWatcher advance_dialog(COLOR_MAGENTA);
     PromptDialogWatcher add_to_party(COLOR_PURPLE);
-    OverworldWatcher overworld(console, COLOR_RED);
+    OverworldWatcher overworld(console.logger(), COLOR_RED);
 
     uint8_t switch_party_slot = 1;
     bool quickball_thrown = false;
     bool tera_target = false;
     bool use_quickball = BBQ_OPTIONS.QUICKBALL;
 
-    int ret2 = run_until(
+    int ret2 = run_until<ProControllerContext>(
         console, context,
-        [&](BotBaseContext& context){
+        [&](ProControllerContext& context){
             while (true){
                 //Check that battle menu appears - this is in case of swapping pokemon
                 NormalBattleMenuWatcher menu_before_throw(COLOR_YELLOW);
@@ -679,8 +743,9 @@ void quest_catch_handle_battle(const ProgramInfo& info, ConsoleHandle& console, 
                 if (bMenu < 0){
                     console.log("Unable to find menu_before_throw.");
                     OperationFailedException::fire(
-                        console, ErrorReport::SEND_ERROR_REPORT,
-                        "Unable to find menu_before_throw."
+                        ErrorReport::SEND_ERROR_REPORT,
+                        "Unable to find menu_before_throw.",
+                        console
                     );
                 }
                 
@@ -728,9 +793,9 @@ void quest_catch_handle_battle(const ProgramInfo& info, ConsoleHandle& console, 
                         MoveSelectWatcher move_watcher(COLOR_BLUE);
                         MoveSelectDetector move_select(COLOR_BLUE);
 
-                        int ret_move_select = run_until(
+                        int ret_move_select = run_until<ProControllerContext>(
                             console, context,
-                            [&](BotBaseContext& context){
+                            [&](ProControllerContext& context){
                                 pbf_press_button(context, BUTTON_A, 10, 50);
                                 pbf_wait(context, 100);
                                 context.wait_for_all_requests();
@@ -761,8 +826,9 @@ void quest_catch_handle_battle(const ProgramInfo& info, ConsoleHandle& console, 
                         if (ret3 == 0){
                             console.log("Battle menu detected early. Out of PP/No move in slot, please check your setup.");
                             OperationFailedException::fire(
-                                console, ErrorReport::SEND_ERROR_REPORT,
-                                "Battle menu detected early. Out of PP, please check your setup."
+                                ErrorReport::SEND_ERROR_REPORT,
+                                "Battle menu detected early. Out of PP, please check your setup.",
+                                console
                             );
                         }
                     }else{
@@ -798,8 +864,9 @@ void quest_catch_handle_battle(const ProgramInfo& info, ConsoleHandle& console, 
                 default:
                     console.log("Invalid state ret2_run. Out of moves?");
                     OperationFailedException::fire(
-                        console, ErrorReport::SEND_ERROR_REPORT,
-                        "Invalid state ret2_run. Out of moves?"
+                        ErrorReport::SEND_ERROR_REPORT,
+                        "Invalid state ret2_run. Out of moves?",
+                        console
                     );
                 }
 
@@ -823,19 +890,25 @@ void quest_catch_handle_battle(const ProgramInfo& info, ConsoleHandle& console, 
     default:
         console.log("Invalid state in run_battle().");
         OperationFailedException::fire(
-            console, ErrorReport::SEND_ERROR_REPORT,
-            "Invalid state in run_battle()."
+            ErrorReport::SEND_ERROR_REPORT,
+            "Invalid state in run_battle().",
+            console
         );
     }
 }
 
-void quest_catch(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context, const BBQOption& BBQ_OPTIONS, BBQuests current_quest){
+void quest_catch(
+    const ProgramInfo& info,
+    ConsoleHandle& console, ProControllerContext& context,
+    const BBQOption& BBQ_OPTIONS,
+    BBQuests current_quest
+){
     EncounterWatcher encounter_watcher(console, COLOR_RED);
 
     //Navigate to target and start battle
-    int ret = run_until(
+    int ret = run_until<ProControllerContext>(
         console, context,
-        [&](BotBaseContext& context){
+        [&](ProControllerContext& context){
             
             quest_catch_navi(info, console, context, BBQ_OPTIONS, current_quest);
             context.wait_for_all_requests();
@@ -854,7 +927,7 @@ void quest_catch(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext
             static_cast<VisualInferenceCallback&>(encounter_watcher),
             static_cast<AudioInferenceCallback&>(encounter_watcher),
         }
-        );
+    );
     encounter_watcher.throw_if_no_sound();
 
     if (ret >= 0){
@@ -873,21 +946,22 @@ void quest_catch(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext
     return_to_plaza(info, console, context);
 
     //Day skip and attempt to respawn fixed encounters
-    pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
-    home_to_date_time(context, true, true);
-    PokemonSwSh::roll_date_forward_1(context, true);
+    pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY1);
+    home_to_date_time(console, context, true);
+    roll_date_forward_1(console, context, true);
+    pbf_press_button(context, BUTTON_HOME, 160ms, ConsoleSettings::instance().SETTINGS_TO_HOME_DELAY0);
     resume_game_from_home(console, context);
 
     //Heal up and then reset position again.
-    OverworldWatcher done_healing(console, COLOR_BLUE);
+    OverworldWatcher done_healing(console.logger(), COLOR_BLUE);
     pbf_move_left_joystick(context, 128, 0, 100, 20);
 
     pbf_mash_button(context, BUTTON_A, 300);
     context.wait_for_all_requests();
 
-    int exit = run_until(
+    int exit = run_until<ProControllerContext>(
         console, context,
-        [&](BotBaseContext& context){
+        [&](ProControllerContext& context){
             pbf_mash_button(context, BUTTON_B, 2000);
         },
         {{ done_healing }}
@@ -901,22 +975,27 @@ void quest_catch(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext
     context.wait_for_all_requests();
 }
 
-void wild_battle_tera(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context, bool& tera_self){
+void wild_battle_tera(
+    const ProgramInfo& info,
+    ConsoleHandle& console, ProControllerContext& context,
+    bool& tera_self
+){
     AdvanceDialogWatcher lost(COLOR_YELLOW);
-    OverworldWatcher overworld(console, COLOR_RED);
+    OverworldWatcher overworld(console.logger(), COLOR_RED);
     WallClock start = current_time();
     uint8_t switch_party_slot = 1;
     bool first_turn = true;
 
-    int ret2 = run_until(
+    int ret2 = run_until<ProControllerContext>(
         console, context,
-        [&](BotBaseContext& context){
+        [&](ProControllerContext& context){
             while(true){
                 if (current_time() - start > std::chrono::minutes(5)){
                     console.log("Timed out during battle after 5 minutes.", COLOR_RED);
                     OperationFailedException::fire(
-                        console, ErrorReport::SEND_ERROR_REPORT,
-                        "Timed out during battle after 5 minutes."
+                        ErrorReport::SEND_ERROR_REPORT,
+                        "Timed out during battle after 5 minutes.",
+                        console
                     );
                 }
 
@@ -963,8 +1042,9 @@ void wild_battle_tera(const ProgramInfo& info, ConsoleHandle& console, BotBaseCo
                     break;
                 default:
                     OperationFailedException::fire(
-                        console, ErrorReport::SEND_ERROR_REPORT,
-                        "Timed out during battle. Stuck, crashed, or took more than 90 seconds for a turn."
+                        ErrorReport::SEND_ERROR_REPORT,
+                        "Timed out during battle. Stuck, crashed, or took more than 90 seconds for a turn.",
+                        console
                     );
                 }
             }

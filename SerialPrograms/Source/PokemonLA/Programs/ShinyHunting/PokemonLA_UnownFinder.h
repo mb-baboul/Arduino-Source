@@ -1,6 +1,6 @@
 /*  Unown Hunter
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -27,18 +27,21 @@ public:
 class UnownFinder : public SingleSwitchProgramInstance{
 public:
     UnownFinder();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    void run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void run_iteration(
+        SingleSwitchProgramEnvironment& env, ProControllerContext& context,
+        bool fresh_from_reset
+    );
 
 private:
     class RunRoute;
 
     ShinyRequiresAudioText SHINY_REQUIRES_AUDIO;
 
-    ShinyDetectedActionOption SHINY_DETECTED_ENROUTE;
-    ShinyDetectedActionOption SHINY_DETECTED_DESTINATION;
+    OverworldShinyDetectedActionOption SHINY_DETECTED_ENROUTE;
+    OverworldShinyDetectedActionOption SHINY_DETECTED_DESTINATION;
 
     EventNotificationOption NOTIFICATION_STATUS;
     EventNotificationsOption NOTIFICATIONS;

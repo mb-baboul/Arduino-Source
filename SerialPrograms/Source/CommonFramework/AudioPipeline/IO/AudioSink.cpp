@@ -1,6 +1,6 @@
 /*  Audio Output Writer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -102,17 +102,21 @@ AudioSink::~AudioSink(){}
 AudioSink::AudioSink(Logger& logger, const AudioDeviceInfo& device, AudioChannelFormat format, double volume){
     NativeAudioInfo native_info = device.native_info();
     QAudioFormat native_format = native_info.preferredFormat();
+    QAudioFormat target_format = native_format;
 
-    set_format(native_format, format);
+    set_format(target_format, format);
 
-    AudioSampleFormat sample_format = get_sample_format(native_format);
+    AudioSampleFormat sample_format = get_sample_format(target_format);
     if (sample_format == AudioSampleFormat::INVALID){
         sample_format = AudioSampleFormat::FLOAT32;
-        setSampleFormatToFloat(native_format);
+        setSampleFormatToFloat(target_format);
     }
 
-    logger.log("AudioOutputDevice(): " + dumpAudioFormat(native_format));
-    if (!native_info.isFormatSupported(native_format)){
+    logger.log("AudioOutputDevice(): Target: " + dumpAudioFormat(target_format));
+    logger.log("AudioOutputDevice(): Native: " + dumpAudioFormat(native_format));
+    if (!native_info.isFormatSupported(native_format) &&
+        native_format != target_format
+    ){
         logger.log("Audio output device does not support the requested audio format.", COLOR_RED);
         return;
     }
@@ -150,15 +154,15 @@ AudioSink::AudioSink(Logger& logger, const AudioDeviceInfo& device, AudioChannel
 
     m_writer = std::make_unique<AudioOutputDevice>(
         logger,
-        native_info, native_format,
+        native_info, target_format,
         sample_format, m_channels * m_multiplier,
         volume
     );
 }
 
-AudioSink::operator AudioFloatStreamListener&(){
+AudioFloatStreamListener* AudioSink::float_stream_listener(){
     auto scope_check = m_sanitizer.check_scope();
-    return *m_writer;
+    return m_writer.get();
 }
 void AudioSink::set_volume(double volume){
     auto scope_check = m_sanitizer.check_scope();

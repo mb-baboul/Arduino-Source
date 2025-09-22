@@ -1,6 +1,6 @@
 /*  ShinyHuntUnattended-Regi
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,7 +9,7 @@
 
 #include "Common/Cpp/Options/StaticTextOption.h"
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "NintendoSwitch/Options/NintendoSwitch_StartInGripMenuOption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
 #include "PokemonSwSh/Options/PokemonSwSh_DateToucher.h"
@@ -31,17 +31,17 @@ class ShinyHuntUnattendedRegi : public SingleSwitchProgramInstance{
 public:
     ShinyHuntUnattendedRegi();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     StartInGripOrGameOption START_LOCATION;
     TouchDateIntervalOption TOUCH_DATE_INTERVAL;
 
-    TimeExpressionOption<uint16_t> START_TO_RUN_DELAY;
+    MillisecondsOption START_TO_RUN_DELAY0;
     RegiSelectorOption REGI_NAME;
     SectionDividerOption m_advanced_options;
     SimpleIntegerOption<uint16_t> CORRECTION_INTERVAL;
-    TimeExpressionOption<uint16_t> TRANSITION_DELAY;
+    MillisecondsOption TRANSITION_DELAY0;
 };
 
 }

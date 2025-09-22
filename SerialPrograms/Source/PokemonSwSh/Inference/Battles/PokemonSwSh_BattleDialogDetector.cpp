@@ -1,12 +1,12 @@
 /*  Battle Dialog Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonSwSh_BattleDialogDetector.h"
 
 //#include <iostream>
@@ -30,7 +30,7 @@ void BattleDialogDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_left);
     items.add(m_color, m_right);
 }
-bool BattleDialogDetector::detect(const ImageViewRGB32& screen) const{
+bool BattleDialogDetector::detect(const ImageViewRGB32& screen){
     ImageStats bottom = image_stats(extract_box_reference(screen, m_bottom));
 //    cout << "bottom: " << bottom.average << bottom.stddev << endl;
     if (!is_grey(bottom, 0, 200, 10)){

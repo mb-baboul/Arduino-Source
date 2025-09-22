@@ -1,6 +1,6 @@
 /*  Sound Listener
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  Debug program to test all kinds of sound detectors.
  */
@@ -27,7 +27,7 @@ class SoundListener : public SingleSwitchProgramInstance{
 public:
     SoundListener();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     enum class SoundType{

@@ -1,6 +1,6 @@
 /*  Pokemon Automation Bot Base
  * 
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  * 
  */
 
@@ -8,13 +8,19 @@
 #include "Common/Cpp/Exceptions.h"
 #include "Common/Cpp/PanicDump.h"
 #include "Common/Cpp/Concurrency/SpinPause.h"
-#include "Common/Microcontroller/MessageProtocol.h"
-#include "Common/Microcontroller/DeviceRoutines.h"
+#include "Common/SerialPABotBase/SerialPABotBase_Protocol.h"
+#include "Controllers/SerialPABotBase/SerialPABotBase_Routines_Protocol.h"
 #include "PABotBase.h"
 
 //#include <iostream>
 //using std::cout;
 //using std::endl;
+
+
+//  Intentionally drop some messages to test self-recovery.
+//#define INTENTIONALLY_DROP_MESSAGES
+
+
 
 // #define DEBUG_STACK_TRACE
 
@@ -39,7 +45,7 @@ PABotBase::PABotBase(
 )
     : PABotBaseConnection(logger, std::move(connection))
     , m_logger(logger)
-    , m_max_pending_requests(PABB_DEVICE_QUEUE_SIZE)
+    , m_max_pending_requests(PABB_DEVICE_MINIMUM_QUEUE_SIZE)
     , m_send_seq(1)
     , m_retransmit_delay(retransmit_delay)
     , m_last_ack(current_time())
@@ -82,16 +88,21 @@ void PABotBase::connect(){
 
     pabb_MsgAckRequest response;
     issue_request_and_wait(
-        Microcontroller::DeviceRequest_seqnum_reset(), nullptr
+        SerialPABotBase::DeviceRequest_seqnum_reset(), nullptr
     ).convert<PABB_MSG_ACK_REQUEST>(logger(), response);
 }
-void PABotBase::stop(){
+void PABotBase::stop(std::string error_message){
     auto scope_check = m_sanitizer.check_scope();
 
     //  Make sure only one thread can get in here.
     State expected = State::RUNNING;
     if (!m_state.compare_exchange_strong(expected, State::STOPPING)){
         return;
+    }
+
+    if (!error_message.empty()){
+        ReadSpinLock lg(m_state_lock);
+        m_error_message = std::move(error_message);
     }
 
     //  Wake everyone up.
@@ -124,6 +135,11 @@ void PABotBase::stop(){
     //  it is safe to destruct.
     m_state.store(State::STOPPED, std::memory_order_release);
 }
+void PABotBase::notify_all(){
+    std::unique_lock<std::mutex> lg(m_sleep_lock);
+    m_cv.notify_all();
+}
+
 void PABotBase::set_queue_limit(size_t queue_limit){
     m_max_pending_requests.store(queue_limit, std::memory_order_relaxed);
 }
@@ -138,7 +154,12 @@ void PABotBase::wait_for_all_requests(const Cancellable* cancelled){
             throw OperationCancelledException();
         }
         if (m_state.load(std::memory_order_acquire) != State::RUNNING){
-            throw InvalidConnectionStateException();
+            ReadSpinLock lg0(m_state_lock);
+            throw InvalidConnectionStateException(m_error_message);
+        }
+        if (m_error.load(std::memory_order_acquire)){
+            ReadSpinLock lg0(m_state_lock);
+            throw ConnectionException(&m_logger, m_error_message);
         }
         {
             ReadSpinLock lg1(m_state_lock, "PABotBase::wait_for_all_requests()");
@@ -159,34 +180,6 @@ void PABotBase::wait_for_all_requests(const Cancellable* cancelled){
 
 //    m_logger.log("Waiting for all requests to finish... Completed.", COLOR_DARKGREEN);
 }
-
-bool PABotBase::try_stop_all_commands(){
-
-#ifdef DEBUG_STACK_TRACE
-    cout << __FILE__ << ":" << __LINE__ <<  " PABotBase::try_stop_all_commands()" << endl;
-    cout << "-----------------------------------------------------------------------------------------" << endl;
-#if defined(__APPLE__)
-    void* callstack[128];
-    int i, frames = backtrace(callstack, 128);
-    char** strs = backtrace_symbols(callstack, frames);
-    for (i = 0; i < frames; ++i) {
-        cout << strs[i] << endl;
-    }
-    free(strs);
-#endif
-    cout << "-----------------------------------------------------------------------------------------" << endl;
-#endif
-
-    auto scope_check = m_sanitizer.check_scope();
-
-    uint64_t seqnum = try_issue_request(nullptr, Microcontroller::DeviceRequest_request_stop(), true);
-    if (seqnum != 0){
-        clear_all_active_commands(seqnum);
-        return true;
-    }else{
-        return false;
-    }
-}
 void PABotBase::stop_all_commands(){
 
 #ifdef DEBUG_STACK_TRACE
@@ -206,24 +199,13 @@ void PABotBase::stop_all_commands(){
 
     auto scope_check = m_sanitizer.check_scope();
 
-    uint64_t seqnum = issue_request(nullptr, Microcontroller::DeviceRequest_request_stop(), true);
+    uint64_t seqnum = issue_request(nullptr, SerialPABotBase::DeviceRequest_request_stop(), true, true);
     clear_all_active_commands(seqnum);
-}
-bool PABotBase::try_next_command_interrupt(){
-    auto scope_check = m_sanitizer.check_scope();
-
-    uint64_t seqnum = try_issue_request(nullptr, Microcontroller::DeviceRequest_next_command_interrupt(), true);
-    if (seqnum != 0){
-        clear_all_active_commands(seqnum);
-        return true;
-    }else{
-        return false;
-    }
 }
 void PABotBase::next_command_interrupt(){
     auto scope_check = m_sanitizer.check_scope();
 
-    uint64_t seqnum = issue_request(nullptr, Microcontroller::DeviceRequest_next_command_interrupt(), true);
+    uint64_t seqnum = issue_request(nullptr, SerialPABotBase::DeviceRequest_next_command_interrupt(), true, true);
     clear_all_active_commands(seqnum);
 }
 void PABotBase::clear_all_active_commands(uint64_t seqnum){
@@ -234,23 +216,53 @@ void PABotBase::clear_all_active_commands(uint64_t seqnum){
     WriteSpinLock lg1(m_state_lock, "PABotBase::next_command_interrupt()");
     m_logger.log("Clearing all active commands... (Commands: " + std::to_string(m_pending_commands.size()) + ")", COLOR_DARKGREEN);
 
-//    if (m_pending_commands.size() > 2){
-//        cout << "asdf" << endl;
-//    }
+    m_cv.notify_all();
 
-    if (!m_pending_commands.empty()){
-        //  Remove all active commands up to the seqnum.
-        while (true){
-            auto iter = m_pending_commands.begin();
-            if (iter == m_pending_commands.end() || iter->first > seqnum){
-                break;
-            }
-            iter->second.sanitizer.check_usage();
-            m_pending_commands.erase(iter);
-        }
+    if (m_pending_commands.empty()){
+        return;
     }
 
-    m_cv.notify_all();
+    //  Remove all active commands up to the seqnum.
+    while (true){
+        auto iter = m_pending_commands.begin();
+        if (iter == m_pending_commands.end() || iter->first > seqnum){
+            break;
+        }
+        iter->second.sanitizer.check_usage();
+
+        //  We cannot remove un-acked messages from our buffer. If an un-acked
+        //  message is dropped and the receiver is still waiting for it, it will
+        //  wait forever since we will never retransmit.
+
+        if (iter->second.state == AckState::NOT_ACKED){
+            //  Convert the command into a no-op request.
+            SerialPABotBase::DeviceRequest_program_id request;
+            BotBaseMessage message = request.message();
+            seqnum_t seqnum_s = (seqnum_t)iter->first;
+            memcpy(&message.body[0], &seqnum_s, sizeof(seqnum_t));
+
+//            cout << "removing = " << seqnum_s << ", " << (int)iter->second.state << endl;
+
+            std::pair<std::map<uint64_t, PendingRequest>::iterator, bool> ret = m_pending_requests.emplace(
+                std::piecewise_construct,
+                std::forward_as_tuple(iter->first),
+                std::forward_as_tuple()
+            );
+            if (!ret.second){
+                throw InternalProgramError(&m_logger, PA_CURRENT_FUNCTION, "Duplicate sequence number: " + std::to_string(seqnum));
+            }
+
+            //  This block will never throw.
+            {
+                PendingRequest& handle = ret.first->second;
+                handle.silent_remove = true;
+                handle.request = std::move(message);
+                handle.first_sent = current_time();
+            }
+        }
+
+        m_pending_commands.erase(iter);
+    }
 }
 template <typename Map>
 uint64_t PABotBase::infer_full_seqnum(const Map& map, seqnum_t seqnum) const{
@@ -294,13 +306,15 @@ uint64_t PABotBase::oldest_live_seqnum() const{
     return oldest;
 }
 
-template <typename Params>
+template <typename Params, bool variable_length>
 void PABotBase::process_ack_request(BotBaseMessage message){
     auto scope_check = m_sanitizer.check_scope();
 
-    if (message.body.size() != sizeof(Params)){
-        m_sniffer->log("Ignoring message with invalid size.");
-        return;
+    if constexpr (!variable_length){
+        if (message.body.size() != sizeof(Params)){
+            m_logger.log("Ignoring message with invalid size.");
+            return;
+        }
     }
     const Params* params = (const Params*)message.body.c_str();
     seqnum_t seqnum = params->seqnum;
@@ -310,14 +324,14 @@ void PABotBase::process_ack_request(BotBaseMessage message){
         WriteSpinLock lg(m_state_lock, "PABotBase::process_ack_request()");
 
         if (m_pending_requests.empty()){
-            m_sniffer->log("Unexpected request ack message: seqnum = " + std::to_string(seqnum));
+            m_logger.log("Unexpected request ack message: seqnum = " + std::to_string(seqnum));
             return;
         }
 
         uint64_t full_seqnum = infer_full_seqnum(m_pending_requests, seqnum);
         std::map<uint64_t, PendingRequest>::iterator iter = m_pending_requests.find(full_seqnum);
         if (iter == m_pending_requests.end()){
-            m_sniffer->log("Unexpected request ack message: seqnum = " + std::to_string(seqnum));
+            m_logger.log("Unexpected request ack message: seqnum = " + std::to_string(seqnum));
             return;
         }
         iter->second.sanitizer.check_usage();
@@ -343,10 +357,10 @@ void PABotBase::process_ack_request(BotBaseMessage message){
         }
         return;
     case AckState::ACKED:
-        m_sniffer->log("Duplicate request ack message: seqnum = " + std::to_string(seqnum));
+        m_logger.log("Duplicate request ack message: seqnum = " + std::to_string(seqnum));
         return;
     case AckState::FINISHED:
-        m_sniffer->log("Request ack on command finish: seqnum = " + std::to_string(seqnum));
+        m_logger.log("Request ack on command finish: seqnum = " + std::to_string(seqnum));
         return;
     }
 }
@@ -355,7 +369,7 @@ void PABotBase::process_ack_command(BotBaseMessage message){
     auto scope_check = m_sanitizer.check_scope();
 
     if (message.body.size() != sizeof(Params)){
-        m_sniffer->log("Ignoring message with invalid size.");
+        m_logger.log("Ignoring message with invalid size.");
         return;
     }
     const Params* params = (const Params*)message.body.c_str();
@@ -364,14 +378,14 @@ void PABotBase::process_ack_command(BotBaseMessage message){
     WriteSpinLock lg(m_state_lock, "PABotBase::process_ack_command()");
 
     if (m_pending_commands.empty()){
-        m_sniffer->log("Unexpected command ack message: seqnum = " + std::to_string(seqnum));
+        m_logger.log("Unexpected command ack message: seqnum = " + std::to_string(seqnum));
         return;
     }
 
     uint64_t full_seqnum = infer_full_seqnum(m_pending_commands, seqnum);
     auto iter = m_pending_commands.find(full_seqnum);
     if (iter == m_pending_commands.end()){
-        m_sniffer->log("Unexpected command ack message: seqnum = " + std::to_string(seqnum));
+        m_logger.log("Unexpected command ack message: seqnum = " + std::to_string(seqnum));
         return;
     }
     iter->second.sanitizer.check_usage();
@@ -385,10 +399,10 @@ void PABotBase::process_ack_command(BotBaseMessage message){
         iter->second.ack = std::move(message);
         return;
     case AckState::ACKED:
-        m_sniffer->log("Duplicate command ack message: seqnum = " + std::to_string(seqnum));
+        m_logger.log("Duplicate command ack message: seqnum = " + std::to_string(seqnum));
         return;
     case AckState::FINISHED:
-        m_sniffer->log("Command ack on finished command: seqnum = " + std::to_string(seqnum));
+        m_logger.log("Command ack on finished command: seqnum = " + std::to_string(seqnum));
         return;
     }
 }
@@ -397,7 +411,7 @@ void PABotBase::process_command_finished(BotBaseMessage message){
     auto scope_check = m_sanitizer.check_scope();
 
     if (message.body.size() != sizeof(Params)){
-        m_sniffer->log("Ignoring message with invalid size.");
+        m_logger.log("Ignoring message with invalid size.");
         return;
     }
     const Params* params = (const Params*)message.body.c_str();
@@ -412,10 +426,18 @@ void PABotBase::process_command_finished(BotBaseMessage message){
     std::lock_guard<std::mutex> lg0(m_sleep_lock);
     WriteSpinLock lg1(m_state_lock, "PABotBase::process_command_finished() - 0");
 
+#ifdef INTENTIONALLY_DROP_MESSAGES
+    if (rand() % 10 != 0){
+        send_message(BotBaseMessage(PABB_MSG_ACK_REQUEST, std::string((char*)&ack, sizeof(ack))), false);
+    }else{
+        m_logger.log("Intentionally dropping finish ack: " + std::to_string(seqnum), COLOR_RED);
+    }
+#else
     send_message(BotBaseMessage(PABB_MSG_ACK_REQUEST, std::string((char*)&ack, sizeof(ack))), false);
+#endif
 
     if (m_pending_commands.empty()){
-        m_sniffer->log(
+        m_logger.log(
             "Unexpected command finished message: seqnum = " + std::to_string(seqnum) +
             ", command_seqnum = " + std::to_string(command_seqnum)
         );
@@ -425,7 +447,7 @@ void PABotBase::process_command_finished(BotBaseMessage message){
     uint64_t full_seqnum = infer_full_seqnum(m_pending_commands, command_seqnum);
     auto iter = m_pending_commands.find(full_seqnum);
     if (iter == m_pending_commands.end()){
-        m_sniffer->log(
+        m_logger.log(
             "Unexpected command finished message: seqnum = " + std::to_string(seqnum) +
             ", command_seqnum = " + std::to_string(command_seqnum)
         );
@@ -444,7 +466,7 @@ void PABotBase::process_command_finished(BotBaseMessage message){
         m_cv.notify_all();
         return;
     case AckState::FINISHED:
-        m_sniffer->log("Duplicate command finish: seqnum = " + std::to_string(seqnum));
+        m_logger.log("Duplicate command finish: seqnum = " + std::to_string(seqnum));
         return;
     }
 }
@@ -467,31 +489,51 @@ void PABotBase::on_recv_message(BotBaseMessage message){
     case PABB_MSG_ACK_REQUEST_I32:
         process_ack_request<pabb_MsgAckRequestI32>(std::move(message));
         return;
+    case PABB_MSG_ACK_REQUEST_DATA:
+        process_ack_request<pabb_MsgAckRequestData, true>(std::move(message));
+        return;
     case PABB_MSG_ERROR_INVALID_TYPE:{
         if (message.body.size() != sizeof(pabb_MsgInfoInvalidType)){
-            m_sniffer->log("Ignoring message with invalid size.");
+            m_logger.log("Ignoring message with invalid size.");
             return;
         }
         const pabb_MsgInfoInvalidType* params = (const pabb_MsgInfoInvalidType*)message.body.c_str();
-        m_error_message = "PABotBase incompatibility. Device does not recognize message type: " + std::to_string(params->type);
-        m_logger.log(m_error_message, COLOR_RED);
+        {
+            WriteSpinLock lg(m_state_lock);
+            m_error_message = "PABotBase incompatibility. Device does not recognize message type: " + std::to_string(params->type);
+            m_logger.log(m_error_message, COLOR_RED);
+        }
         m_error.store(true, std::memory_order_release);
         std::lock_guard<std::mutex> lg0(m_sleep_lock);
         m_cv.notify_all();
     }
     case PABB_MSG_ERROR_MISSED_REQUEST:{
         if (message.body.size() != sizeof(pabb_MsgInfoMissedRequest)){
-            m_sniffer->log("Ignoring message with invalid size.");
+            m_logger.log("Ignoring message with invalid size.");
             return;
         }
         const pabb_MsgInfoMissedRequest* params = (const pabb_MsgInfoMissedRequest*)message.body.c_str();
         if (params->seqnum == 1){
-            m_error_message = "Serial connection has been interrupted.";
-            m_logger.log(m_error_message, COLOR_RED);
+            {
+                WriteSpinLock lg(m_state_lock);
+                m_error_message = "Serial connection has been interrupted.";
+                m_logger.log(m_error_message, COLOR_RED);
+            }
             m_error.store(true, std::memory_order_release);
             std::lock_guard<std::mutex> lg0(m_sleep_lock);
             m_cv.notify_all();
         }
+        return;
+    }
+    case PABB_MSG_ERROR_DISCONNECTED:{
+        m_logger.log("The console has disconnected the controller.", COLOR_RED);
+        {
+            WriteSpinLock lg(m_state_lock);
+            m_error_message = "Disconnected by console.";
+        }
+        m_error.store(true, std::memory_order_release);
+        std::lock_guard<std::mutex> lg0(m_sleep_lock);
+        m_cv.notify_all();
         return;
     }
     case PABB_MSG_REQUEST_COMMAND_FINISHED:{
@@ -528,7 +570,37 @@ void PABotBase::retransmit_thread(){
 
         //  Retransmit
         //      Iterate through all pending requests and retransmit them in
-        //  chronological order. Skip the ones that are new.
+        //  chronological order. ~~Skip the ones that are new.~~
+        //  (Don't skip the new ones since it will lead to gaps.)
+
+        //  Gather together all requests/commands. Sort them by seqnum and
+        //  resend everything.
+
+        WallClock oldest = last_sent;
+
+        std::map<uint64_t, const BotBaseMessage*> messages;
+        for (auto& item : m_pending_requests){
+            item.second.sanitizer.check_usage();
+            if (item.second.state == AckState::NOT_ACKED){
+                oldest = std::max(oldest, item.second.first_sent);
+                messages[item.first] = &item.second.request;
+            }
+        }
+        for (auto& item : m_pending_commands){
+            item.second.sanitizer.check_usage();
+            if (item.second.state == AckState::NOT_ACKED){
+                oldest = std::max(oldest, item.second.first_sent);
+                messages[item.first] = &item.second.request;
+            }
+        }
+
+        if (!messages.empty() && now - oldest >= m_retransmit_delay){
+            for (const auto& item : messages){
+                send_message(*item.second, true);
+            }
+        }
+
+#if 0
         for (auto& item : m_pending_requests){
             item.second.sanitizer.check_usage();
             if (item.second.state == AckState::NOT_ACKED &&
@@ -545,6 +617,8 @@ void PABotBase::retransmit_thread(){
                 send_message(item.second.request, true);
             }
         }
+#endif
+
         last_sent = current_time();
     }
 //    cout << "retransmit_thread() - exit" << endl;
@@ -555,7 +629,8 @@ void PABotBase::retransmit_thread(){
 
 uint64_t PABotBase::try_issue_request(
     const Cancellable* cancelled,
-    const BotBaseRequest& request, bool silent_remove
+    const BotBaseRequest& request,
+    bool silent_remove, bool do_not_block
 ){
     auto scope_check = m_sanitizer.check_scope();
 
@@ -563,7 +638,7 @@ uint64_t PABotBase::try_issue_request(
     if (message.body.size() < sizeof(uint32_t)){
         throw InternalProgramError(&m_logger, PA_CURRENT_FUNCTION, "Message is too short.");
     }
-    if (message.body.size() > PABB_MAX_MESSAGE_SIZE){
+    if (message.body.size() > PABB_PROTOCOL_MAX_PACKET_SIZE){
         throw InternalProgramError(&m_logger, PA_CURRENT_FUNCTION, "Message is too long.");
     }
 
@@ -574,7 +649,7 @@ uint64_t PABotBase::try_issue_request(
 
     State state = m_state.load(std::memory_order_acquire);
     if (state != State::RUNNING){
-        throw InvalidConnectionStateException();
+        throw InvalidConnectionStateException(m_error_message);
     }
     if (m_error.load(std::memory_order_acquire)){
         throw ConnectionException(&m_logger, m_error_message);
@@ -583,14 +658,20 @@ uint64_t PABotBase::try_issue_request(
     size_t queue_limit = m_max_pending_requests.load(std::memory_order_relaxed);
 
     //  Too many unacked requests in flight.
-    if (inflight_requests() >= queue_limit){
-        m_logger.log("Message throttled due to too many inflight requests.");
+    if (!do_not_block && inflight_requests() >= queue_limit){
+//        m_logger.log("Message throttled due to too many inflight requests.");
         return 0;
     }
 
     //  Don't get too far ahead of the oldest seqnum.
     uint64_t seqnum = m_send_seq;
     if (seqnum - oldest_live_seqnum() > MAX_SEQNUM_GAP){
+        if (do_not_block){
+            throw ConnectionException(
+                &m_logger,
+                "Connection has stalled for a long time. Assuming it is dead."
+            );
+        }
         return 0;
     }
 
@@ -614,13 +695,22 @@ uint64_t PABotBase::try_issue_request(
     handle.request = std::move(message);
     handle.first_sent = current_time();
 
+#ifdef INTENTIONALLY_DROP_MESSAGES
+    if (rand() % 10 != 0){
+        send_message(handle.request, false);
+    }else{
+        m_logger.log("Intentionally dropping request: " + std::to_string(seqnum), COLOR_RED);
+    }
+#else
     send_message(handle.request, false);
+#endif
 
     return seqnum;
 }
 uint64_t PABotBase::try_issue_command(
     const Cancellable* cancelled,
-    const BotBaseRequest& request, bool silent_remove
+    const BotBaseRequest& request,
+    bool silent_remove
 ){
     auto scope_check = m_sanitizer.check_scope();
 
@@ -628,7 +718,7 @@ uint64_t PABotBase::try_issue_command(
     if (message.body.size() < sizeof(uint32_t)){
         throw InternalProgramError(&m_logger, PA_CURRENT_FUNCTION, "Message is too short.");
     }
-    if (message.body.size() > PABB_MAX_MESSAGE_SIZE){
+    if (message.body.size() > PABB_PROTOCOL_MAX_PACKET_SIZE){
         throw InternalProgramError(&m_logger, PA_CURRENT_FUNCTION, "Message is too long.");
     }
 
@@ -639,7 +729,7 @@ uint64_t PABotBase::try_issue_command(
 
     State state = m_state.load(std::memory_order_acquire);
     if (state != State::RUNNING){
-        throw InvalidConnectionStateException();
+        throw InvalidConnectionStateException(m_error_message);
     }
     if (m_error.load(std::memory_order_acquire)){
         throw ConnectionException(&m_logger, m_error_message);
@@ -655,7 +745,7 @@ uint64_t PABotBase::try_issue_command(
 
     //  Too many unacked requests in flight.
     if (inflight_requests() >= queue_limit){
-        m_logger.log("Message throttled due to too many inflight requests.");
+//        m_logger.log("Message throttled due to too many inflight requests.");
         return 0;
     }
 
@@ -685,17 +775,26 @@ uint64_t PABotBase::try_issue_command(
     handle.request = std::move(message);
     handle.first_sent = current_time();
 
+#ifdef INTENTIONALLY_DROP_MESSAGES
+    if (rand() % 10 != 0){
+        send_message(handle.request, false);
+    }else{
+        m_logger.log("Intentionally dropping command: " + std::to_string(seqnum), COLOR_RED);
+    }
+#else
     send_message(handle.request, false);
+#endif
 
     return seqnum;
 }
 uint64_t PABotBase::issue_request(
     const Cancellable* cancelled,
-    const BotBaseRequest& request, bool silent_remove
+    const BotBaseRequest& request,
+    bool silent_remove, bool do_not_block
 ){
     auto scope_check = m_sanitizer.check_scope();
 
-    //  Issue a request or a command and return.
+    //  Issue a request and return.
     //
     //  If it cannot be issued (because we're over the limits), this function
     //  will wait until it can be issued.
@@ -714,7 +813,7 @@ uint64_t PABotBase::issue_request(
     //
 
     while (true){
-        uint64_t seqnum = try_issue_request(cancelled, request, silent_remove);
+        uint64_t seqnum = try_issue_request(cancelled, request, silent_remove, do_not_block);
         if (seqnum != 0){
             return seqnum;
         }
@@ -723,9 +822,11 @@ uint64_t PABotBase::issue_request(
             throw OperationCancelledException();
         }
         if (m_state.load(std::memory_order_acquire) != State::RUNNING){
-            throw InvalidConnectionStateException();
+            ReadSpinLock lg0(m_state_lock);
+            throw InvalidConnectionStateException(m_error_message);
         }
         if (m_error.load(std::memory_order_acquire)){
+            ReadSpinLock lg0(m_state_lock);
             throw ConnectionException(&m_logger, m_error_message);
         }
         m_cv.wait(lg);
@@ -733,11 +834,12 @@ uint64_t PABotBase::issue_request(
 }
 uint64_t PABotBase::issue_command(
     const Cancellable* cancelled,
-    const BotBaseRequest& request, bool silent_remove
+    const BotBaseRequest& request,
+    bool silent_remove
 ){
     auto scope_check = m_sanitizer.check_scope();
 
-    //  Issue a request or a command and return.
+    //  Issue a command and return.
     //
     //  If it cannot be issued (because we're over the limits), this function
     //  will wait until it can be issued.
@@ -765,9 +867,11 @@ uint64_t PABotBase::issue_command(
             throw OperationCancelledException();
         }
         if (m_state.load(std::memory_order_acquire) != State::RUNNING){
-            throw InvalidConnectionStateException();
+            ReadSpinLock lg0(m_state_lock);
+            throw InvalidConnectionStateException(m_error_message);
         }
         if (m_error.load(std::memory_order_acquire)){
+            ReadSpinLock lg0(m_state_lock);
             throw ConnectionException(&m_logger, m_error_message);
         }
         m_cv.wait(lg);
@@ -781,7 +885,7 @@ bool PABotBase::try_issue_request(
     auto scope_check = m_sanitizer.check_scope();
 
     if (!request.is_command()){
-        return try_issue_request(cancelled, request, true) != 0;
+        return try_issue_request(cancelled, request, true, false) != 0;
     }else{
         return try_issue_command(cancelled, request, true) != 0;
     }
@@ -793,7 +897,7 @@ void PABotBase::issue_request(
     auto scope_check = m_sanitizer.check_scope();
 
     if (!request.is_command()){
-        issue_request(cancelled, request, true);
+        issue_request(cancelled, request, true, false);
     }else{
         issue_command(cancelled, request, true);
     }
@@ -809,14 +913,18 @@ BotBaseMessage PABotBase::issue_request_and_wait(
         throw InternalProgramError(&m_logger, PA_CURRENT_FUNCTION, "This function only supports requests.");
     }
 
-    uint64_t seqnum = issue_request(cancelled, request, false);
-    return wait_for_request(seqnum);
+    uint64_t seqnum = issue_request(cancelled, request, false, false);
+    return wait_for_request(seqnum, cancelled);
 }
-BotBaseMessage PABotBase::wait_for_request(uint64_t seqnum){
+BotBaseMessage PABotBase::wait_for_request(uint64_t seqnum, const Cancellable* cancelled){
     auto scope_check = m_sanitizer.check_scope();
 
     std::unique_lock<std::mutex> lg(m_sleep_lock);
     while (true){
+        if (cancelled && cancelled->cancelled()){
+            throw OperationCancelledException();
+        }
+
         {
             WriteSpinLock slg(m_state_lock, "PABotBase::issue_request_and_wait()");
             auto iter = m_pending_requests.find(seqnum);
@@ -829,7 +937,7 @@ BotBaseMessage PABotBase::wait_for_request(uint64_t seqnum){
             if (state != State::RUNNING){
                 m_pending_requests.erase(iter);
                 m_cv.notify_all();
-                throw InvalidConnectionStateException();
+                throw InvalidConnectionStateException(m_error_message);
             }
             if (m_error.load(std::memory_order_acquire)){
                 m_pending_requests.erase(iter);

@@ -1,6 +1,6 @@
 /*  Battle Sprite Arrow Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  Detect the white arrow pointing towards left on the selected sprite, in the upper right corner
  *  of the screen, during a multi-pokemon battle.
@@ -9,15 +9,13 @@
 #ifndef PokemonAutomation_PokemonLA_BattleSpriteArrowDetector_H
 #define PokemonAutomation_PokemonLA_BattleSpriteArrowDetector_H
 
-#include "Common/Cpp/Color.h"
-#include "Common/Cpp/Concurrency/SpinLock.h"
-#include "CommonFramework/Logging/Logger.h"
-#include "CommonFramework/ImageMatch/WaterfillTemplateMatcher.h"
-#include "CommonFramework/Inference/DetectionDebouncer.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/ImageMatch/WaterfillTemplateMatcher.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/DetectionDebouncer.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_WhiteObjectDetector.h"
 
 namespace PokemonAutomation{
+    class Logger;
 namespace NintendoSwitch{
 namespace PokemonLA{
 

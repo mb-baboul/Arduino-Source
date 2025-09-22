@@ -1,13 +1,13 @@
 /*  Encounter Mon Options
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_Pokemon_EncounterBotOptions_H
 #define PokemonAutomation_Pokemon_EncounterBotOptions_H
 
-#include "CommonFramework/Options/LanguageOCROption.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "Pokemon/Inference/Pokemon_NameReader.h"
 

@@ -1,6 +1,6 @@
 /*  Multi-Switch Program
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -13,13 +13,13 @@
 #include "Common/Cpp/Options/BatchOption.h"
 #include "CommonFramework/Globals.h"
 #include "CommonFramework/Notifications/EventNotificationOption.h"
-#include "CommonFramework/ControllerDevices/SerialPortGlobals.h"
 #include "CommonFramework/Tools/ProgramEnvironment.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
 #include "CommonFramework/Panels/ProgramDescriptor.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
+#include "NintendoSwitch/NintendoSwitch_ConsoleHandle.h"
 
 namespace PokemonAutomation{
-    class BotBaseContext;
+    class ControllerSession;
 namespace NintendoSwitch{
 
 
@@ -43,15 +43,27 @@ public:
     //  Run the specified lambda for all switches in parallel.
     void run_in_parallel(
         CancellableScope& scope,
-        const std::function<void(ConsoleHandle& console, BotBaseContext& context)>& func
+        const std::function<void(CancellableScope& scope, ConsoleHandle& console)>& func
+    );
+    void run_in_parallel(   //  REMOVE: Temporary for refactor.
+        CancellableScope& scope,
+        const std::function<void(ConsoleHandle& console, ProControllerContext& context)>& func
     );
 
     //  Run the specified lambda for switch indices [s, e) in parallel.
     void run_in_parallel(
         CancellableScope& scope, size_t s, size_t e,
-        const std::function<void(ConsoleHandle& console, BotBaseContext& context)>& func
+        const std::function<void(CancellableScope& scope, ConsoleHandle& console)>& func
+    );
+    void run_in_parallel(   //  REMOVE: Temporary for refactor.
+        CancellableScope& scope, size_t s, size_t e,
+        const std::function<void(ConsoleHandle& console, ProControllerContext& context)>& func
     );
 
+    // add video overlay log on all console video streams
+    void add_overlay_log_to_all_consoles(const std::string& message, Color color = COLOR_WHITE);
+    // clear video overlay log on all console video streams
+    void clear_all_overlay_logs();
 };
 
 
@@ -63,17 +75,19 @@ public:
         std::string category, std::string display_name,
         std::string doc_link,
         std::string description,
+        ProgramControllerClass color_class,
         FeedbackType feedback,
         AllowCommandsWhenRunning allow_commands_while_running,
-        PABotBaseLevel min_pabotbase_level,
         size_t min_switches,
         size_t max_switches,
-        size_t default_switches
+        size_t default_switches,
+        bool deprecated = false
     );
 
+    ProgramControllerClass color_class() const{ return m_color_class; }
     FeedbackType feedback() const{ return m_feedback; }
-    PABotBaseLevel min_pabotbase_level() const{ return m_min_pabotbase_level; }
     bool allow_commands_while_running() const{ return m_allow_commands_while_running; }
+    bool deprecated() const{ return m_deprecated; }
 
     size_t min_switches() const{ return m_min_switches; }
     size_t max_switches() const{ return m_max_switches; }
@@ -83,9 +97,10 @@ public:
     virtual std::unique_ptr<MultiSwitchProgramInstance> make_instance() const{ return nullptr; }
 
 private:
+    const ProgramControllerClass m_color_class;
     const FeedbackType m_feedback;
-    const PABotBaseLevel m_min_pabotbase_level;
     const bool m_allow_commands_while_running;
+    const bool m_deprecated;
 
     const size_t m_min_switches;
     const size_t m_max_switches;
@@ -127,6 +142,22 @@ public:
     );
 
     virtual void program(MultiSwitchProgramEnvironment& env, CancellableScope& scope) = 0;
+
+
+public:
+    //  Startup Checks: Feel free to override to change behavior.
+
+    virtual void start_program_controller_check(
+        ControllerSession& session, size_t console_index
+    );
+    virtual void start_program_feedback_check(
+        VideoStream& stream, size_t console_index,
+        FeedbackType feedback_type
+    );
+    virtual void start_program_border_check(
+        VideoStream& stream, size_t console_index,
+        FeedbackType feedback_type
+    );
 
 
 public:

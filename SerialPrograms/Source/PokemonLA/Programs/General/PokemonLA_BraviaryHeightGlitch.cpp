@@ -1,6 +1,6 @@
 /*  Braviary Height Glitch
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -20,9 +20,9 @@ BraviaryHeightGlitch_Descriptor::BraviaryHeightGlitch_Descriptor()
         STRING_POKEMON + " LA", "Braviary Height Glitch",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/BraviaryHeightGlitch.md",
         "Increase your height in place using the height glitch.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -30,7 +30,7 @@ BraviaryHeightGlitch_Descriptor::BraviaryHeightGlitch_Descriptor()
 BraviaryHeightGlitch::BraviaryHeightGlitch(){}
 
 
-void BraviaryHeightGlitch::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void BraviaryHeightGlitch::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     while (true){
         pbf_press_button(context, BUTTON_Y, 30, 0);
         pbf_press_button(context, BUTTON_PLUS, 30, 10);

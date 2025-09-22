@@ -1,13 +1,11 @@
 /*  Snapshot Dumper
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <QDir>
-#include "Common/Cpp/Time.h"
 #include "Common/Cpp/PrettyPrint.h"
-#include "ClientSource/Connection/BotBase.h"
 #include "CommonFramework/Globals.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
 #include "NintendoSwitch_SnapshotDumper.h"
@@ -22,9 +20,10 @@ SnapshotDumper_Descriptor::SnapshotDumper_Descriptor()
         "Nintendo Switch", "Snapshot Dumper",
         "ComputerControl/blob/master/Wiki/Programs/NintendoSwitch/SnapshotDumper.md",
         "Periodically take screenshots.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::NONE,
         AllowCommandsWhenRunning::ENABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        {}
     )
 {}
 
@@ -50,7 +49,7 @@ SnapshotDumper::SnapshotDumper()
     PA_ADD_OPTION(FORMAT);
 }
 
-void SnapshotDumper::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void SnapshotDumper::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     std::string folder_path = USER_FILE_PATH() + "ScreenshotDumper/";
     QDir().mkpath(folder_path.c_str());
     while (true){
@@ -69,10 +68,10 @@ void SnapshotDumper::program(SingleSwitchProgramEnvironment& env, BotBaseContext
     }
 }
 
-void dump_snapshot(ConsoleHandle& console, std::string folder_name){
+void dump_snapshot(VideoStream& stream, std::string folder_name){
     std::string folder_path = USER_FILE_PATH() + folder_name + "/";
     QDir().mkpath(folder_path.c_str());
-    VideoSnapshot last = console.video().snapshot();
+    VideoSnapshot last = stream.video().snapshot();
     std::string filename = folder_path + now_to_filestring() + ".png";
     last->save(filename);
 }

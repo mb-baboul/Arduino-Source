@@ -1,19 +1,12 @@
 /*  Autostory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_AutoStory_Segment_24_H
 #define PokemonAutomation_PokemonSV_AutoStory_Segment_24_H
 
-#include <functional>
-#include "Common/Cpp/Options/EnumDropdownOption.h"
-#include "CommonFramework/Notifications/EventNotificationsTable.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
-#include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
-#include "Common/NintendoSwitch/NintendoSwitch_ControllerDefs.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 
 namespace PokemonAutomation{
@@ -27,9 +20,67 @@ public:
     virtual std::string end_text() const override;
     virtual void run_segment(
         SingleSwitchProgramEnvironment& env, 
-        BotBaseContext& context,
-        AutoStoryOptions options) const override;
+        ProControllerContext& context,
+        AutoStoryOptions options,
+        AutoStoryStats& stats
+    ) const override;
 };
+
+
+// start: At East Province (Area Three) Watchtower.
+// end: 
+void checkpoint_55(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
+
+// start: 
+// end: 
+void checkpoint_56(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
+
+// start: 
+// end: 
+void checkpoint_57(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
+
+// start: 
+// end: 
+void checkpoint_58(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
+
+// start: 
+// end: 
+void checkpoint_59(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
+
+// start: 
+// end: 
+void checkpoint_60(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
+
 
 
 

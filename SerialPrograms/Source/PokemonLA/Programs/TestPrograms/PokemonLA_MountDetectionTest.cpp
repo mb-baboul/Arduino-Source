@@ -1,11 +1,10 @@
 /*  Mount Detection Test
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "ClientSource/Connection/BotBase.h"
-#include "CommonFramework/InferenceInfra/InferenceSession.h"
+#include "CommonTools/Async/InferenceSession.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonLA/Inference/PokemonLA_MountDetector.h"
 #include "PokemonLA_MountDetectionTest.h"
@@ -22,8 +21,10 @@ MountDetectionTest_Descriptor::MountDetectionTest_Descriptor()
         STRING_POKEMON + " LA", "Mount Detection Test",
         "",
         "Test the mount detection in the bottom right corner.",
-        FeedbackType::REQUIRED, AllowCommandsWhenRunning::ENABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        ProgramControllerClass::StandardController_NoRestrictions,
+        FeedbackType::REQUIRED,
+        AllowCommandsWhenRunning::ENABLE_COMMANDS,
+        {}
     )
 {}
 
@@ -33,7 +34,7 @@ MountDetectionTest::MountDetectionTest(){
 }
 
 
-void MountDetectionTest::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void MountDetectionTest::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     MountTracker tracker(env.console, FAILED_ACTION);
     InferenceSession session(
         context, env.console,

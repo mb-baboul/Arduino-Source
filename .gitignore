@@ -2,10 +2,14 @@ SerialPrograms/bin/
 
 .vscode
 
+discord_social_sdk_win/
+discord_partner_sdk.dll
+
 # macOS hidden system file
 .DS_Store
 
 build-*/
+build/
 
 # Qt config file on a user basis
 *.pro.user
@@ -25,19 +29,19 @@ build-*/
 *.pch
 
 # Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+SerialPrograms/*.so
+SerialPrograms/*.dylib
+SerialPrograms/*.dll
 
 # Fortran module files
 *.mod
 *.smod
 
 # Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
+SerialPrograms/*.lai
+SerialPrograms/*.la
+SerialPrograms/*.a
+SerialPrograms/*.lib
 
 # Executables
 *.exe
@@ -47,6 +51,11 @@ build-*/
 .vs
 Resources/*
 SerialPrograms/CMakeLists.txt.user
+opencv_world4110d.dll
 
 # Python cache
 __pycache__
+
+# Jupyter Notebooks
+*.ipynb
+

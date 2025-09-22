@@ -1,18 +1,15 @@
 /*  Clothing Buyer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Cpp/PrettyPrint.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "Pokemon/Pokemon_Strings.h"
-#include "NintendoSwitch/NintendoSwitch_Settings.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
-#include "PokemonSV/PokemonSV_Settings.h"
+#include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
 #include "PokemonSV/Inference/PokemonSV_ClothingTopDetector.h"
 #include "PokemonSV_ClothingBuyer.h"
@@ -29,9 +26,9 @@ ClothingBuyer_Descriptor::ClothingBuyer_Descriptor()
         STRING_POKEMON + " SV", "Clothing Buyer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/ClothingBuyer.md",
         "Buy all the clothing in a store.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -64,7 +61,7 @@ ClothingBuyer::ClothingBuyer()
     PA_ADD_OPTION(NOTIFICATIONS);
 }
 
-void ClothingBuyer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void ClothingBuyer::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
     /*
@@ -179,8 +176,9 @@ void ClothingBuyer::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
             default:
                 env.log("Error looking for wear prompt.");
                 OperationFailedException::fire(
-                    env.console, ErrorReport::SEND_ERROR_REPORT,
-                    "Error looking for wear prompt."
+                    ErrorReport::SEND_ERROR_REPORT,
+                    "Error looking for wear prompt.",
+                    env.console
                 );
                 break;
             }
@@ -189,8 +187,9 @@ void ClothingBuyer::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
         default:
                 env.log("Error looking for purchase prompt.");
                 OperationFailedException::fire(
-                    env.console, ErrorReport::SEND_ERROR_REPORT,
-                    "Error looking for purchase prompt."
+                    ErrorReport::SEND_ERROR_REPORT,
+                    "Error looking for purchase prompt.",
+                    env.console
                 );
                 break;
         }

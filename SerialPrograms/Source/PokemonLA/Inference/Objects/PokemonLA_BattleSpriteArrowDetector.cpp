@@ -1,9 +1,10 @@
 /*  Battle Sprite Arrow Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
+#include "Common/Cpp/AbstractLogger.h"
 #include "PokemonLA_BattleSpriteArrowDetector.h"
 
 namespace PokemonAutomation{

@@ -1,15 +1,17 @@
 /*  AutoStory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/Exceptions/OperationFailedException.h"
+#include "CommonFramework/VideoPipeline/VideoOverlay.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "PokemonSV/Inference/Overworld/PokemonSV_DirectionDetector.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-#include "PokemonSV/Inference/Overworld/PokemonSV_DirectionDetector.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 #include "PokemonSV_AutoStory_Segment_16.h"
 
@@ -27,7 +29,7 @@ namespace PokemonSV{
 
 
 std::string AutoStory_Segment_16::name() const{
-    return "13.1: Cascarrafa Gym (Water): Get Kofu's wallet";
+    return "16: Cascarrafa Gym (Water): Get Kofu's wallet";
 }
 
 std::string AutoStory_Segment_16::start_text() const{
@@ -38,40 +40,41 @@ std::string AutoStory_Segment_16::end_text() const{
     return "End: Received Kofu's wallet. At Porto Marinada Pokecenter.";
 }
 
-void AutoStory_Segment_16::run_segment(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AutoStoryOptions options) const{
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
+void AutoStory_Segment_16::run_segment(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    AutoStoryOptions options,
+    AutoStoryStats& stats
+) const{
+    
 
-    context.wait_for_all_requests();
-    env.console.overlay().add_log("Start Segment 13.1: Cascarrafa Gym (Water): Get Kofu's wallet", COLOR_ORANGE);
-
-    checkpoint_35(env, context, options.notif_status_update);
-    checkpoint_36(env, context, options.notif_status_update);
-
-    context.wait_for_all_requests();
-    env.console.log("End Segment 13.1: Cascarrafa Gym (Water): Get Kofu's wallet", COLOR_GREEN);
     stats.m_segment++;
     env.update_stats();
+    context.wait_for_all_requests();
+    env.console.log("Start Segment " + name(), COLOR_ORANGE);
+
+    checkpoint_35(env, context, options.notif_status_update, stats);
+    checkpoint_36(env, context, options.notif_status_update, stats);
+
+    context.wait_for_all_requests();
+    env.console.log("End Segment " + name(), COLOR_GREEN);
 
 }
 
 
 void checkpoint_35(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){         
         context.wait_for_all_requests();
         DirectionDetector direction;
         do_action_and_monitor_for_battles(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 direction.change_direction(env.program_info(), env.console, context, 0.3491);
                 pbf_move_left_joystick(context, 128, 0, 400, 100);
                 direction.change_direction(env.program_info(), env.console, context, 5.075911);
@@ -93,31 +96,19 @@ void checkpoint_35(
         walk_forward_until_dialog(env.program_info(), env.console, context, NavigationMovementMode::DIRECTIONAL_ONLY, 20);
         mash_button_till_overworld(env.console, context, BUTTON_A);
        
-        break;
-    }catch (...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }           
-    }
+    });
 
 }
 
 void checkpoint_36(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){         
         context.wait_for_all_requests();
         move_cursor_towards_flypoint_and_go_there(env.program_info(), env.console, context, {ZoomChange::ZOOM_IN, 100, 0, 80});
 
@@ -172,15 +163,7 @@ void checkpoint_36(
 
         fly_to_overlapping_flypoint(env.program_info(), env.console, context);           
        
-        break;
-    }catch (...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }            
-    }
+    });
 
 }
 

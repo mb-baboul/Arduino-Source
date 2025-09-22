@@ -1,6 +1,6 @@
 /*  Go Home When Done
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,7 @@
 #define PokemonAutomation_NintendoSwitch_GoHomeWhenDone_H
 
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
-#include "ClientSource/Connection/BotBase.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -18,7 +18,7 @@ class GoHomeWhenDoneOption : public BooleanCheckBoxOption{
 public:
     GoHomeWhenDoneOption(bool default_value);
 
-    void run_end_of_program(BotBaseContext& context);
+    void run_end_of_program(ProControllerContext& context);
 };
 
 

@@ -1,6 +1,6 @@
 /*  Sandwich Makter Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,9 +11,7 @@
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
 #include "Common/Cpp/Options/GroupOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
-//#include "PokemonSV/Resources/PokemonSV_Ingredients.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
-//#include "PokemonSV_SandwichIngredientsOption.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "PokemonSV_SandwichIngredientsTable.h"
 
 namespace PokemonAutomation{
@@ -253,7 +251,7 @@ public:
     SandwichIngredientsTable SANDWICH_INGREDIENTS;
 
 private:
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
     virtual std::string check_validity() const override;
 
     std::string check_herb_compatibility(HerbaSelection herb1, HerbaSelection herb2, PokemonType type) const;

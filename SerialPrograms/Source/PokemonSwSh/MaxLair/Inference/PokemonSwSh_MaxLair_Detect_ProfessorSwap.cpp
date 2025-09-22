@@ -1,12 +1,11 @@
 /*  Max Lair Detect Professor Swap
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Compiler.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlay.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonSwSh_MaxLair_Detect_ProfessorSwap.h"
 
 namespace PokemonAutomation{

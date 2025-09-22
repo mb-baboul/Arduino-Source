@@ -1,17 +1,16 @@
 /*  Battle Menu Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_BattleMenuDetector_H
 #define PokemonAutomation_PokemonBDSP_BattleMenuDetector_H
 
-#include <memory>
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -31,7 +30,7 @@ public:
     BattleMenuDetector(BattleType battle_type, Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     bool is_battle_button(const ImageViewRGB32& screen) const;

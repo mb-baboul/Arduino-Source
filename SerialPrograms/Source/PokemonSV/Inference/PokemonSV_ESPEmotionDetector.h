@@ -1,20 +1,17 @@
 /*  ESP Emotion Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_ESPEmotionDetector_H
 #define PokemonAutomation_PokemonSV_ESPEmotionDetector_H
 
-#include <chrono>
 #include <atomic>
-//#include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-//#include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
 
 namespace PokemonAutomation{
     class CancellableScope;

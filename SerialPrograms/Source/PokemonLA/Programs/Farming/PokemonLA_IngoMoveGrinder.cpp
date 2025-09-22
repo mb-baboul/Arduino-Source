@@ -1,16 +1,14 @@
 /*  Ingo Move Grinder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/ImageTypes/ImageViewRGB32.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/VideoPipeline/VideoFeed.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonLA/Inference/Battles/PokemonLA_BattleMenuDetector.h"
@@ -35,10 +33,11 @@ IngoMoveGrinder_Descriptor::IngoMoveGrinder_Descriptor()
         "PokemonLA:IngoMoveGrinder",
         STRING_POKEMON + " LA", "Ingo Move Grinder",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/IngoMoveGrinder.md",
-        "Attend Ingo's battles to grind move related " + STRING_POKEDEX + " research tasks. More effective than Ingo Battle Grinder for " + STRING_POKEDEX + " research tasks but less effective for everything else.",
+        "Attend Ingo's battles to grind move related " + STRING_POKEDEX + " research tasks. "
+        "More effective than Ingo Battle Grinder for " + STRING_POKEDEX + " research tasks but less effective for everything else.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 class IngoMoveGrinder_Descriptor::Stats : public StatsTracker{
@@ -83,18 +82,36 @@ IngoMoveGrinder::IngoMoveGrinder()
 }
 
 
-bool IngoMoveGrinder::start_dialog(ConsoleHandle& console, BotBaseContext& context){
+bool IngoMoveGrinder::start_dialog(VideoStream& stream, ProControllerContext& context){
     // First press A to start talking with Ingo.
     pbf_press_button(context, BUTTON_A, 20, 150);
     context.wait_for_all_requests();
 
     {
-        ButtonDetector button0(console, console, ButtonType::ButtonA, {0.50, 0.408, 0.40, 0.042}, std::chrono::milliseconds(100), true);
-        ButtonDetector button1(console, console, ButtonType::ButtonA, {0.50, 0.450, 0.40, 0.042}, std::chrono::milliseconds(100), true);
-        ButtonDetector button2(console, console, ButtonType::ButtonA, {0.50, 0.492, 0.40, 0.042}, std::chrono::milliseconds(100), true);
-        int ret = run_until(
-            console, context,
-            [&](BotBaseContext& context){
+        ButtonDetector button0(
+            stream.logger(), stream.overlay(),
+            ButtonType::ButtonA,
+            {0.50, 0.408, 0.40, 0.042},
+            std::chrono::milliseconds(100),
+            true
+        );
+        ButtonDetector button1(
+            stream.logger(), stream.overlay(),
+            ButtonType::ButtonA,
+            {0.50, 0.450, 0.40, 0.042},
+            std::chrono::milliseconds(100),
+            true
+        );
+        ButtonDetector button2(
+            stream.logger(), stream.overlay(),
+            ButtonType::ButtonA,
+            {0.50, 0.492, 0.40, 0.042},
+            std::chrono::milliseconds(100),
+            true
+        );
+        int ret = run_until<ProControllerContext>(
+            stream, context,
+            [&](ProControllerContext& context){
                 for (size_t c = 0; c < 10; c++){
                     pbf_press_button(context, BUTTON_A, 20, 150);
                 }
@@ -117,8 +134,9 @@ bool IngoMoveGrinder::start_dialog(ConsoleHandle& console, BotBaseContext& conte
             break;
         default:
             OperationFailedException::fire(
-                console, ErrorReport::SEND_ERROR_REPORT,
-                "Unable to detect options after 10 A presses."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Unable to detect options after 10 A presses.",
+                stream
             );
         }
     }
@@ -126,10 +144,16 @@ bool IngoMoveGrinder::start_dialog(ConsoleHandle& console, BotBaseContext& conte
     pbf_press_button(context, BUTTON_A, 20, 150);
     context.wait_for_all_requests();
 
-    ButtonDetector button2(console, console, ButtonType::ButtonA, {0.50, 0.350, 0.40, 0.400}, std::chrono::milliseconds(100), true);
-    int ret = run_until(
-        console, context,
-        [&](BotBaseContext& context){
+    ButtonDetector button2(
+        stream.logger(), stream.overlay(),
+        ButtonType::ButtonA,
+        {0.50, 0.350, 0.40, 0.400},
+        std::chrono::milliseconds(100),
+        true
+    );
+    int ret = run_until<ProControllerContext>(
+        stream, context,
+        [&](ProControllerContext& context){
             for (size_t c = 0; c < 5; c++){
                 pbf_press_button(context, BUTTON_A, 20, 150);
             }
@@ -141,13 +165,14 @@ bool IngoMoveGrinder::start_dialog(ConsoleHandle& console, BotBaseContext& conte
         return false;
     default:
         OperationFailedException::fire(
-            console, ErrorReport::SEND_ERROR_REPORT,
-            "Unable to find opponent list options after 5 A presses."
+            ErrorReport::SEND_ERROR_REPORT,
+            "Unable to find opponent list options after 5 A presses.",
+            stream
         );
     }
 }
 
-bool IngoMoveGrinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool IngoMoveGrinder::run_iteration(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     IngoMoveGrinder_Descriptor::Stats& stats = env.current_stats<IngoMoveGrinder_Descriptor::Stats>();
 
     env.console.log("Starting battle...");
@@ -212,8 +237,9 @@ bool IngoMoveGrinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBase
 //            auto snapshot = env.console.video().snapshot();
 //            dump_image(env.logger(), env.program_info(), "BattleMenuNotFound", snapshot);
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Failed to find battle menu after 2 minutes."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Failed to find battle menu after 2 minutes.",
+                env.console
             );
         }
 
@@ -302,7 +328,7 @@ bool IngoMoveGrinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBase
 
 
 
-void IngoMoveGrinder::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void IngoMoveGrinder::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     IngoMoveGrinder_Descriptor::Stats& stats = env.current_stats<IngoMoveGrinder_Descriptor::Stats>();
 
     //  Connect the controller.
@@ -332,7 +358,7 @@ void IngoMoveGrinder::program(SingleSwitchProgramEnvironment& env, BotBaseContex
     send_program_finished_notification(env, NOTIFICATION_PROGRAM_FINISH);
 }
 
-void IngoMoveGrinder::go_to_next_move(SingleSwitchProgramEnvironment& env, BotBaseContext& context)
+void IngoMoveGrinder::go_to_next_move(SingleSwitchProgramEnvironment& env, ProControllerContext& context)
 {
     env.console.log("Switch to next move " + debug_current_info() + debug_move_attempts_info());
     pbf_press_button(context, BUTTON_A, 10, 125);
@@ -347,13 +373,14 @@ void IngoMoveGrinder::go_to_next_move(SingleSwitchProgramEnvironment& env, BotBa
     context.wait_for_all_requests();
 }
 
-void IngoMoveGrinder::go_to_next_pokemon(SingleSwitchProgramEnvironment& env, BotBaseContext& context)
+void IngoMoveGrinder::go_to_next_pokemon(SingleSwitchProgramEnvironment& env, ProControllerContext& context)
 {
     if (cur_pokemon == 4){
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
+            ErrorReport::SEND_ERROR_REPORT,
             "Abort program. Your 4 first pokemons are done grinding moves, dead or without PP. "
-            "Your fifth pokemon (Arceus) died so no other choice than stopping the program."
+            "Your fifth pokemon (Arceus) died so no other choice than stopping the program.",
+            env.console
         );
     }
     env.console.log("Switch to next pokemon " + debug_current_info() + debug_move_attempts_info());

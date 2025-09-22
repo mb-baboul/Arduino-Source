@@ -1,6 +1,6 @@
 /*  Money Farmer (Highlands)
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -28,17 +28,20 @@ public:
 class NuggetFarmerHighlands : public SingleSwitchProgramInstance{
 public:
     NuggetFarmerHighlands();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    bool run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    bool run_iteration(
+        SingleSwitchProgramEnvironment& env, ProControllerContext& context,
+        bool fresh_from_reset
+    );
 
 private:
     class RunRoute;
 
     ShinyRequiresAudioText SHINY_REQUIRES_AUDIO;
 
-    ShinyDetectedActionOption SHINY_DETECTED;
+    OverworldShinyDetectedActionOption SHINY_DETECTED;
 
     EventNotificationOption NOTIFICATION_STATUS;
     EventNotificationsOption NOTIFICATIONS;

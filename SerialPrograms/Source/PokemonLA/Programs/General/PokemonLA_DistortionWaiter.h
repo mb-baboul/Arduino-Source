@@ -1,15 +1,14 @@
 /*  Distortion Waiter
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonLA_DistortionWaiter_H
 #define PokemonAutomation_PokemonLA_DistortionWaiter_H
 
-#include "CommonFramework/Options/LanguageOCROption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
-//#include "NintendoSwitch/Options/GoHomeWhenDoneOption.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
 
 namespace PokemonAutomation{
@@ -29,7 +28,7 @@ public:
 class DistortionWaiter : public SingleSwitchProgramInstance{
 public:
     DistortionWaiter();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 
 private:

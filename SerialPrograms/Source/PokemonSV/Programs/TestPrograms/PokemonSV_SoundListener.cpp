@@ -1,20 +1,13 @@
 /*  Sound Listener
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include <float.h>
-#include <chrono>
-#include <map>
 #include <iostream>
-#include <fstream>
-#include <sstream>
 #include "Common/Cpp/Exceptions.h"
-#include "ClientSource/Connection/BotBase.h"
-#include "CommonFramework/InferenceInfra/InferenceSession.h"
+#include "CommonTools/Async/InferenceSession.h"
 #include "Pokemon/Pokemon_Strings.h"
-//#include "PokemonLA/PokemonLA_Settings.h"
 #include "PokemonSV/Inference/Battles/PokemonSV_ShinySoundDetector.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_LetsGoKillDetector.h"
 #include "PokemonSV_SoundListener.h"
@@ -33,8 +26,10 @@ SoundListener_Descriptor::SoundListener_Descriptor()
         STRING_POKEMON + " LA", "Sound Listener",
         "",
         "Test sound detectors listening to audio stream.",
-        FeedbackType::REQUIRED, AllowCommandsWhenRunning::ENABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        ProgramControllerClass::StandardController_NoRestrictions,
+        FeedbackType::REQUIRED,
+        AllowCommandsWhenRunning::ENABLE_COMMANDS,
+        {}
     )
 {}
 
@@ -61,7 +56,7 @@ SoundListener::SoundListener()
 
 // void search_alpha_roar_from_audio_dump();
 
-void SoundListener::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void SoundListener::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     //  Connect the controller.
     // pbf_move_right_joystick(context, 0, 255, 10, 0);
 

@@ -1,15 +1,17 @@
 /*  AutoStory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/Exceptions/OperationFailedException.h"
+#include "CommonFramework/VideoPipeline/VideoOverlay.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "PokemonSV/Inference/Overworld/PokemonSV_DirectionDetector.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-#include "PokemonSV/Inference/Overworld/PokemonSV_DirectionDetector.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 #include "PokemonSV_AutoStory_Segment_07.h"
 
@@ -31,66 +33,55 @@ std::string AutoStory_Segment_07::name() const{
 }
 
 std::string AutoStory_Segment_07::start_text() const{
-    return "Start: At Los Platos Pokecenter.";
+    return "Start: At Los Platos Pokecenter. Cleared Let's go tutorial.";
 }
 
 std::string AutoStory_Segment_07::end_text() const{
     return "End: At Mesagoza South Pokecenter.";
 }
 
-void AutoStory_Segment_07::run_segment(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AutoStoryOptions options) const{
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
+void AutoStory_Segment_07::run_segment(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    AutoStoryOptions options,
+    AutoStoryStats& stats
+) const{
+    
 
+    stats.m_segment++;
+    env.update_stats();
     context.wait_for_all_requests();
     env.console.log("Start Segment 07: Go to Mesagoza South", COLOR_ORANGE);
-    env.console.overlay().add_log("Start Segment 07: Go to Mesagoza South", COLOR_ORANGE);
 
-    checkpoint_12(env, context, options.notif_status_update);
-
-    // // Mystery Gift, delete later
-    // enter_menu_from_overworld(env.program_info(), env.console, context, 2);
-    // pbf_press_button(context, BUTTON_A, 20, 4 * TICKS_PER_SECOND);
-    // pbf_press_dpad(context, DPAD_UP, 20, 105);
-    // pbf_press_button(context, BUTTON_A, 20, 4 * TICKS_PER_SECOND);
-    // pbf_press_dpad(context, DPAD_DOWN, 20, 105);
-    // pbf_press_button(context, BUTTON_A, 20, 4 * TICKS_PER_SECOND);
-    // pbf_press_button(context, BUTTON_A, 20, 10 * TICKS_PER_SECOND);
-    // clear_dialog(env.console, context, ClearDialogMode::STOP_TIMEOUT, 10);
+    checkpoint_12(env, context, options.notif_status_update, stats);
 
     context.wait_for_all_requests();
     env.console.log("End Segment 07: Go to Mesagoza South", COLOR_GREEN);
-    env.console.overlay().add_log("End Segment 07: Go to Mesagoza South", COLOR_GREEN);
-    stats.m_segment++;
-    env.update_stats();
 
 }
 
 void checkpoint_12(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
     // reset rate: ~25%. 12 resets out of 52. 
     // resets due to: getting attacked by wild pokemon, either from behind, 
     // or when lead pokemon not strong enough to clear them with Let's go
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
-        
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
+
         fly_to_overlapping_flypoint(env.program_info(), env.console, context);
         context.wait_for_all_requests();
 
         // re-orient camera
         pbf_press_button(context, BUTTON_L, 20, 20);
         do_action_and_monitor_for_battles(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 walk_forward_while_clear_front_path(env.program_info(), env.console, context, 35);
-                
+
                 // place the marker elsewhere
                 realign_player(info, env.console, context, PlayerRealignMode::REALIGN_NEW_MARKER, 255, 128, 50);
 
@@ -103,28 +94,20 @@ void checkpoint_12(
                 // not stuck at Los Platos Pokecenter
                 pbf_press_button(context, BUTTON_B, 20, 1 * TICKS_PER_SECOND);
                 pbf_press_button(context, BUTTON_B, 20, 1 * TICKS_PER_SECOND);
-                press_Bs_to_back_to_overworld(info, env.console, context, 7);                
+                press_Bs_to_back_to_overworld(info, env.console, context, 7);
 
                 direction.change_direction(info, env.console, context, 0.29);
                 walk_forward_while_clear_front_path(info, env.console, context, 1200, 0, 125, 125);
                 direction.change_direction(info, env.console, context, 0.61);
                 walk_forward_while_clear_front_path(info, env.console, context, 1200, 0, 125, 125);
 
-                fly_to_overlapping_flypoint(info, env.console, context);                
+                fly_to_overlapping_flypoint(info, env.console, context);
             }
-        );             
+        );
 
         env.console.log("Reached Mesagoza (South) Pokecenter.");
-        
-        break;
-    }catch(...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }             
-    }
+
+    });
 
 }
 

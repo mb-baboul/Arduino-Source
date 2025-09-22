@@ -1,13 +1,12 @@
 /*  Box Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Compiler.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonBDSP_BoxDetector.h"
 
 #include <iostream>
@@ -32,7 +31,7 @@ void BoxDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_bottom);
     items.add(m_color, m_row);
 }
-bool BoxDetector::detect(const ImageViewRGB32& screen) const{
+bool BoxDetector::detect(const ImageViewRGB32& screen){
     ImageStats left = image_stats(extract_box_reference(screen, m_left));
 //    cout << left.average << left.stddev << endl;
     if (!is_solid(left, {0.274119, 0.355324, 0.370557})){

@@ -1,6 +1,6 @@
 /*  Stationary Overworld Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,8 +10,7 @@
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_OverworldDetector.h"
 
 
@@ -34,7 +33,7 @@ public:
 private:
     const Color m_color;
     const ImageFloatBox m_box;
-    const OverworldDetector m_overworld_detector;
+    OverworldDetector m_overworld_detector;
     const std::chrono::milliseconds m_map_hold_duration;
     VideoSnapshot m_snapshot_start;
 };

@@ -1,14 +1,16 @@
 /*  Egg Fetcher 2
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/PrettyPrint.h"
+#include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSwSh/Commands/PokemonSwSh_Commands_EggRoutines.h"
 #include "PokemonSwSh/Programs/PokemonSwSh_GameEntry.h"
+#include "PokemonSwSh_EggHelpers.h"
 #include "PokemonSwSh_EggFetcher2.h"
 
 namespace PokemonAutomation{
@@ -23,9 +25,9 @@ EggFetcher2_Descriptor::EggFetcher2_Descriptor()
         STRING_POKEMON + " SwSh", "Egg Fetcher 2",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSwSh/EggFetcher2.md",
         "Fetch eggs without hatching them.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -37,14 +39,18 @@ EggFetcher2::EggFetcher2()
         LockMode::LOCK_WHILE_RUNNING,
         2000
     )
+    , NOTIFICATIONS({
+        &NOTIFICATION_PROGRAM_FINISH,
+    })
 {
     PA_ADD_OPTION(START_LOCATION);
     PA_ADD_OPTION(MAX_FETCH_ATTEMPTS);
+    PA_ADD_OPTION(NOTIFICATIONS);
 }
 
 
 void EggFetcher2::run_eggfetcher(
-    Logger& logger, BotBaseContext& context,
+    Logger& logger, ProControllerContext& context,
     bool deposit_automatically,
     uint16_t attempts
 ) const{
@@ -75,7 +81,7 @@ void EggFetcher2::run_eggfetcher(
     }
 }
 
-void EggFetcher2::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void EggFetcher2::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     if (START_LOCATION.start_in_grip_menu()){
         grip_menu_connect_go_home(context);
         resume_game_back_out(env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST, 400);
@@ -85,7 +91,9 @@ void EggFetcher2::program(SingleSwitchProgramEnvironment& env, BotBaseContext& c
 
     run_eggfetcher(env.console, context, GameSettings::instance().AUTO_DEPOSIT, MAX_FETCH_ATTEMPTS);
 
-    pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY_SAFE);
+    pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY_SAFE0);
+
+    send_program_finished_notification(env, NOTIFICATION_PROGRAM_FINISH);
 }
 
 

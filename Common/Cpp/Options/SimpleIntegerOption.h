@@ -1,6 +1,6 @@
 /*  Simple Integer Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *      This option is thread-safe.
  *
@@ -47,7 +47,7 @@ public:
     Type current_value() const;
 
     operator Type() const;
-    virtual std::string set(Type x);
+    std::string set(Type x);
 
     virtual void load_json(const JsonValue& json) override;
     virtual JsonValue to_json() const override;

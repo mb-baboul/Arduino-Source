@@ -1,20 +1,18 @@
 /*  Game Entry
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/FatalProgramException.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/VideoPipeline/VideoFeed.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
 #include "CommonFramework/Tools/ProgramEnvironment.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Inference/BlackScreenDetector.h"
-//#include "NintendoSwitch/NintendoSwitch_Settings.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/VisualDetectors/BlackScreenDetector.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_Routines.h"
 #include "NintendoSwitch/Programs/NintendoSwitch_GameEntry.h"
@@ -22,9 +20,9 @@
 #include "PokemonSV_GameEntry.h"
 
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -63,24 +61,23 @@ private:
 };
 
 
-bool reset_game_to_gamemenu(ConsoleHandle& console, BotBaseContext& context){
-    close_game(console, context);
+bool reset_game_to_gamemenu(ConsoleHandle& console, ProControllerContext& context){
+    close_game_from_home(console, context);
     start_game_from_home(
-        console,
-        context,
+        console, context,
         true,
         0, 0,
-        GameSettings::instance().START_GAME_MASH
+        GameSettings::instance().START_GAME_MASH0
     );
 
-    uint16_t timeout = GameSettings::instance().START_GAME_WAIT;
+    Milliseconds timeout = GameSettings::instance().START_GAME_WAIT0;
 
     {
         console.log("Waiting to load game...");
         WaitforWhiteLoadScreen detector(false);
         int ret = wait_until(
             console, context,
-            std::chrono::milliseconds(timeout * (1000 / TICKS_PER_SECOND)),
+            timeout,
             {{detector}}
         );
         if (ret < 0){
@@ -93,7 +90,7 @@ bool reset_game_to_gamemenu(ConsoleHandle& console, BotBaseContext& context){
         WaitforWhiteLoadScreen detector(true);
         int ret = wait_until(
             console, context,
-            std::chrono::milliseconds(timeout * (1000 / TICKS_PER_SECOND)),
+            timeout,
             {{detector}}
         );
         if (ret < 0){
@@ -107,28 +104,29 @@ bool reset_game_to_gamemenu(ConsoleHandle& console, BotBaseContext& context){
     return true;
 }
 
-bool gamemenu_to_ingame(ConsoleHandle& console, BotBaseContext& context){
-    console.log("Mashing A to enter game...");
+bool gamemenu_to_ingame(VideoStream& stream, ProControllerContext& context){
+    stream.log("Mashing A to enter game...");
     BlackScreenOverWatcher detector(COLOR_RED, {0.2, 0.2, 0.6, 0.6});
-    pbf_mash_button(context, BUTTON_A, GameSettings::instance().ENTER_GAME_MASH);
+    pbf_mash_button(context, BUTTON_A, GameSettings::instance().ENTER_GAME_MASH0);
     context.wait_for_all_requests();
-    console.log("Waiting to enter game...");
+    stream.log("Waiting to enter game...");
     int ret = wait_until(
-        console, context,
-        std::chrono::milliseconds(GameSettings::instance().ENTER_GAME_WAIT * (1000 / TICKS_PER_SECOND)),
+        stream, context,
+        GameSettings::instance().ENTER_GAME_WAIT0,
         {{detector}}
     );
     if (ret == 0){
-        console.log("Entered game!");
+        stream.log("Entered game!");
         return true;
     }else{
-        console.log("Timed out waiting to enter game.", COLOR_RED);
+        stream.log("Timed out waiting to enter game.", COLOR_RED);
         return false;
     }
 }
 
 bool reset_game_from_home(
-    const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context,
+    const ProgramInfo& info,
+    ConsoleHandle& console, ProControllerContext& context,
     uint16_t post_wait_time
 ){
     console.log("Resetting game from home...");
@@ -137,7 +135,7 @@ bool reset_game_from_home(
     ok &= reset_game_to_gamemenu(console, context);
     ok &= gamemenu_to_ingame(console, context);
     if (!ok){
-        dump_image(info, console, "StartGame");
+        dump_image(console.logger(), info, console.video(), "StartGame");
     }
     console.log("Entered game! Waiting out grace period.");
     pbf_wait(context, post_wait_time);
@@ -145,7 +143,8 @@ bool reset_game_from_home(
     return ok;
 }
 bool reset_game_from_home_zoom_out(
-    const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context,
+    const ProgramInfo& info,
+    ConsoleHandle& console, ProControllerContext& context,
     uint16_t post_wait_time
 ){
     bool ret = reset_game_from_home(info, console, context, post_wait_time);
@@ -161,14 +160,18 @@ bool reset_game_from_home_zoom_out(
     return ret;
 }
 
-void reset_game(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+void reset_game(
+    const ProgramInfo& info,
+    ConsoleHandle& console, ProControllerContext& context
+){
     try{
-        pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+        pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY1);
         context.wait_for_all_requests();
         if (!reset_game_from_home(info, console, context, 5 * TICKS_PER_SECOND)){
             OperationFailedException::fire(
-                console, ErrorReport::SEND_ERROR_REPORT,
-                "Failed to start game."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Failed to start game.",
+                console
             );
         }
     }catch (OperationFailedException& e){

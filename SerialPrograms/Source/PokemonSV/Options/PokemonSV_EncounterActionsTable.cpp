@@ -1,6 +1,6 @@
 /*  Encounter Filter Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -17,8 +17,8 @@ using namespace Pokemon;
 
 
 
-const EnumDatabase<EncounterActionsAction>& EncounterFilterAction_database(){
-    static EnumDatabase<EncounterActionsAction> database{
+const EnumDropdownDatabase<EncounterActionsAction>& EncounterFilterAction_database(){
+    static EnumDropdownDatabase<EncounterActionsAction> database{
         {EncounterActionsAction::RUN_AWAY,              "run-away",     "Run Away"},
         {EncounterActionsAction::STOP_PROGRAM,          "stop-program", "Stop Program"},
         {EncounterActionsAction::THROW_BALLS,           "throw-balls",  "Throw Balls"},
@@ -26,8 +26,8 @@ const EnumDatabase<EncounterActionsAction>& EncounterFilterAction_database(){
     };
     return database;
 }
-const EnumDatabase<EncounterActionsShininess>& EncounterFilterShininess_database(){
-    static EnumDatabase<EncounterActionsShininess> database{
+const EnumDropdownDatabase<EncounterActionsShininess>& EncounterFilterShininess_database(){
+    static EnumDropdownDatabase<EncounterActionsShininess> database{
         {EncounterActionsShininess::ANYTHING,   "anything",     "Anything"},
         {EncounterActionsShininess::NOT_SHINY,  "not-shiny",    "Not Shiny"},
         {EncounterActionsShininess::SHINY,      "shiny",        "Shiny"},
@@ -67,7 +67,7 @@ EncounterActionsRow::EncounterActionsRow(EditableTableOption& parent_table)
     PA_ADD_OPTION(pokeball);
     PA_ADD_OPTION(ball_limit);
 
-    EncounterActionsRow::value_changed(this);
+    EncounterActionsRow::on_config_value_changed(this);
 
     action.add_listener(*this);
 }
@@ -89,7 +89,7 @@ EncounterActionsEntry EncounterActionsRow::snapshot() const{
         ball_limit,
     };
 }
-void EncounterActionsRow::value_changed(void* object){
+void EncounterActionsRow::on_config_value_changed(void* object){
     switch (action){
     case EncounterActionsAction::STOP_PROGRAM:
     case EncounterActionsAction::RUN_AWAY:

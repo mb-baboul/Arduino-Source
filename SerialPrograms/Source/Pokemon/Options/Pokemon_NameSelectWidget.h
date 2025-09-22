@@ -1,6 +1,6 @@
 /*  Pokemon Name Select Widget
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,7 @@
 #define PokemonAutomation_Pokemon_PokemonNameSelectWidget_H
 
 #include "Common/Qt/NoWheelComboBox.h"
-#include "CommonFramework/Resources/SpriteDatabase.h"
+#include "CommonTools/Resources/SpriteDatabase.h"
 
 namespace PokemonAutomation{
 namespace Pokemon{

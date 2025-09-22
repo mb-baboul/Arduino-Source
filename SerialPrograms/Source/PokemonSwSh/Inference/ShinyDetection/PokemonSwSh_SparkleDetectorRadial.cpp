@@ -1,19 +1,18 @@
 /*  Shiny Sparkle Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <cmath>
 #include <set>
-#include "Kernels/Waterfill/Kernels_Waterfill.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
-#include "CommonFramework/ImageTools/WaterfillUtilities.h"
+#include "CommonTools/Images/WaterfillUtilities.h"
 #include "PokemonSwSh_SparkleDetectorRadial.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -27,13 +26,16 @@ const double STAR_SPARKLE_ANGLE_TOLERANCE_DEGREES = 10.;
 
 
 RadialSparkleDetector::~RadialSparkleDetector(){}
-RadialSparkleDetector::RadialSparkleDetector(const WaterfillObject& object)
+RadialSparkleDetector::RadialSparkleDetector(size_t screen_area, const WaterfillObject& object)
     : m_object(object)
 {
     if (object.area < 20){
         return;
     }
-    if (object.area > 10000){
+
+    double area_1080p = 1920 * 1080;
+    double area_current = (double)screen_area;
+    if (object.area * area_1080p > 10000 * area_current){
         return;
     }
 
@@ -131,7 +133,7 @@ bool RadialSparkleDetector::is_star() const{
         return false;
     }
 
-    //  Make sure dimentions are roughly square-ish.
+    //  Make sure dimensions are roughly square-ish.
     if (width > 2 * height || height > 2 * width){
         return false;
     }

@@ -1,17 +1,10 @@
 /*  No Minimap Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
-#include "CommonFramework/Globals.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/ImageMatch/ImageDiff.h"
-#include "CommonFramework/ImageMatch/ExactImageMatcher.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
-#include "CommonFramework/ImageTools/WaterfillUtilities.h"
-#include "CommonFramework/ImageMatch/WaterfillTemplateMatcher.h"
 #include "PokemonSV_NoMinimapDetector.h"
 
 //#include <iostream>
@@ -32,7 +25,7 @@ NoMinimapDetector::NoMinimapDetector(Logger& logger, Color color)
 void NoMinimapDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_ball);
 }
-bool NoMinimapDetector::detect(const ImageViewRGB32& screen) const{
+bool NoMinimapDetector::detect(const ImageViewRGB32& screen){
     return !m_overworld.detect(screen);
 }
 

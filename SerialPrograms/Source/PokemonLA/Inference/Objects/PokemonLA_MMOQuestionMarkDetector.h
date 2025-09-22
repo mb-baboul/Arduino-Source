@@ -1,6 +1,6 @@
 /*  MMO Question Mark Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  Detect MMO question mark symbol.
  */
@@ -9,11 +9,9 @@
 #define PokemonAutomation_PokemonLA_MMOQuestionMarkDetector_H
 
 #include <array>
-#include "Common/Cpp/Color.h"
-#include "Common/Cpp/Concurrency/SpinLock.h"
+#include <vector>
+#include "Common/Cpp/AbstractLogger.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/Logging/Logger.h"
-#include "CommonFramework/ImageMatch/WaterfillTemplateMatcher.h"
 
 namespace PokemonAutomation{
 

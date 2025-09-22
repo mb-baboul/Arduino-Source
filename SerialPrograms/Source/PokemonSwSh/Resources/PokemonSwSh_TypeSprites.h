@@ -1,6 +1,6 @@
 /*  Pokemon Sword/Shield Type Sprites
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,18 +8,21 @@
 #define PokemonAutomation_PokemonSwSh_TypeSprites_H
 
 #include <memory>
-#include "CommonFramework/ImageTools/FloatPixel.h"
-#include "CommonFramework/ImageMatch/ExactImageMatcher.h"
-#include "PokemonSwSh_TypeMatchup.h"
+#include <map>
+#include "CommonTools/ImageMatch/ExactImageMatcher.h"
+#include "Pokemon/Pokemon_Types.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
 namespace PokemonSwSh{
 
+using namespace Pokemon;
+
 
 class TypeSprite{
 public:
     const std::string& slug() const{ return m_slug; }
+    double aspect_ratio() const{ return m_aspect_ratio; }
 //    const ImageRGB32& sprite() const{ return m_sprite; }
 
     const ImageMatch::WeightedExactImageMatcher& matcher() const{ return *m_matcher; }
@@ -30,6 +33,7 @@ public:
 
 private:
     std::string m_slug;
+    double m_aspect_ratio;
 
     std::unique_ptr<ImageMatch::WeightedExactImageMatcher> m_matcher;
 };

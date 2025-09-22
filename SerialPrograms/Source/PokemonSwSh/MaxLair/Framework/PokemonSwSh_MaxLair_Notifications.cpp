@@ -1,6 +1,6 @@
 /*  Max Lair Notifications
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -66,9 +66,9 @@ void send_status_notification(
 
 void send_raid_notification(
     ProgramEnvironment& env,
-    ConsoleHandle& console,
+    VideoStream& stream,
     AutoHostNotificationOption& settings,
-    bool has_code, uint8_t code[8],
+    const std::string& code,
     const std::string& slug,
     const PathStats& path_stats,
     const StatsTracker& session_stats
@@ -77,7 +77,7 @@ void send_raid_notification(
         return;
     }
 
-    VideoSnapshot screen = console.video().snapshot();
+    VideoSnapshot screen = stream.video().snapshot();
 
     std::vector<std::pair<std::string, std::string>> embeds;
 
@@ -95,17 +95,8 @@ void send_raid_notification(
 
     {
         std::string code_str;
-        if (has_code){
-            size_t c = 0;
-            for (; c < 4; c++){
-                code_str += code[c] + '0';
-            }
-            code_str += " ";
-            for (; c < 8; c++){
-                code_str += code[c] + '0';
-            }
-        }else{
-            code_str += "None";
+        if (code.empty()){
+            code_str = "None";
         }
         embeds.emplace_back("Raid Code:", std::move(code_str));
     }

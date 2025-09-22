@@ -1,6 +1,6 @@
 /*  Nintendo Switch Panels
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -17,7 +17,8 @@ namespace NintendoSwitch{
 class PanelListFactory : public PanelListDescriptor{
 public:
     PanelListFactory();
-    virtual std::vector<PanelEntry> make_panels() const;
+private:
+    virtual std::vector<PanelEntry> make_panels() const override;
 };
 
 

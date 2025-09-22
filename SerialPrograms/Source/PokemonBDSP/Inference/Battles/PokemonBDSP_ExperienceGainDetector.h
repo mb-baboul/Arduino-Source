@@ -1,16 +1,14 @@
 /*  Battle Won Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_BattleWonDetector_H
 #define PokemonAutomation_PokemonBDSP_BattleWonDetector_H
 
-#include "Common/Cpp/Containers/FixedLimitVector.h"
-#include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
 #include "PokemonBDSP/Inference/PokemonBDSP_DialogDetector.h"
 
 namespace PokemonAutomation{
@@ -26,7 +24,7 @@ public:
     ExperienceGainDetector(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;

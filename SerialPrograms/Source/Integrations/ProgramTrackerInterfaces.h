@@ -1,6 +1,6 @@
 /*  Program Tracker
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *      A singleton class that keeps track of all live programs and handles.
  *  This allows Discord integration to safely interface with programs.
@@ -15,16 +15,17 @@
 
 namespace PokemonAutomation{
 
-class BotBaseHandle;
 class VideoFeed;
 class AudioFeed;
+class ControllerSession;
+class BotBaseHandle;
 
 
 class TrackableConsole{
 public:
-    virtual BotBaseHandle& sender() = 0;
     virtual VideoFeed& video() = 0;
     virtual AudioFeed& audio() = 0;
+    virtual ControllerSession& controller() = 0;
 };
 
 class TrackableProgram{

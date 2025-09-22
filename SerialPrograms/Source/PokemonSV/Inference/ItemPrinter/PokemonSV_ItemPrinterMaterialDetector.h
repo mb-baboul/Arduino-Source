@@ -1,24 +1,23 @@
 /*  Item Printer Jobs Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_ItemPrinterMaterialDetector_H
 #define PokemonAutomation_PokemonSV_ItemPrinterMaterialDetector_H
 
+#include <array>
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/Language.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/Inference/VisualDetector.h"
-#include "CommonFramework/OCR/OCR_SmallDictionaryMatcher.h"
-#include <array>
+#include "CommonFramework/Tools/VideoStream.h"
+#include "CommonTools/OCR/OCR_SmallDictionaryMatcher.h"
+#include "CommonTools/VisualDetector.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 
 namespace PokemonAutomation{
     class Logger;
-    class AsyncDispatcher;
-    class ConsoleHandle;
-    class BotBaseContext;
 namespace NintendoSwitch{
 namespace PokemonSV{
 
@@ -50,44 +49,46 @@ public:
     std::array<ImageFloatBox, 10> Material_Boxes(ImageFloatBox initial_box);
 
     int8_t find_happiny_dust_row_index(
-        AsyncDispatcher& dispatcher,
-        ConsoleHandle& console, BotBaseContext& context
+        VideoStream& stream, ProControllerContext& context
     ) const;
 
     std::vector<int8_t> find_material_value_row_index(
-        AsyncDispatcher& dispatcher,
-        ConsoleHandle& console, 
-        BotBaseContext& context,
+        VideoStream& stream,
+        ProControllerContext& context,
         int16_t material_value
     ) const;
 
+    // detect the quantity of material at the given row number
     int16_t detect_material_quantity(
-        AsyncDispatcher& dispatcher,
-        ConsoleHandle& console, 
-        BotBaseContext& context,
+        VideoStream& stream,
+        const ImageViewRGB32& screen,
+        ProControllerContext& context,
         int8_t row_index
     ) const;
 
+    // detects the material name at the given row_index, given the screen
     std::string detect_material_name(
-        ConsoleHandle& console, 
-        BotBaseContext& context,
+        VideoStream& stream,
+        const ImageViewRGB32& screen,
+        ProControllerContext& context,
         int8_t row_index
     ) const;    
 
-
-private:
     int16_t read_number(
-        Logger& logger, AsyncDispatcher& dispatcher,
-        const ImageViewRGB32& screen, const ImageFloatBox& box
+        Logger& logger,
+        const ImageViewRGB32& screen, const ImageFloatBox& box,
+        int8_t row_index
     ) const;
 
 
 private:
     Color m_color;
     Language m_language;
-    std::array<ImageFloatBox, 10> m_box_mat_value;
-    std::array<ImageFloatBox, 10> m_box_mat_quantity;
-    std::array<ImageFloatBox, 10> m_box_mat_name;
+    std::array<ImageFloatBox, 10> m_box_mat_value;    // {0.39,0.176758,0.025,0.05}, {0.39,0.250977,0.025,0.05}, {0.39,0.325196,0.025,0.05}, {0.39,0.399415,0.025,0.05}, {0.39,0.473634,0.025,0.05}, {0.39,0.547853,0.025,0.05}, {0.39,0.622072,0.025,0.05}, {0.39,0.696291,0.025,0.05}, {0.39,0.77051,0.025,0.05}, {0.39,0.844729,0.025,0.05}, 
+    std::array<ImageFloatBox, 10> m_box_mat_quantity; // {0.485,0.176758,0.037,0.05}, {0.485,0.250977,0.037,0.05}, {0.485,0.325196,0.037,0.05}, {0.485,0.399415,0.037,0.05}, {0.485,0.473634,0.037,0.05}, {0.485,0.547853,0.037,0.05}, {0.485,0.622072,0.037,0.05}, {0.485,0.696291,0.037,0.05}, {0.485,0.77051,0.037,0.05}, {0.485,0.844729,0.037,0.05}, 
+    std::array<ImageFloatBox, 10> m_box_mat_name;     // {0.09,0.176758,0.275,0.05}, {0.09,0.250977,0.275,0.05}, {0.09,0.325196,0.275,0.05}, {0.09,0.399415,0.275,0.05}, {0.09,0.473634,0.275,0.05}, {0.09,0.547853,0.275,0.05}, {0.09,0.622072,0.275,0.05}, {0.09,0.696291,0.275,0.05}, {0.09,0.77051,0.275,0.05}, {0.09,0.844729,0.275,0.05}, 
+
+    
 };
 
 

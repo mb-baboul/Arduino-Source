@@ -1,6 +1,6 @@
 /*  Test Program (Switch)
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -14,12 +14,10 @@
 #include "Common/Cpp/Containers/FixedLimitVector.tpp"
 #include "Common/Cpp/Concurrency/AsyncDispatcher.h"
 #include "Common/Cpp/Concurrency/PeriodicScheduler.h"
-#include "ClientSource/Connection/BotBase.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/InferenceInfra/InferenceSession.h"
-#include "CommonFramework/OCR/OCR_RawOCR.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/OCR/OCR_RawOCR.h"
 #include "PokemonLA/Inference/PokemonLA_MountDetector.h"
-#include "CommonFramework/InferenceInfra/VisualInferencePivot.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonBDSP/Inference/BoxSystem/PokemonBDSP_IvJudgeReader.h"
 #include "PokemonBDSP/Inference/Battles/PokemonBDSP_BattleBallReader.h"
@@ -28,22 +26,16 @@
 #include "PokemonLA/Inference/Objects/PokemonLA_FlagTracker.h"
 #include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_BattleMenu.h"
 #include "PokemonBDSP/Inference/BoxSystem/PokemonBDSP_BoxGenderDetector.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "PokemonBDSP/Inference/Battles/PokemonBDSP_BattleMenuDetector.h"
 #include "PokemonLA/Inference/Map/PokemonLA_MapZoomLevelReader.h"
 #include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_PokemonSwapMenu.h"
-#include "CommonFramework/Inference/FrozenImageDetector.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "PokemonSwSh/Inference/Battles/PokemonSwSh_BattleMenuDetector.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_ShinySymbolDetector.h"
 #include "PokemonLA/Inference/Battles/PokemonLA_BattleMenuDetector.h"
 #include "PokemonSwSh/Inference/PokemonSwSh_SummaryShinySymbolDetector.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
-#include "CommonFramework/ImageMatch/ImageDiff.h"
-#include "CommonFramework/OCR/OCR_NumberReader.h"
+#include "CommonTools/OCR/OCR_NumberReader.h"
 #include "NintendoSwitch/Inference/NintendoSwitch_DetectHome.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_FlagTracker.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
 #include "Kernels/Waterfill/Kernels_Waterfill.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
 #include "PokemonSV/Inference/PokemonSV_WhiteButtonDetector.h"
@@ -54,12 +46,11 @@
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
-#include "NintendoSwitch/Inference/NintendoSwitch_DateReader.h"
-#include "NintendoSwitch/Programs/NintendoSwitch_FastCodeEntry.h"
+#include "NintendoSwitch/Programs/DateManip/NintendoSwitch_DateManip.h"
+#include "NintendoSwitch/Programs/FastCodeEntry/NintendoSwitch_KeyboardCodeEntry.h"
 #include "PokemonSV/PokemonSV_Settings.h"
 #include "PokemonLA/Programs/PokemonLA_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
 #include "PokemonSV/Programs/Battles/PokemonSV_BasicCatcher.h"
 #include "PokemonSwSh/Inference/PokemonSwSh_YCommDetector.h"
 #include "PokemonSV/Inference/Tera/PokemonSV_TeraCardDetector.h"
@@ -72,7 +63,6 @@
 #include "PokemonSV/Inference/Boxes/PokemonSV_BoxDetection.h"
 #include "PokemonSV/Programs/Trading/PokemonSV_TradeRoutines.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/InterruptableCommands.h"
 #include "PokemonSV/Programs/Boxes/PokemonSV_BoxRoutines.h"
 #include "PokemonSV/Programs/Eggs/PokemonSV_EggRoutines.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
@@ -81,13 +71,9 @@
 #include "PokemonSV/Programs/TeraRaids/PokemonSV_TeraRoutines.h"
 #include "PokemonSV/Programs/FastCodeEntry/PokemonSV_CodeEntry.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_AreaZeroSkyDetector.h"
-#include "CommonFramework/Inference/AudioPerSpectrumDetectorBase.h"
-#include "CommonFramework/Inference/SpectrogramMatcher.h"
-#include "CommonFramework/Inference/AudioTemplateCache.h"
 #include "PokemonSV/Inference/Battles/PokemonSV_EncounterWatcher.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_LetsGoKillDetector.h"
 #include "CommonFramework/Exceptions/ProgramFinishedException.h"
-#include "CommonFramework/Inference/BlackScreenDetector.h"
 #include "PokemonSV/Inference/PokemonSV_ZeroGateWarpPromptDetector.h"
 #include "PokemonSV/Programs/ShinyHunting/PokemonSV_AreaZeroPlatform.h"
 #include "PokemonSV/Inference/PokemonSV_SweatBubbleDetector.h"
@@ -102,7 +88,6 @@
 #include "PokemonSwSh/Inference/Battles/PokemonSwSh_BattleBallReader.h"
 #include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_PathSelect.h"
 #include "PokemonSV/Programs/PokemonSV_ConnectToInternet.h"
-#include "CommonFramework/Inference/FrozenImageDetector.h"
 #include "PokemonLA/Inference/PokemonLA_DialogDetector.h"
 #include "PokemonLA/Programs/PokemonLA_GameSave.h"
 #include "Pokemon/Resources/Pokemon_PokemonSlugs.h"
@@ -114,7 +99,6 @@
 #include "PokemonSwSh/Inference/PokemonSwSh_ReceivePokemonDetector.h"
 #include "PokemonSV/Inference/PokemonSV_PokemonSummaryReader.h"
 #include "PokemonSV/Programs/Battles/PokemonSV_SinglesBattler.h"
-#include "NintendoSwitch/Inference/NintendoSwitch_DateReader.h"
 #include "PokemonSV/Inference/ItemPrinter/PokemonSV_ItemPrinterPrizeReader.h"
 #include "PokemonSV/Inference/ItemPrinter/PokemonSV_ItemPrinterJobsDetector.h"
 #include "PokemonSV/Inference/ItemPrinter/PokemonSV_ItemPrinterMaterialDetector.h"
@@ -125,7 +109,41 @@
 #include "PokemonLA/Inference/Map/PokemonLA_OutbreakReader.h"
 #include "PokemonSV/Programs/Farming/PokemonSV_AuctionFarmer.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_MMOQuestionMarkDetector.h"
-
+//#include "PokemonSwSh/Inference/Battles/PokemonSwSh_BattleMenuDetector.h"
+#include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_BattleMenu.h"
+#include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_PokemonSwapMenu.h"
+#include "PokemonBDSP/Inference/PokemonBDSP_SelectionArrow.h"
+#include "PokemonSV/Programs/Farming/PokemonSV_MaterialFarmerTools.h"
+#include "PokemonSV/Programs/Farming/PokemonSV_TournamentFarmer.h"
+#include "NintendoSwitch/Programs/FastCodeEntry/NintendoSwitch_NumberCodeEntry.h"
+#include "PokemonSV/Inference/ItemPrinter/PokemonSV_ItemPrinterMenuDetector.h"
+#include "PokemonSV/Inference/Picnics/PokemonSV_SandwichHandDetector.h"
+#include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_PokemonSwapMenu.h"
+#include "CommonTools/Images/ImageFilter.h"
+#include "NintendoSwitch/Options/NintendoSwitch_ModelType.h"
+#include "NintendoSwitch/Programs/DateSpam/NintendoSwitch_HomeToDateTime.h"
+#include "NintendoSwitch/Inference/NintendoSwitch_ConsoleTypeDetector.h"
+#include "NintendoSwitch/Inference/NintendoSwitch_HomeMenuDetector.h"
+#include "NintendoSwitch/Inference/NintendoSwitch_StartGameUserSelectDetector.h"
+#include "NintendoSwitch/Inference/NintendoSwitch_UpdatePopupDetector.h"
+#include "NintendoSwitch/Programs/DateSpam/NintendoSwitch_RollDateForward1.h"
+#include "NintendoSwitch/Programs/DateManip/NintendoSwitch_DateManip_US.h"
+#include "NintendoSwitch/Programs/DateManip/NintendoSwitch_DateManip_24h.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
+#include "NintendoSwitch/Inference/NintendoSwitch2_BinarySliderDetector.h"
+#include "PokemonSwSh/Programs/PokemonSwSh_GameEntry.h"
+#include "PokemonSwSh/PokemonSwSh_Settings.h"
+#include "PokemonSV/Inference/Battles/PokemonSV_StartBattleYellowBar.h"
+#include "PokemonLA/Inference/Map/PokemonLA_SelectedRegionDetector.h"
+#include "PokemonHome/Inference/PokemonHome_BallReader.h"
+#include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_PathSide.h"
+#include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_PathMap.h"
+#include "NintendoSwitch/Inference/NintendoSwitch_SelectedSettingDetector.h"
+#include "PokemonSV/Inference/Boxes/PokemonSV_BoxShinyDetector.h"
+#include "PokemonSwSh/Inference/PokemonSwSh_DialogBoxDetector.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/Async/InterruptableCommands.h"
+#include "PokemonLGPE/Inference/Battles/PokemonLGPE_BattleArrowDetector.h"
 
 
 #include <QPixmap>
@@ -146,24 +164,8 @@ namespace PokemonAutomation{
 namespace NintendoSwitch{
 
 
-namespace PokemonSwSh{
-    std::vector<ImagePixelBox> find_selection_arrows(const ImageViewRGB32& image, size_t min_area);
-}
 
 
-
-
-StringSelectDatabase make_database(){
-    StringSelectDatabase ret;
-    for (size_t c = 0; c < 1000; c++){
-        ret.add_entry(StringSelectEntry("slug" + std::to_string(c), "Display " + std::to_string(c)));
-    }
-    return ret;
-}
-const StringSelectDatabase& test_database(){
-    static StringSelectDatabase database = make_database();
-    return database;
-}
 
 
 TestProgram_Descriptor::TestProgram_Descriptor()
@@ -172,9 +174,9 @@ TestProgram_Descriptor::TestProgram_Descriptor()
         "Nintendo Switch", "Test Program (Switch)",
         "",
         "Test Program (Switch)",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::OPTIONAL_,
         AllowCommandsWhenRunning::ENABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB,
         1, 4, 1
     )
 {}
@@ -198,25 +200,9 @@ TestProgram::TestProgram()
         LockMode::LOCK_WHILE_RUNNING,
         false
     )
+    , IMAGE_PATH(false, "Path to image for testing", LockMode::UNLOCK_WHILE_RUNNING, "default.png", "default.png")
     , STATIC_TEXT("Test text...")
-    , SELECT("String Select", test_database(), LockMode::LOCK_WHILE_RUNNING, 0)
-//    , PLAYER_LIST("Test Table", LockMode::UNLOCK_WHILE_RUNNING, "Notes")
-    , DATE0(
-        "Date",
-        LockMode::UNLOCK_WHILE_RUNNING,
-        DateTimeOption::DATE_HOUR_MIN,
-        DateTime{2000, 1, 1, 0, 0, 0},
-        DateTime{2060, 12, 31, 23, 59, 59},
-        DateTime{2024, 4, 12, 2, 16, 30}
-    )
-    , DATE1(
-        "Date",
-        LockMode::UNLOCK_WHILE_RUNNING,
-        DateTimeOption::DATE_HOUR_MIN,
-        DateTime{2000, 1, 1, 0, 0, 0},
-        DateTime{2060, 12, 31, 23, 59, 59},
-        DateTime{2048, 1, 13, 20, 48}
-    )
+    , BOX("Box", LockMode::UNLOCK_WHILE_RUNNING, 0, 0, 1, 1)
     , NOTIFICATION_TEST("Test", true, true, ImageAttachmentMode::JPG)
     , NOTIFICATIONS({
         &NOTIFICATION_TEST,
@@ -227,12 +213,11 @@ TestProgram::TestProgram()
     PA_ADD_OPTION(BUTTON0);
     PA_ADD_OPTION(BUTTON1);
     PA_ADD_OPTION(LANGUAGE);
+//    PA_ADD_OPTION(CONSOLE_MODEL);
+    PA_ADD_OPTION(IMAGE_PATH);
     PA_ADD_OPTION(STATIC_TEXT);
-    PA_ADD_OPTION(SELECT);
-//    PA_ADD_OPTION(PLAYER_LIST);
+    PA_ADD_OPTION(BOX);
 //    PA_ADD_OPTION(battle_AI);
-    PA_ADD_OPTION(DATE0);
-    PA_ADD_OPTION(DATE1);
     PA_ADD_OPTION(NOTIFICATIONS);
     BUTTON0.add_listener(*this);
     BUTTON1.add_listener(*this);
@@ -258,13 +243,15 @@ void TestProgram::on_press(){
 
 
 
+
+
 void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& scope){
     using namespace Kernels;
     using namespace Kernels::Waterfill;
     using namespace OCR;
     using namespace NintendoSwitch;
     using namespace Pokemon;
-//    using namespace PokemonSwSh;
+    using namespace PokemonSwSh;
 //    using namespace PokemonBDSP;
     using namespace PokemonLA;
 //    using namespace PokemonSV;
@@ -274,12 +261,754 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
 //    [[maybe_unused]] BotBase& botbase = env.consoles[0];
     [[maybe_unused]] VideoFeed& feed = env.consoles[0];
     [[maybe_unused]] VideoOverlay& overlay = env.consoles[0];
-    BotBaseContext context(scope, console.botbase());
+    ProControllerContext context(scope, console.controller<ProController>());
     VideoOverlaySet overlays(overlay);
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-//    ImageRGB32 image("Screenshot.png");
+#if 1
+    // context.controller().monitor_keyboard_events();
+#endif
+
+
+#if 0
+
+    HomeMenuDetector detector(console);
+    detector.make_overlays(overlays);
+#endif
+
+
+#if 0
+//    auto screenshot = feed.snapshot();
+
+    PokemonLGPE::BattleArrowWatcher detector(COLOR_RED, {0.004251, 0.638941, 0.062699, 0.115312});
+    detector.make_overlays(overlays);
+
+    while (true){
+        cout << detector.process_frame(feed.snapshot()) << endl;
+        scope.wait_for(100ms);
+    }
+#endif
+
+
+
+#if 0
+    AsyncCommandSession<ProController> session(
+        scope, logger, env.realtime_dispatcher(),
+        console.controller<ProController>()
+    );
+
+    Milliseconds delay = 500ms;
+
+    for (int c = 0; c < 100; c++){
+        session.dispatch([](ProControllerContext& context){
+            pbf_mash_button(context, BUTTON_A, 360000ms);
+        });
+
+        delay = 552ms;
+
+        cout << "delay = " << delay.count() << endl;
+
+        context.wait_for(delay);
+
+        session.stop_command();
+
+        pbf_press_button(context, BUTTON_B, 5000ms, 800ms);
+        context.wait_for_all_requests();
+
+        delay += 1ms;
+    }
+#endif
+
+
+
+
+#if 0
+    auto screenshot = feed.snapshot();
+
+
+
+    PokemonSV::OverworldDetector detector;
+    detector.make_overlays(overlays);
+    cout << detector.detect(screenshot) << endl;
+#endif
+
+
+
+#if 0
+    TeraCardReader detector;
+    detector.make_overlays(overlays);
+
+    cout << detector.detect(screenshot) << endl;
+    detector.pokemon_slug(logger, env.program_info(), screenshot);
+#endif
+
+#if 0
+    NewsDetector detector;
+    detector.make_overlays(overlays);
+    cout << detector.detect(screenshot) << endl;
+#endif
+
+#if 0
+    PokemonSwSh::BlackDialogBoxDetector detector(true);
+    detector.make_overlays(overlays);
+    cout << detector.process_frame(screenshot, current_time()) << endl;
+#endif
+
+
+//    PokemonSV::BoxShinyDetector detector;
+//    cout << detector.detect(screenshot) << endl;
+
+
+
+
+#if 0
+    YCommIconDetector detector(true);
+    cout << detector.process_frame(screenshot, current_time()) << endl;
+#endif
+
+#if 0
+    bool switch2 = true;
+    ImageFloatBox key1_box; 
+    ImageFloatBox other_setting1; 
+    ImageFloatBox other_setting2; 
+
+    if (!switch2){
+        key1_box = {0.037322, 0.451172, 0.009879, 0.113281};
+        other_setting1 = {0.01, 0.451172, 0.009879, 0.113281};
+        other_setting2 = {0.02, 0.451172, 0.009879, 0.113281};
+    }else if (switch2){
+        key1_box = {0.062706, 0.510763, 0.009901, 0.097847};
+        other_setting1 = {0.02, 0.510763, 0.009901, 0.097847};
+        other_setting2 = {0.04, 0.510763, 0.009901, 0.097847};            
+    }     
+    
+    SelectedSettingWatcher key1_selected(key1_box, other_setting1, other_setting2, other_setting1);
+    int ret = wait_until(
+        console, context,
+        Milliseconds(5000),
+        {key1_selected}
+    );
+    if (ret < 0){  // failed to detect Key 1 being highlighted. Reset game and re-try
+        console.log("claim_mystery_gift: Failed to detect the Mystery Gift window. Reset game and re-try.", COLOR_YELLOW);
+        reset_game(env.program_info(), console, context);
+    }   
+
+#endif
+
+#if 0
+    auto screenshot = feed.snapshot();
+
+    OcrFailureWatchdog watchdog(logger);
+    MaxLairInternal::BattleMenuReader reader(overlay, Language::ChineseTraditional, watchdog);
+    reader.read_opponent_in_summary(logger, screenshot);
+#endif
+
+#if 0
+    auto screenshot = feed.snapshot();
+
+    std::deque<OverlayBoxScope> hits;
+    Pokemon::PokemonType type[4];
+
+    bool ret = MaxLairInternal::read_type_array(
+        console,
+        screenshot,
+        ImageFloatBox{0.150, 0.020, 0.800, 0.780},
+        hits,
+        4, type, nullptr
+    );
+
+    cout << "ret = " << ret << endl;
+#endif
+
+#if 0
+    ItemPrinterMaterialDetector detector(COLOR_RED, LANGUAGE);
+    // detector.make_overlays(overlays);
+    // cout << (int)detector.find_happiny_dust_row_index(console, context) << endl;
+
+    ImageRGB32 image(IMAGE_PATH);
+    // auto image = feed.snapshot();
+
+    for (int i = 0; i < 10; i++){
+        cout << detector.detect_material_name(console, image, context, (int8_t)i) << endl;
+        cout << detector.detect_material_quantity(console, image, context, (int8_t)i) << endl;
+    }
+#endif
+
+#if 0
+    auto screenshot = feed.snapshot();
+
+
+    DateReader reader(console);
+    reader.make_overlays(overlays);
+    reader.read_date(logger, screenshot);
+#endif
+
+#if 0
+    BinarySliderDetector detector(COLOR_BLUE, {0.836431, 0.097521, 0.069703, 0.796694});
+    auto result = detector.detect(screenshot);
+
+    for (auto& item : result){
+        cout << item.first << " : " << item.second.center_y() << endl;
+    }
+#endif
+
+//    LetsGoKillWatcher menu(logger, COLOR_RED, true, {0.23, 0.23, 0.04, 0.20});
+//    cout << menu.detect(screenshot) << endl;
+
+
+
+//    PokemonSwSh::MaxLairInternal::PathSelectDetector detector;
+//    detector.detect(screenshot);
+
+//    int ret = PokemonSwSh::MaxLairInternal::read_side(screenshot);
+//    cout << "ret = " << ret << endl;
+
+
+
+
+#if 0
+    ImageRGB32 image("20250717-121112090631.png");
+
+    AdvanceDialogDetector detector;
+    detector.make_overlays(overlays);
+    cout << detector.detect(image) << endl;
+#endif
+
+#if 0
+    ImageRGB32 image(RESOURCE_PATH() + "PokemonHome/PokeballSprites.png");
+    image = remove_white_border(image);
+    image.save("test.png");
+#endif
+
+
+#if 0
+    auto screenshot = feed.snapshot();
+
+    PokemonHome::BallReader reader(console);
+
+    reader.read_ball(screenshot);
+#endif
+
+
+
+//    pbf_press_button(context, );
+
+
+
+
+//    PokemonLA::detect_selected_region(console, scope);
+
+
+
+
+#if 0
+    auto screenshot = feed.snapshot();
+
+
+    StartBattleYellowBarDetector detector(COLOR_RED);
+    cout << detector.detect(screenshot) << endl;
+#endif
+
+
+
+//    cout << "asdf" << endl;
+//    cout << (int)settings_detect_console_type(console, context) << endl;
+
+
+
+//    DateReader_Switch2_US reader(COLOR_RED);
+//    reader.read_date(logger, screenshot);
+
+#if 0
+    HomeMenuDetector detector0(console);
+//    StartGameUserSelectDetector detector1(console);
+//    UpdatePopupDetector detector2(console);
+    detector0.make_overlays(overlays);
+//    detector1.make_overlays(overlays);
+//    detector2.make_overlays(overlays);
+    cout << detector0.detect(feed.snapshot()) << endl;
+//    cout << detector1.detect(feed.snapshot()) << endl;
+//    cout << detector2.detect(feed.snapshot()) << endl;
+#endif
+
+
+
+//    ImageRGB32 image0("menu-light.png");
+//    ImageRGB32 image1("menu-dark.png");
+//    ImageRGB32 image2("menu-jpn.png");
+
+#if 0
+    env.log("Touching date to prevent rollover.");
+    pbf_press_button(context, BUTTON_HOME, 160ms, PokemonSwSh::GameSettings::instance().GAME_TO_HOME_DELAY_SAFE0);
+    touch_date_from_home(console, context, ConsoleSettings::instance().SETTINGS_TO_HOME_DELAY0);
+    resume_game_no_interact(console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
+#endif
+
+
+
+#if 0
+    auto screenshot = feed.snapshot();
+
+
+    BinarySliderDetector detector(COLOR_RED, {0.836431, 0.097521, 0.069703, 0.796694});
+    auto sliders = detector.detect(screenshot);
+
+    for (auto& item : sliders){
+        cout << item.first << " : " << item.second.min_y << endl;
+    }
+#endif
+
+#if 0
+    ImageFloatBox box(0.842007, 0.626446, 0.050186, 0.049587);
+    ImageViewRGB32 cropped = extract_box_reference(screenshot, box);
+
+    cropped.save("temp.png");
+
+    PackedBinaryMatrix matrix = compress_rgb32_to_binary_range(
+        cropped, 0xffc0c0c0, 0xffffffff
+    );
+
+    cout << matrix.dump() << endl;
+
+    std::vector<WaterfillObject> objects = find_objects_inplace(matrix, 200);
+    cout << "objects.size() = " << objects.size() << endl;
+    for (auto& item : objects){
+        extract_box_reference(cropped, item).save("test.png");
+    }
+#endif
+
+
+
+//    FastCodeEntry::numberpad_enter_code(console, context, "708538991006", true);
+
+
+
+#if 0
+//    ssf_issue_scroll(context, DPAD_LEFT, 48ms, 48ms, 24ms);
+    ssf_press_button(context, BUTTON_A, 96ms, 48ms, 24ms);
+    ssf_press_button(context, BUTTON_L, 0ms, 48ms, 24ms);
+    ssf_issue_scroll(context, DPAD_LEFT, 48ms, 48ms, 24ms);
+#endif
+
+#if 0
+    DateReader reader;
+    reader.make_overlays(overlays);
+    auto date = reader.read_date(logger, feed.snapshot());
+
+    cout << "date format = " << (int)date.first << endl;
+//    cout << "date  = " << (int)date.second << endl;
+#endif
+
+
+
+#if 0
+//    DateReader_Switch2_US reader(COLOR_RED);
+    DateReader_Switch2_JP reader(COLOR_RED);
+    reader.make_overlays(overlays);
+    DateTime date = reader.read_date(logger, feed.snapshot());
+
+    cout << "Month = " << (int)date.month << endl;
+    cout << "Day = " << (int)date.day << endl;
+    cout << "Year = " << (int)date.year << endl;
+    cout << "Hour = " << (int)date.hour << endl;
+    cout << "Minute = " << (int)date.minute << endl;
+#endif
+
+
+#if 0
+    DateChangeDetector_Switch2 detector(COLOR_RED);
+    detector.make_overlays(overlays);
+    cout << detector.detect(feed.snapshot()) << endl;
+#endif
+
+
+#if 0
+    DateReader reader(console);
+    reader.make_overlays(overlays);
+    DateTime date = reader.read_date(logger, feed.snapshot()).second;
+
+    cout << "Month = " << (int)date.month << endl;
+    cout << "Day = " << (int)date.day << endl;
+    cout << "Year = " << (int)date.year << endl;
+    cout << "Hour = " << (int)date.hour << endl;
+    cout << "Minute = " << (int)date.minute << endl;
+
+    while (true){
+        reader.set_date(env.program_info(), console, context, DATE0);
+        for (int c = 0; c < 7; c++){
+            ssf_issue_scroll_ptv(context, DPAD_LEFT);
+        }
+        reader.set_date(env.program_info(), console, context, DATE1);
+        for (int c = 0; c < 7; c++){
+            ssf_issue_scroll_ptv(context, DPAD_LEFT);
+        }
+    }
+#endif
+
+
+
+//    rollback_hours_from_home(console, context, 3, 500ms);
+
+
+
+#if 0
+    while (true){
+        roll_date_backward_N_Switch2_wired(context, 60);
+        for (size_t c = 0; c < 60; c++){
+            roll_date_forward_1(console, context, true);
+        }
+    }
+#endif
+
+
+
+#if 0
+    while (true){
+        home_to_date_time(console, context, true);
+//        home_to_date_time_Switch2_wired_blind(context, true);
+        ssf_do_nothing(context, 1000ms);
+        pbf_press_button(context, BUTTON_HOME, 200ms, 1800ms);
+    }
+#endif
+
+
+
+
+#if 0
+    ConsoleTypeDetector_Home detector(console);
+    detector.make_overlays(overlays);
+
+    cout << (int)detector.detect(feed.snapshot()) << endl;
+#endif
+
+
+
+#if 0
+    UpdatePopupDetector detector;
+    detector.make_overlays(overlays);
+
+    cout << detector.detect(feed.snapshot()) << endl;
+#endif
+
+
+
+
+
+#if 0
+    home_to_date_time(console, context, false);
+#endif
+
+#if 0
+//    std::terminate();
+    ImageRGB32 image("20250503-121259857603.png");
+
+    image = filter_rgb32_brightness(image, COLOR_RED, false, 0x00ffff01, 0, 200);
+    image.save("temp.png");
+#endif
+
+
+#if 0
+    ImageRGB32 image("20250503-121259857603.png");
+
+    {
+        TeraTypeReader reader;
+        ImageMatch::ImageMatchResult results = reader.read(image);
+        results.log(logger, 120);
+    }
+    {
+        TeraSilhouetteReader reader;
+        ImageMatch::ImageMatchResult results = reader.read(image);
+        results.log(logger, 120);
+    }
+#endif
+
+#if 0
+    Milliseconds unit = 24ms;
+
+    ssf_issue_scroll(context, DPAD_DOWN, 2*unit, 2*unit, unit);
+    ssf_issue_scroll(context, DPAD_LEFT, unit, 2*unit, unit);
+    ssf_issue_scroll(context, DPAD_LEFT, unit, 2*unit, unit);
+    ssf_issue_scroll(context, DPAD_LEFT, unit, 2*unit, unit);
+
+
+#endif
+
+
+
+#if 0
+    ssf_press_button(context, Button::BUTTON_ZR, 1s, 60h, 0ms);
+//    context->issue_gyro_rotate_x(&scope, 0s, 60h, 0ms, 0x1000);
+//    context->issue_gyro_rotate_y(&scope, 0s, 60h, 0ms, 0x0000);
+//    context->issue_gyro_rotate_z(&scope, 0s, 60h, 0ms, 0x1000);
+
+//    auto duration = 10s;
+
+//    context->issue_gyro_rotate_x(&scope, duration, duration, 0s, 0x1000);
+//    context->issue_nop(&scope, 60h);
+
+#if 0
+    auto duration = 15ms;
+    for (size_t c = 0; c < 65536; c += 1){
+        context->issue_gyro_accel_x(&scope, 0s, duration, 0s, (uint16_t)(688 + 0*c % 2));
+        context->issue_gyro_accel_y(&scope, 0s, duration, 0s, (uint16_t)(1*c % 2));
+        context->issue_gyro_accel_z(&scope, 0s, duration, 0s, (uint16_t)(-4038 + 0*c % 2));
+        context->issue_gyro_rotate_x(&scope, 0s, duration, 0s, (uint16_t)(0x0000 + 1*c));
+        context->issue_gyro_rotate_y(&scope, 0s, duration, 0s, (uint16_t)(0x0000 + 1*c));
+        context->issue_gyro_rotate_z(&scope, 0s, duration, 0s, (uint16_t)(0x0000 + 0*c));
+        context->issue_nop(&scope, duration);
+    }
+#endif
+#endif
+
+
+#if 0
+    ImageRGB32 image("20250420-043111395281.png");
+
+    OcrFailureWatchdog watchdog(logger);
+
+    PokemonSwSh::MaxLairInternal::PokemonSwapMenuReader reader(logger, overlay, Language::Korean, watchdog);
+
+    double hp[4];
+    reader.read_hp(image, hp);
+#endif
+
+#if 0
+    ImageRGB32 image("20250404-154507236508.png");
+
+    ArcPhoneDetector phone(logger, overlay, std::chrono::milliseconds(250), true);
+
+    while (true){
+        cout << phone.process_frame(image, current_time()) << endl;
+        scope.wait_for(100ms);
+    }
+
+#if 0
+    wait_until(
+        console, context,
+        10000ms,
+        {phone}
+    );
+#endif
+#endif
+
+#if 0
+    // ImageRGB32 image(IMAGE_PATH);
+    auto image = feed.snapshot();
+#if 0
+    ImageRGB32 image(IMAGE_PATH);
+    // auto image = feed.snapshot();
+
+    SandwichHandLocator hand(SandwichHandType::FREE, {0, 0, 1, 1});
+    std::pair<double, double> location = hand.locate_sandwich_hand(image, {0,0,1,1});
+    cout << location.first << ", " << location.second << endl;
+#endif
+
+#if 0
+    ImageRGB32 image(IMAGE_PATH);
+    // auto image = feed.snapshot();
+
+    ItemPrinterMaterialDetector detector(COLOR_RED, Language::English);
+
+    std::vector<ImageFloatBox> boxes = {
+        // {0.485,0.176758,0.037,0.05}, {0.485,0.250977,0.037,0.05}, {0.485,0.325196,0.037,0.05}, {0.485,0.399415,0.037,0.05}, {0.485,0.473634,0.037,0.05}, {0.485,0.547853,0.037,0.05}, {0.485,0.622072,0.037,0.05}, {0.485,0.696291,0.037,0.05}, {0.485,0.77051,0.037,0.05}, {0.485,0.844729,0.037,0.05},
+        {0.39,0.176758,0.025,0.05}, {0.39,0.250977,0.025,0.05}, {0.39,0.325196,0.025,0.05}, {0.39,0.399415,0.025,0.05}, {0.39,0.473634,0.025,0.05}, {0.39,0.547853,0.025,0.05}, {0.39,0.622072,0.025,0.05}, {0.39,0.696291,0.025,0.05}, {0.39,0.77051,0.025,0.05}, {0.39,0.844729,0.025,0.05},
+    };
+    for (ImageFloatBox box : boxes){
+        detector.read_number(console.logger(), env.inference_dispatcher(), image, box);
+    }
+
+#endif
+#endif
+
+#if 0
+
+    ImageRGB32 image("20250323-011605651979.png");
+
+    DialogBoxDetector detector;
+    detector.make_overlays(overlays);
+    cout << detector.detect(image) << endl;
+
+#endif
+
+
+#if 0
+    auto image = feed.snapshot();
+
+    ItemPrinterMenuDetector detector(COLOR_GREEN);
+    cout << detector.detect(image) << endl;
+#endif
+
+
+//    numberpad_enter_code(logger, context, "708538991006", false);
+
+
+
+#if 0
+    for (size_t i = 0; i < 100; i++){
+        for (size_t c = 0; c < 4; c++){
+            ssf_issue_scroll(context, DPAD_RIGHT, 17ms);
+        }
+        for (size_t c = 0; c < 4; c++){
+            ssf_issue_scroll(context, DPAD_LEFT, 17ms);
+        }
+    }
+#endif
+
+
+
+#if 0
+    while (true){
+        for (size_t c = 0; c < 60; c++){
+            ssf_issue_scroll(context, DPAD_DOWN, 24ms);
+        }
+        ssf_do_nothing(context, 1000ms);
+        for (size_t c = 0; c < 60; c++){
+            ssf_issue_scroll(context, DPAD_UP, 24ms);
+        }
+        ssf_do_nothing(context, 1000ms);
+    }
+#endif
+
+//    pbf_move_left_joystick(context, 38, 38, 10000, 0);
+
+
+//    ssf_issue_scroll(context, DPAD_LEFT, 0);
+//    ssf_press_button(context, BUTTON_A | BUTTON_L, 3);
+//    ssf_press_button(context, BUTTON_L, 0);
+
+#if 0
+    numberpad_enter_code(
+        logger, context,
+        "708538991006",
+        false
+    );
+#endif
+
+#if 0
+    codeboard_enter_digits(
+        logger, context, KeyboardLayout::QWERTY,
+        "JRH5T9",
+        true,
+        CodeboardDelays{
+            .hold = 5 * 8ms,
+            .cool = 3 * 8ms,
+            .press_delay = 4 * 8ms * 1,
+            .move_delay = 5 * 8ms * 1,
+            .wrap_delay = 6 * 8ms * 1,
+        }
+    );
+#endif
+
+//    ssf_flush_pipeline(context);
+
+
+//    return_to_academy_after_loss(env, console, context);
+
+
+
+
+//    fly_from_paldea_to_blueberry_entrance(env.program_info(), console, context);
+
+
+
+#if 0
+    ssf_press_button(context, BUTTON_A, 0);
+    ssf_do_nothing(context, 4);
+    ssf_press_button(context, BUTTON_A, 0);
+    ssf_do_nothing(context, 4);
+    ssf_press_button(context, BUTTON_A, 0);
+    ssf_do_nothing(context, 4);
+    ssf_press_button(context, BUTTON_A, 0);
+    ssf_do_nothing(context, 4);
+#endif
+
+
+
+//    enter_digits(context, 8, (const uint8_t*)"56685459");
+
+#if 0
+    for (int c = 0; c < 10; c++){
+        scroll_to(context, 1, 9, true);
+        scroll_to(context, 9, 1, true);
+    }
+//    pbf_wait(context, 100);
+#endif
+
+
+#if 0
+    ImageRGB32 image("20250131-170450792229.png");
+
+    PokemonSwSh::BattleBallReader reader(console, Language::Korean);
+    reader.read_ball(image);
+#endif
+
+
+#if 0
+    {
+        TeraTypeReader reader;
+        ImageMatch::ImageMatchResult results = reader.read(image);
+        results.log(logger, 100);
+    }
+#endif
+
+
+#if 0
+    ImageRGB32 image("20250125-224044294692.png");
+    MaxLairInternal::BattleMenuReader reader(overlay, Language::English);
+    std::set<std::string> slugs = reader.read_opponent_in_summary(logger, image);
+
+    cout << set_to_str(slugs) << endl;
+#endif
+
+//    ssf_press_button(context, BUTTON_A, 0, 1000, 0);
+//    pbf_move_left_joystick(context, 0, 0, 20, 0);
+
+
+
+#if 0
+    ImageRGB32 image("20250218-003554940153.png");
+//    ImageRGB32 image("raidecho1.jpg");
+//    auto image = feed.snapshot();
+
+//    MaxLairInternal::BattleMenuReader reader(overlay, Language::English);
+//    reader.read_opponent_in_summary(logger, image);
+
+    TeraCardReader reader;
+    cout << reader.detect(image) << endl;
+    reader.pokemon_slug(logger, env.program_info(), image);
+//    cout << (int)reader.stars(logger, env.program_info(), image) << endl;
+#endif
+
+
+
+
+
+#if 0
+    ImageRGB32 image("20250112-194339635973.png");
+
+    PokemonBDSP::SelectionArrowFinder detector0(console, {0.50, 0.58, 0.40, 0.10}, COLOR_RED);
+    PokemonBDSP::SelectionArrowFinder detector1(console, {0.50, 0.52, 0.40, 0.10}, COLOR_RED);
+
+    cout << detector0.detect(image) << endl;
+    cout << detector1.detect(image) << endl;
+#endif
+
+
+
+#if 0
+    PokemonSwSh::MaxLairInternal::PokemonSwapMenuReader reader(console, overlay, Language::English);
+
+    ImageRGB32 image("20241221-123730238930.png");
+
+    double hp[4];
+    reader.read_hp(image, hp);
+#endif
+
+//    reader.read_opponent_in_summary(logger, image);
+
 //    PokemonSwSh::find_selection_arrows(image, 10);
 
 
@@ -331,9 +1060,9 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
     );
 #endif
 
-#if 1
+#if 0
     VideoSnapshot image = feed.snapshot();
-//    ImageRGB32 image("screenshot-20241124-135028529403.png");
+//    ImageRGB32 image("20250108-151305644248.png");
 
     DateReader date_reader;
     date_reader.make_overlays(overlays);
@@ -351,7 +1080,7 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
 
     VideoSnapshot image = feed.snapshot();
     DirectionDetector detector;
-    
+
     // ImageRGB32 image("MaterialFarmer-1.png");
     // ImageRGB32 image("dark-capture-card_1.png");
     // DirectionDetector detector(COLOR_BLUE, ImageFloatBox(0,0,1,1));
@@ -369,7 +1098,7 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
     // cout << (int)detector.detect_material_quantity(env.inference_dispatcher(), console, context, 2) << endl;
 
     // test OCR for number 1 -> 999. for black text on light background.
-    // increasing quantity of materials to sell. 
+    // increasing quantity of materials to sell.
     for (int i = 1; i < 1000; i++){
        context.wait_for_all_requests();
         if (i != (int)detector.detect_material_quantity(env.inference_dispatcher(), console, context, 2)){
@@ -479,22 +1208,6 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
     reader.read(logger, env.inference_dispatcher(), feed.snapshot());
 #endif
 
-#if 0
-    DateReader reader;
-    reader.make_overlays(overlays);
-    DateTime date = reader.read_date(logger, feed.snapshot()).second;
-
-    cout << "Month = " << (int)date.month << endl;
-    cout << "Day = " << (int)date.day << endl;
-    cout << "Year = " << (int)date.year << endl;
-    cout << "Hour = " << (int)date.hour << endl;
-    cout << "Minute = " << (int)date.minute << endl;
-
-    while (true){
-        reader.set_date(env.program_info(), console, context, DATE0);
-        reader.set_date(env.program_info(), console, context, DATE1);
-    }
-#endif
 
 //    SinglesAIOption battle_AI;
 //    run_singles_battle(env, console, context, battle_AI, false);
@@ -1025,9 +1738,9 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
         NormalBattleMenuWatcher battle_menu(COLOR_RED);
         AreaZeroSkyTracker sky_tracker(overlay);
         context.wait_for_all_requests();
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             console, context,
-            [&](BotBaseContext& context){
+            [&](ProControllerContext& context){
                 while (true){
                     switch (count++ % 2){
                     case 0:
@@ -1112,7 +1825,7 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
     ConsoleHandle& host = env.consoles[host_index];
     BotBaseContext host_context(scope, host.botbase());
 
-    env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
+    env.run_in_parallel(scope, [&](ConsoleHandle& console, ProControllerContext& context){
         if (console.index() == host_index){
             open_raid(console, context);
         }else{
@@ -1131,7 +1844,7 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
         OperationFailedException::fire(env.logger(), "Unable to read raid code.");
     }
 
-    env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
+    env.run_in_parallel(scope, [&](ConsoleHandle& console, ProControllerContext& context){
         if (console.index() == host_index){
             return;
         }
@@ -1398,12 +2111,12 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
 
 #if 0
     AsyncCommandSession session(scope, logger, env.realtime_dispatcher(), context.botbase());
-    session.dispatch([](BotBaseContext& context){
+    session.dispatch([](ProControllerContext& context){
 //        pbf_controller_state(context, 0, DPAD_NONE, 128, 0, 128, 128, 255);
         pbf_press_button(context, BUTTON_A, 255, 0);
     });
     context.wait_for(std::chrono::seconds(2));
-    session.dispatch([](BotBaseContext& context){
+    session.dispatch([](ProControllerContext& context){
 //        pbf_controller_state(context, BUTTON_B, DPAD_NONE, 128, 0, 128, 128, 255);
         pbf_press_button(context, BUTTON_B, 255, 0);
     });
@@ -1425,8 +2138,8 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
 
 
 #if 0
-    CodeboardPosition point0{1, 0};
-    CodeboardPosition point1{1, 10};
+    KeyboardEntryPosition point0{1, 0};
+    KeyboardEntryPosition point1{1, 10};
 //    uint16_t scroll_delay = 3;
 //    uint16_t A_delay = 3;
 
@@ -1630,7 +2343,7 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
     TradeStats stats;
     env.run_in_parallel(
         scope,
-        [&](ConsoleHandle& console, BotBaseContext& context){
+        [&](ConsoleHandle& console, ProControllerContext& context){
             trade_current_pokemon(console, context, state, stats);
         }
     );
@@ -1897,7 +2610,7 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
 
 
 //    YCommMenuDetector detector(true);
-//    HomeDetector detector;
+//    HomeMenuDetector detector;
 //    cout << detector.detect(image) << endl;
 //    cout << detector.detect(feed.snapshot()) << endl;
 
@@ -1964,8 +2677,8 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
 #if 0
     ImageRGB32 image("screenshot-20221107-210754107968.png");
 //    auto image = feed.snapshot();
-    HomeDetector detector;
-//    UpdateMenuDetector detector;
+    HomeMenuDetector detector;
+//    UpdatePopupDetector detector;
     VideoOverlaySet overlays(overlay);
     detector.make_overlays(overlays);
     cout << detector.detect(image) << endl;
@@ -1974,7 +2687,7 @@ void TestProgram::program(MultiSwitchProgramEnvironment& env, CancellableScope& 
 //    ImageRGB32 image("ExclamationFalsePositive.png");
 //    find_exclamation_marks(image);
 
-//    HomeDetector detector;
+//    HomeMenuDetector detector;
 //    cout << detector.detect(image) << endl;
 
 

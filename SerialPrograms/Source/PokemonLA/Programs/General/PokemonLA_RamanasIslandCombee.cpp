@@ -1,19 +1,19 @@
 /*  Ramanas Island Combee Finder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include <array>
-#include <sstream>
+#include "CommonFramework/Exceptions/ProgramFinishedException.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "Pokemon/Pokemon_Strings.h"
+#include "Pokemon/Inference/Pokemon_NameReader.h"
 #include "PokemonLA/PokemonLA_Settings.h"
 #include "PokemonLA/PokemonLA_TravelLocations.h"
 #include "PokemonLA/Inference/Battles/PokemonLA_BattleMenuDetector.h"
@@ -38,10 +38,10 @@ RamanasCombeeFinder_Descriptor::RamanasCombeeFinder_Descriptor()
         "PokemonLA:Ramanas Island Combee Finder",
         STRING_POKEMON + " LA", "Ramanas Combee Finder",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/RamanasCombeeFinder.md",
-        "Check Ramanas Island Tree until a Combee is found",
+        "Check Ramanas Island Tree until a Combee is found.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 class RamanasCombeeFinder_Descriptor::Stats : public StatsTracker{
@@ -85,7 +85,7 @@ RamanasCombeeFinder:: RamanasCombeeFinder()
     , SHINY_DETECTED_ENROUTE(
         "Enroute Shiny Action",
         "This applies if a shiny is detected while traveling in the overworld.",
-        "0 * TICKS_PER_SECOND"
+        "0 ms"
     )
     , NOTIFICATION_STATUS("Status Update", true, false, std::chrono::seconds(3600))
     , NOTIFICATIONS({
@@ -110,17 +110,17 @@ RamanasCombeeFinder:: RamanasCombeeFinder()
 }
 
 
-void RamanasCombeeFinder::check_tree_no_stop(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void RamanasCombeeFinder::check_tree_no_stop(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     context.wait_for_all_requests();
     disable_shiny_sound(context);
     // Throw pokemon
-    pbf_press_button(context, BUTTON_ZR, (uint16_t)(0.5 * TICKS_PER_SECOND), (uint16_t)(1.5 * TICKS_PER_SECOND));
+    pbf_press_button(context, BUTTON_ZR, 500ms, 1500ms);
     context.wait_for_all_requests();
     env.current_stats<RamanasCombeeFinder_Descriptor::Stats>().trees++;
     env.update_stats();
 }
 
-bool RamanasCombeeFinder::check_tree(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool RamanasCombeeFinder::check_tree(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     context.wait_for_all_requests();
 
     disable_shiny_sound(context);
@@ -141,16 +141,16 @@ bool RamanasCombeeFinder::check_tree(SingleSwitchProgramEnvironment& env, BotBas
 }
 
 
-void RamanasCombeeFinder::disable_shiny_sound(BotBaseContext& context){
+void RamanasCombeeFinder::disable_shiny_sound(ProControllerContext& context){
     context.wait_for_all_requests();
     m_enable_shiny_sound.store(false, std::memory_order_release);
 }
-void RamanasCombeeFinder::enable_shiny_sound(BotBaseContext& context){
+void RamanasCombeeFinder::enable_shiny_sound(ProControllerContext& context){
     context.wait_for_all_requests();
     m_enable_shiny_sound.store(true, std::memory_order_release);
 }
 
-bool RamanasCombeeFinder::handle_battle(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool RamanasCombeeFinder::handle_battle(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     RamanasCombeeFinder_Descriptor::Stats& stats = env.current_stats<RamanasCombeeFinder_Descriptor::Stats>();
 
     PokemonDetails pokemon = get_pokemon_details(env.console, context, LANGUAGE);
@@ -167,21 +167,24 @@ bool RamanasCombeeFinder::handle_battle(SingleSwitchProgramEnvironment& env, Bot
 
     env.console.log("Combee found");
     stats.found++;
-    on_match_found(env, env.console, context, SHINY_DETECTED_ENROUTE, true);
-    return true;
+
+    context.wait_for_all_requests();
+    throw ProgramFinishedException();
+//    on_battle_match_found(env, env.console, context, SHINY_DETECTED_ENROUTE, true);
+//    return true;
 }
 
-void RamanasCombeeFinder::grouped_path(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void RamanasCombeeFinder::grouped_path(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
 
     BattleMenuDetector battle_menu_detector(env.console, env.console, true);
 
-    int ret = run_until(
+    int ret = run_until<ProControllerContext>(
         env.console, context,
-        [&](BotBaseContext& context){
+        [&](ProControllerContext& context){
 
             env.console.log("Checking Tree 1");
             change_mount(env.console,context,MountState::BRAVIARY_ON);
-            pbf_move_left_joystick(context, 241, 0, 100, 20);
+            pbf_move_left_joystick(context, 239, 0, 100, 20);
             pbf_press_button(context, BUTTON_B, 2390, 0);
             pbf_press_button(context, BUTTON_Y, 380, 0);
             pbf_move_right_joystick(context, 127, 255, 90, 20);
@@ -243,7 +246,10 @@ void RamanasCombeeFinder::grouped_path(SingleSwitchProgramEnvironment& env, BotB
 
 }
 
-void RamanasCombeeFinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void RamanasCombeeFinder::run_iteration(
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
+    bool fresh_from_reset
+){
     RamanasCombeeFinder_Descriptor::Stats& stats = env.current_stats<RamanasCombeeFinder_Descriptor::Stats>();
     stats.attempts++;
     env.update_stats();
@@ -256,8 +262,9 @@ void RamanasCombeeFinder::run_iteration(SingleSwitchProgramEnvironment& env, Bot
         }
         if (c >= 5){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Failed to switch to Pokemon selection after 5 attempts."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Failed to switch to Pokemon selection after 5 attempts.",
+                env.console
             );
         }
         env.console.log("Not on Pokemon selection. Attempting to switch to it...", COLOR_ORANGE);
@@ -278,11 +285,15 @@ void RamanasCombeeFinder::run_iteration(SingleSwitchProgramEnvironment& env, Bot
 
     BlackOutDetector black_out_detector(env.console, env.console);
 
-    goto_camp_from_jubilife(env, env.console, context, TravelLocations::instance().Fieldlands_Heights);
+    goto_camp_from_jubilife(
+        env, env.console, context,
+        TravelLocations::instance().Fieldlands_Heights,
+        fresh_from_reset
+    );
 
-    int ret = run_until(
+    int ret = run_until<ProControllerContext>(
         env.console, context,
-        [&](BotBaseContext& context){
+        [&](ProControllerContext& context){
             grouped_path(env, context);
             context.wait_for_all_requests();
             goto_camp_from_overworld(env, env.console, context);
@@ -304,31 +315,36 @@ void RamanasCombeeFinder::run_iteration(SingleSwitchProgramEnvironment& env, Bot
             context.wait_for_all_requests();
         }
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Black out."
+            ErrorReport::SEND_ERROR_REPORT,
+            "Black out.",
+            env.console
         );
     }
 
     from_professor_return_to_jubilife(env, env.console, context);
 }
 
-void RamanasCombeeFinder::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void RamanasCombeeFinder::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     RamanasCombeeFinder_Descriptor::Stats& stats = env.current_stats<RamanasCombeeFinder_Descriptor::Stats>();
 
     //  Connect the controller.
     pbf_press_button(context, BUTTON_LCLICK, 5, 5);
 
+    bool fresh_from_reset = false;
     while (true){
         env.update_stats();
         send_program_status_notification(env, NOTIFICATION_STATUS);
         try{
-            run_iteration(env, context);
+            run_iteration(env, context, fresh_from_reset);
         }catch (OperationFailedException& e){
             stats.errors++;
             e.send_notification(env, NOTIFICATION_ERROR_RECOVERABLE);
 
-            pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
-            reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
+            pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
+            fresh_from_reset = reset_game_from_home(
+                env, env.console, context,
+                ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST
+            );
         }
     }
 

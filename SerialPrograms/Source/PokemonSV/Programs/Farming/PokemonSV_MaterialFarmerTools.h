@@ -1,6 +1,6 @@
 /*  Material Farmer - Happiny dust
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,8 +10,9 @@
 #include <functional>
 #include "Common/Cpp/Options/FloatingPointOption.h"
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
-#include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
+#include "CommonFramework/Notifications/EventNotificationOption.h"
+#include "CommonTools/Options/LanguageOCROption.h"
+#include "NintendoSwitch/NintendoSwitch_ConsoleHandle.h"
 #include "PokemonSV/Options/PokemonSV_SandwichMakerOption.h"
 #include "PokemonSV/Programs/ShinyHunting/PokemonSV_LetsGoTools.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_LetsGoHpReader.h"
@@ -50,7 +51,7 @@ public:
         EventNotificationOption& notif_error_recoverable_option,
         EventNotificationOption& notif_error_fatal_option
     );
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 private:
     std::unique_ptr<OCR::LanguageOCROption> m_language_owner;
@@ -86,16 +87,15 @@ public:
 
 void run_material_farmer(
     ProgramEnvironment& env,
-    ConsoleHandle& console,
-    BotBaseContext& context,
+    ConsoleHandle& console, ProControllerContext& context,
     MaterialFarmerOptions& options,
     MaterialFarmerStats& stats
 );
 
 void check_hp(
     ProgramEnvironment& env,
-    ConsoleHandle& console,
-    BotBaseContext& context,
+    VideoStream& stream,
+    ProControllerContext& context,
     MaterialFarmerOptions& options,
     LetsGoHpWatcher& hp_watcher,
     MaterialFarmerStats& stats
@@ -103,58 +103,58 @@ void check_hp(
 
 WallClock make_sandwich_material_farm(
     ProgramEnvironment& env, 
-    ConsoleHandle& console,
-    BotBaseContext& context, 
+    VideoStream& stream,
+    ProControllerContext& context, 
     MaterialFarmerOptions& options,
     MaterialFarmerStats& stats
 );        
 
-void move_to_start_position_for_letsgo0(ConsoleHandle& console, BotBaseContext& context);
+void move_to_start_position_for_letsgo0(VideoStream& stream, ProControllerContext& context);
 
-void move_to_start_position_for_letsgo1(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context);
+void move_to_start_position_for_letsgo1(const ProgramInfo& info, VideoStream& stream, ProControllerContext& context);
 
-void lets_go_movement0(BotBaseContext& context);
+void lets_go_movement0(ProControllerContext& context);
 
-void lets_go_movement1(BotBaseContext& context);
+void lets_go_movement1(ProControllerContext& context);
 
 std::chrono::minutes minutes_remaining(WallClock start_time, std::chrono::minutes minutes_duration);
 
 void run_lets_go_iteration(
-    ConsoleHandle& console,
-    BotBaseContext& context,
+    VideoStream& stream,
+    ProControllerContext& context,
     LetsGoEncounterBotTracker& encounter_tracker,
     int num_forward_moves_per_lets_go_iteration
 );
 
 void run_from_battles_and_back_to_pokecenter(
     ProgramEnvironment& env, 
-    ConsoleHandle& console,
-    BotBaseContext& context,
+    VideoStream& stream,
+    ProControllerContext& context,
     MaterialFarmerStats& stats,
     std::function<
         void(ProgramEnvironment& env,
-        ConsoleHandle& console,
-        BotBaseContext& context)
+        VideoStream& stream,
+        ProControllerContext& context)
     >&& action
 );
 
 
 
-void move_from_material_farming_to_item_printer(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context);
+void move_from_material_farming_to_item_printer(const ProgramInfo& info, VideoStream& stream, ProControllerContext& context);
 
-void fly_from_paldea_to_blueberry_entrance(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context);
+void fly_from_paldea_to_blueberry_entrance(const ProgramInfo& info, VideoStream& stream, ProControllerContext& context);
 
-void move_from_blueberry_entrance_to_league_club(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context);
+void move_from_blueberry_entrance_to_league_club(const ProgramInfo& info, VideoStream& stream, ProControllerContext& context);
 
-void move_from_league_club_entrance_to_item_printer(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context);
+void move_from_league_club_entrance_to_item_printer(const ProgramInfo& info, VideoStream& stream, ProControllerContext& context);
 
 
 
-void move_from_item_printer_to_material_farming(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context);
+void move_from_item_printer_to_material_farming(const ProgramInfo& info, VideoStream& stream, ProControllerContext& context);
 
-void move_from_item_printer_to_blueberry_entrance(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context);
+void move_from_item_printer_to_blueberry_entrance(const ProgramInfo& info, VideoStream& stream, ProControllerContext& context);
 
-void fly_from_blueberry_to_north_province_3(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context);
+void fly_from_blueberry_to_north_province_3(const ProgramInfo& info, VideoStream& stream, ProControllerContext& context);
 
 
 

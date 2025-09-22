@@ -1,6 +1,6 @@
 /*  Pokemon Home Page Swap
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -22,9 +22,9 @@ PageSwap_Descriptor::PageSwap_Descriptor()
         STRING_POKEMON + " Home", STRING_POKEMON + " Home: Page Swap",
         "ComputerControl/blob/master/Wiki/Programs/PokemonHome/PageSwap.md",
         "Swap 30 boxes (1 page) in " + STRING_POKEMON + " Home.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -41,7 +41,7 @@ PageSwap::PageSwap()
     PA_ADD_OPTION(DODGE_SYSTEM_UPDATE_WINDOW);
 }
 
-void PageSwap::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void PageSwap::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     if (START_LOCATION.start_in_grip_menu()){
         grip_menu_connect_go_home(context);
         PokemonSwSh::resume_game_no_interact(env.console, context, DODGE_SYSTEM_UPDATE_WINDOW);
@@ -49,7 +49,7 @@ void PageSwap::program(SingleSwitchProgramEnvironment& env, BotBaseContext& cont
         pbf_press_button(context, BUTTON_RCLICK, 5, 5);
     }
 
-    const uint16_t PICKUP_DELAY = 125;
+    const uint16_t PICKUP_DELAY = 250;
     const uint16_t SCROLL_DELAY = 20;
 
     for (uint8_t i = 0; i < 2; i++){

@@ -1,6 +1,6 @@
 /*  Test Map
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,6 +10,7 @@
 #include "Kernels_Tests.h"
 #include "NintendoSwitch_Tests.h"
 #include "PokemonLA_Tests.h"
+#include "PokemonLZA_Tests.h"
 #include "PokemonSwSh_Tests.h"
 #include "PokemonSV_Tests.h"
 #include "TestMap.h"
@@ -228,7 +229,7 @@ const std::map<std::string, TestFunction> TEST_MAP = {
     {"Kernels_CompressRGB32ToBinaryEuclidean", std::bind(image_void_detector_helper, test_kernels_CompressRGB32ToBinaryEuclidean, _1)},
     {"Kernels_Waterfill", std::bind(image_void_detector_helper, test_kernels_Waterfill, _1)},
     {"CommonFramework_BlackBorderDetector", std::bind(image_bool_detector_helper, test_CommonFramework_BlackBorderDetector, _1)},
-    {"NintendoSwitch_UpdateMenuDetector", std::bind(image_bool_detector_helper, test_NintendoSwitch_UpdateMenuDetector, _1)},
+    {"NintendoSwitch_UpdatePopupDetector", std::bind(image_bool_detector_helper, test_NintendoSwitch_UpdatePopupDetector, _1)},
     {"PokemonSwSh_YCommMenuDetector", std::bind(image_bool_detector_helper, test_pokemonSwSh_YCommMenuDetector, _1)},
     {"PokemonSwSh_MaxLair_BattleMenuDetector", std::bind(image_bool_detector_helper, test_pokemonSwSh_MaxLair_BattleMenuDetector, _1)},
     {"PokemonSwSh_DialogTriangleDetector", std::bind(image_bool_detector_helper, test_pokemonSwSh_DialogTriangleDetector, _1)},
@@ -240,6 +241,7 @@ const std::map<std::string, TestFunction> TEST_MAP = {
     {"PokemonSwSh_BlackDialogBoxDetector", std::bind(image_bool_detector_helper, test_pokemonSwSh_BlackDialogBoxDetector, _1)},
     {"PokemonSwSh_BoxShinySymbolDetector", std::bind(image_bool_detector_helper, test_pokemonSwSh_BoxShinySymbolDetector, _1)},
     {"PokemonSwSh_BoxGenderDetector", std::bind(image_int_detector_helper, test_pokemonSwSh_BoxGenderDetector, _1)},
+    {"PokemonSwSh_SelectionArrowFinder", std::bind(image_int_detector_helper, test_pokemonSwSh_SelectionArrowFinder, _1)},
     {"PokemonLA_BattleMenuDetector", std::bind(image_bool_detector_helper, test_pokemonLA_BattleMenuDetector, _1)},
     {"PokemonLA_BattlePokemonSwitchDetector", std::bind(image_bool_detector_helper, test_pokemonLA_BattlePokemonSwitchDetector, _1)},
     {"PokemonLA_TransparentDialogueDetector", std::bind(image_bool_detector_helper, test_pokemonLA_TransparentDialogueDetector, _1)},
@@ -276,7 +278,7 @@ const std::map<std::string, TestFunction> TEST_MAP = {
     {"PokemonSV_OverworldDetector", std::bind(image_bool_detector_helper, test_pokemonSV_OverworldDetector, _1)},
     {"PokemonSV_BoxBottomButtonDetector", std::bind(image_words_detector_helper, test_pokemonSV_BoxBottomButtonDetector, _1)},
     {"PokemonSV_SandwichIngredientsDetector", std::bind(image_words_detector_helper, test_pokemonSV_SandwichIngredientsDetector, _1)},
-    {"PokemonSV_SandwichIngredientReader", std::bind(image_words_detector_helper, test_pokemonSV_SandwichIngredientReader, _1)},
+    {"PokemonSV_SandwichIngredientReader", test_pokemonSV_SandwichIngredientReader},
     {"PokemonSV_AdvanceDialogDetector", std::bind(image_bool_detector_helper, test_pokemonSV_AdvanceDialogDetector, _1)},
     {"PokemonSV_SwapMenuDetector", std::bind(image_bool_detector_helper, test_pokemonSV_SwapMenuDetector, _1)},
     {"PokemonSV_DialogBoxDetector", std::bind(image_bool_detector_helper, test_pokemonSV_DialogBoxDetector, _1)},
@@ -285,7 +287,8 @@ const std::map<std::string, TestFunction> TEST_MAP = {
     {"PokemonSV_ESPPressedEmotionDetector", std::bind(image_bool_detector_helper, test_pokemonSV_ESPPressedEmotionDetector, _1)},
     {"PokemonSV_MapFlyMenuDetector", std::bind(image_bool_detector_helper, test_pokemonSV_MapFlyMenuDetector, _1)},
     {"PokemonSV_SandwichPlateDetector", std::bind(image_words_detector_helper, test_pokemonSV_SandwichPlateDetector, _1)},
-    {"PokemonSV_RecentlyBattledDetector", std::bind(image_bool_detector_helper, test_pokemonSV_RecentlyBattledDetector, _1)}
+    {"PokemonSV_RecentlyBattledDetector", std::bind(image_bool_detector_helper, test_pokemonSV_RecentlyBattledDetector, _1)},
+    {"PokemonLZA_NormalDialogBoxDetector", std::bind(image_bool_detector_helper, test_pokemonZLA_NormalDialogBoxDetector, _1)},
 };
 
 TestFunction find_test_function(const std::string& test_space, const std::string& test_name){

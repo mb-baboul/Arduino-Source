@@ -1,13 +1,13 @@
 /*  Pokeball Sprite Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_PokeballSpriteReader_H
 #define PokemonAutomation_PokemonBDSP_PokeballSpriteReader_H
 
-#include "CommonFramework/ImageMatch/CroppedImageDictionaryMatcher.h"
+#include "CommonTools/ImageMatch/CroppedImageDictionaryMatcher.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

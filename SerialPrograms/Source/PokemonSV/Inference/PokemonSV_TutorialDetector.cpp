@@ -1,20 +1,16 @@
 /*  Tutorial Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Cpp/Exceptions.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
-#include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
-#include "CommonFramework/VideoPipeline/VideoFeed.h"
+#include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonSV_TutorialDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -32,7 +28,7 @@ void TutorialDetector::make_overlays(VideoOverlaySet& items) const{
 }
 
 // detect solid beige color along the side and bottom of the tutorial
-bool TutorialDetector::detect(const ImageViewRGB32& screen) const{
+bool TutorialDetector::detect(const ImageViewRGB32& screen){
     ImageStats bottom = image_stats(extract_box_reference(screen, m_bottom));
     ImageStats left = image_stats(extract_box_reference(screen, m_left));
     // cout << "bottom.average.sum(): " << bottom.average.sum() << endl;

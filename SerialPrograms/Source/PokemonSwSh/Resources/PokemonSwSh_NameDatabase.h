@@ -1,6 +1,6 @@
 /*  Name Database
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,7 @@
 #define PokemonAutomation_PokemonSwSh_NameDatabase_H
 
 #include <set>
-#include "CommonFramework/Options/StringSelectOption.h"
+#include "CommonTools/Options/StringSelectOption.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

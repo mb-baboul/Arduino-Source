@@ -1,15 +1,14 @@
 /*  Max Lair Detect Lobby
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSwSh_MaxLair_Detect_Lobby_H
 #define PokemonAutomation_PokemonSwSh_MaxLair_Detect_Lobby_H
 
-#include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/FrozenImageDetector.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetectors/FrozenImageDetector.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

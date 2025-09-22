@@ -1,15 +1,15 @@
 /*  Encounter Handler
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_EncounterHandler_H
 #define PokemonAutomation_PokemonBDSP_EncounterHandler_H
 
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "Pokemon/Pokemon_Notification.h"
-#include "Pokemon/Options/Pokemon_EncounterBotOptions.h"
 #include "PokemonSwSh/ShinyHuntTracker.h"
 #include "PokemonBDSP/Options/PokemonBDSP_EncounterBotCommon.h"
 #include "PokemonBDSP/Inference/ShinyDetection/PokemonBDSP_ShinyEncounterDetector.h"
@@ -24,7 +24,7 @@ namespace PokemonBDSP{
 class StandardEncounterHandler{
 public:
     StandardEncounterHandler(
-        ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
+        ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context,
         Language language,
         EncounterBotCommonOptions& settings,
         PokemonSwSh::ShinyHuntTracker& session_stats
@@ -37,7 +37,7 @@ public:
     //
     //  exit_battle_time: number of ticks to wait for battle ends after pressing "Run" button.
     //    If end of battle not detected in time, log the error but don't throw exception.
-    void run_away_due_to_error(uint16_t exit_battle_time);
+    void run_away_due_to_error(Milliseconds exit_battle_time);
 
     //  Use shiny detection result and inference of pokemon species to determine whether
     //  to stop the program according to the user setting.
@@ -47,7 +47,7 @@ public:
     //  to stop the program, run away from battle or catch the pokemon according to the user
     //  setting.
     //  Return true if program should stop.
-    bool handle_standard_encounter_end_battle(const DoublesShinyDetection& result, uint16_t exit_battle_time);
+    bool handle_standard_encounter_end_battle(const DoublesShinyDetection& result, Milliseconds exit_battle_time);
 
 
 private:
@@ -58,8 +58,8 @@ private:
 
 private:
     ProgramEnvironment& m_env;
-    BotBaseContext& m_context;
-    ConsoleHandle& m_console;
+    ProControllerContext& m_context;
+    VideoStream& m_stream;
     const Language m_language;
     EncounterBotCommonOptions& m_settings;
 
@@ -69,11 +69,11 @@ private:
 };
 
 
-void take_video(BotBaseContext& context);
+void take_video(ProControllerContext& context);
 void run_away(
     ProgramEnvironment& env,
-    ConsoleHandle& console,
-    uint16_t exit_battle_time
+    VideoStream& stream,
+    Milliseconds exit_battle_time
 );
 
 

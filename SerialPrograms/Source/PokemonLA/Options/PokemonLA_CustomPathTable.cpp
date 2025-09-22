@@ -1,6 +1,6 @@
 /*  Battle Pokemon Action Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -28,11 +28,13 @@ namespace PokemonAutomation{
 namespace NintendoSwitch{
 namespace PokemonLA{
 
+using namespace std::chrono_literals;
 
 
 
-const EnumDatabase<PathAction>& PathAction_Database(){
-    static const EnumDatabase<PathAction> database({
+
+const EnumDropdownDatabase<PathAction>& PathAction_Database(){
+    static const EnumDropdownDatabase<PathAction> database({
         {PathAction::NO_ACTION,             "no-action",            "NO Action"},
         {PathAction::CHANGE_MOUNT,          "change-mount",         "Change Mount"},
         {PathAction::MOVE_FORWARD,          "move-forward",         "Move Forward"},
@@ -45,8 +47,8 @@ const EnumDatabase<PathAction>& PathAction_Database(){
     });
     return database;
 }
-const EnumDatabase<PathMount>& PathMount_Database(){
-    static const EnumDatabase<PathMount> database({
+const EnumDropdownDatabase<PathMount>& PathMount_Database(){
+    static const EnumDropdownDatabase<PathMount> database({
         {PathMount::NO_MOUNT,       "none",         "No Mount"},
         {PathMount::WYRDEER,        "wrydeer",      "Wrydeer"},
         {PathMount::URSALUNA,       "ursaluna",     "Ursaluna"},
@@ -56,8 +58,8 @@ const EnumDatabase<PathMount>& PathMount_Database(){
     });
     return database;
 }
-const EnumDatabase<PathSpeed>& PathSpeed_Database(){
-    static const EnumDatabase<PathSpeed> database({
+const EnumDropdownDatabase<PathSpeed>& PathSpeed_Database(){
+    static const EnumDropdownDatabase<PathSpeed> database({
         {PathSpeed::NORMAL_SPEED,   "normal",   "Normal Speed"},
         {PathSpeed::SLOW_SPEED,     "slow",     "Slow Speed"},
         {PathSpeed::RUN,            "run",      "Run on Foot"},
@@ -78,46 +80,61 @@ CustomPathCell::~CustomPathCell(){
 void CustomPathCell::operator=(const CustomPathCell& x){
     text.set_text(x.text.text());
     mount.set(x.mount);
-    move_forward_ticks.set(x.move_forward_ticks);
+    move_forward.set(x.move_forward.current_text());
     move_speed.set(x.move_speed);
     left_x.set(x.left_x);
     left_y.set(x.left_y);
-    jump_wait_ticks.set(x.jump_wait_ticks);
-    wait_ticks.set(x.wait_ticks);
+    jump_wait.set(x.jump_wait.current_text());
+    wait.set(x.wait.current_text());
 }
 CustomPathCell::CustomPathCell(EnumDropdownCell<PathAction>& action)
     : BatchOption(LockMode::LOCK_WHILE_RUNNING, true)
     , m_action(action)
     , text("", false)
     , mount(PathMount_Database(), LockMode::LOCK_WHILE_RUNNING, PathMount::NO_MOUNT)
-    , move_forward_ticks("Ticks to Move:", LockMode::LOCK_WHILE_RUNNING, 0)
+    , move_forward(
+        "Duration (ms):", false,
+        LockMode::LOCK_WHILE_RUNNING,
+        0ms, Milliseconds::max(),
+        "2000 ms"
+    )
     , move_speed(PathSpeed_Database(), LockMode::LOCK_WHILE_RUNNING,PathSpeed::NORMAL_SPEED)
     , left_x("x: [left: -1.0, right: 1.0]", LockMode::LOCK_WHILE_RUNNING, 0, -1.0, 1.0)
     , left_y("y: [backward: -1.0, forward: 1.0]", LockMode::LOCK_WHILE_RUNNING, 0, -1.0, 1.0)
-    , jump_wait_ticks("Ticks after jump:", LockMode::LOCK_WHILE_RUNNING, 0)
-    , wait_ticks("Ticks:", LockMode::LOCK_WHILE_RUNNING, 0)
+    , jump_wait(
+        "Wait after jump (ms):", false,
+        LockMode::LOCK_WHILE_RUNNING,
+        0ms, Milliseconds::max(),
+        "2000 ms"
+    )
+    , wait(
+        "Wait Time (ms):", false,
+        LockMode::LOCK_WHILE_RUNNING,
+        0ms, Milliseconds::max(),
+        "2000 ms"
+    )
 {
     PA_ADD_STATIC(text);
     PA_ADD_OPTION(mount);
-    PA_ADD_OPTION(move_forward_ticks);
+    PA_ADD_OPTION(move_forward);
     PA_ADD_OPTION(move_speed);
     PA_ADD_OPTION(left_x);
     PA_ADD_OPTION(left_y);
-    PA_ADD_OPTION(jump_wait_ticks);
-    PA_ADD_OPTION(wait_ticks);
+    PA_ADD_OPTION(jump_wait);
+    PA_ADD_OPTION(wait);
 
-    CustomPathCell::value_changed(this);
+    CustomPathCell::on_config_value_changed(this);
     action.add_listener(*this);
 }
-void CustomPathCell::value_changed(void* object){
+void CustomPathCell::on_config_value_changed(void* object){
     text.set_visibility(ConfigOptionState::HIDDEN);
     mount.set_visibility(ConfigOptionState::HIDDEN);
-    move_forward_ticks.set_visibility(ConfigOptionState::HIDDEN);
+    move_forward.set_visibility(ConfigOptionState::HIDDEN);
     move_speed.set_visibility(ConfigOptionState::HIDDEN);
     left_x.set_visibility(ConfigOptionState::HIDDEN);
     left_y.set_visibility(ConfigOptionState::HIDDEN);
-    jump_wait_ticks.set_visibility(ConfigOptionState::HIDDEN);
-    wait_ticks.set_visibility(ConfigOptionState::HIDDEN);
+    jump_wait.set_visibility(ConfigOptionState::HIDDEN);
+    wait.set_visibility(ConfigOptionState::HIDDEN);
     switch (m_action){
     case PathAction::NO_ACTION:
         break;
@@ -125,11 +142,11 @@ void CustomPathCell::value_changed(void* object){
         mount.set_visibility(ConfigOptionState::ENABLED);
         break;
     case PathAction::MOVE_FORWARD:
-        move_forward_ticks.set_visibility(ConfigOptionState::ENABLED);
+        move_forward.set_visibility(ConfigOptionState::ENABLED);
         move_speed.set_visibility(ConfigOptionState::ENABLED);
         break;
     case PathAction::MOVE_IN_DIRECTION:
-        move_forward_ticks.set_visibility(ConfigOptionState::ENABLED);
+        move_forward.set_visibility(ConfigOptionState::ENABLED);
         left_x.set_visibility(ConfigOptionState::ENABLED);
         left_y.set_visibility(ConfigOptionState::ENABLED);
         break;
@@ -138,10 +155,10 @@ void CustomPathCell::value_changed(void* object){
         text.set_visibility(ConfigOptionState::ENABLED);
         break;
     case PathAction::JUMP:
-        jump_wait_ticks.set_visibility(ConfigOptionState::ENABLED);
+        jump_wait.set_visibility(ConfigOptionState::ENABLED);
         break;
     case PathAction::WAIT:
-        wait_ticks.set_visibility(ConfigOptionState::ENABLED);
+        wait.set_visibility(ConfigOptionState::ENABLED);
         break;
     case PathAction::START_LISTEN:
         text.set_text("If shiny detected, use \"Destination Shiny Action\".");
@@ -159,7 +176,7 @@ void CustomPathCell::value_changed(void* object){
 
 
 
-CustomPathTableRow2::CustomPathTableRow2(EditableTableOption& parent_table)
+CustomPathTableRow::CustomPathTableRow(EditableTableOption& parent_table)
     : EditableTableRow(parent_table)
     , action(PathAction_Database(), LockMode::LOCK_WHILE_RUNNING, PathAction::NO_ACTION)
     , parameters(action)
@@ -167,13 +184,13 @@ CustomPathTableRow2::CustomPathTableRow2(EditableTableOption& parent_table)
     PA_ADD_OPTION(action);
     PA_ADD_OPTION(parameters);
 }
-std::unique_ptr<EditableTableRow> CustomPathTableRow2::clone() const{
-    std::unique_ptr<CustomPathTableRow2> ret(new CustomPathTableRow2(parent()));
+std::unique_ptr<EditableTableRow> CustomPathTableRow::clone() const{
+    std::unique_ptr<CustomPathTableRow> ret(new CustomPathTableRow(parent()));
     ret->action.set(action);
     ret->parameters = parameters;
     return ret;
 }
-void CustomPathTableRow2::load_json(const JsonValue& json){
+void CustomPathTableRow::load_json(const JsonValue& json){
     const JsonObject* obj = json.to_object();
     if (obj == nullptr){
         return;
@@ -194,8 +211,12 @@ void CustomPathTableRow2::load_json(const JsonValue& json){
         break;
     case PathAction::MOVE_FORWARD:
         value = obj->get_value("MoveForwardTicks");
+        if (value != nullptr && value->is_integer()){
+            parameters.move_forward.set(std::to_string(value->to_integer_default() * 8));
+        }
+        value = obj->get_value("MoveForwardMs");
         if (value != nullptr){
-            parameters.move_forward_ticks.load_json(*value);
+            parameters.move_forward.load_json(*value);
         }
         value = obj->get_value("Speed");
         if (value != nullptr){
@@ -204,8 +225,12 @@ void CustomPathTableRow2::load_json(const JsonValue& json){
         break;
     case PathAction::MOVE_IN_DIRECTION:
         value = obj->get_value("MoveForwardTicks");
+        if (value != nullptr && value->is_integer()){
+            parameters.move_forward.set(std::to_string(value->to_integer_default() * 8));
+        }
+        value = obj->get_value("MoveForwardMs");
         if (value != nullptr){
-            parameters.move_forward_ticks.load_json(*value);
+            parameters.move_forward.load_json(*value);
         }
 //        value = obj->get_value("Speed");
 //        if (value != nullptr){
@@ -222,21 +247,29 @@ void CustomPathTableRow2::load_json(const JsonValue& json){
         break;
     case PathAction::JUMP:
         value = obj->get_value("JumpWaitTicks");
+        if (value != nullptr && value->is_integer()){
+            parameters.jump_wait.set(std::to_string(value->to_integer_default() * 8));
+        }
+        value = obj->get_value("JumpWaitMs");
         if (value != nullptr){
-            parameters.jump_wait_ticks.load_json(*value);
+            parameters.jump_wait.load_json(*value);
         }
         break;
     case PathAction::WAIT:
         value = obj->get_value("WaitTicks");
+        if (value != nullptr && value->is_integer()){
+            parameters.wait.set(std::to_string(value->to_integer_default() * 8));
+        }
+        value = obj->get_value("WaitMs");
         if (value != nullptr){
-            parameters.wait_ticks.load_json(*value);
+            parameters.wait.load_json(*value);
         }
         break;
     default:
         break;
     }
 }
-JsonValue CustomPathTableRow2::to_json() const{
+JsonValue CustomPathTableRow::to_json() const{
     JsonObject obj;
     obj["Action"] = action.to_json();
     switch (action){
@@ -244,20 +277,20 @@ JsonValue CustomPathTableRow2::to_json() const{
         obj["Mount"] = parameters.mount.to_json();
         break;
     case PathAction::MOVE_FORWARD:
-        obj["MoveForwardTicks"] = parameters.move_forward_ticks.to_json();
+        obj["MoveForwardMs"] = parameters.move_forward.to_json();
         obj["Speed"] = parameters.move_speed.to_json();
         break;
     case PathAction::MOVE_IN_DIRECTION:
-        obj["MoveForwardTicks"] = parameters.move_forward_ticks.to_json();
+        obj["MoveForwardMs"] = parameters.move_forward.to_json();
 //        obj["Speed"] = parameters.move_speed.to_json();
         obj["MoveDirectionX"] = parameters.left_x.to_json();
         obj["MoveDirectionY"] = parameters.left_y.to_json();
         break;
     case PathAction::JUMP:
-        obj["JumpWaitTicks"] = parameters.jump_wait_ticks.to_json();
+        obj["JumpWaitMs"] = parameters.jump_wait.to_json();
         break;
     case PathAction::WAIT:
-        obj["WaitTicks"] = parameters.wait_ticks.to_json();
+        obj["WaitMs"] = parameters.wait.to_json();
         break;
     default:
         break;
@@ -265,8 +298,8 @@ JsonValue CustomPathTableRow2::to_json() const{
     return obj;
 }
 
-CustomPathTable2::CustomPathTable2()
-    : EditableTableOption_t<CustomPathTableRow2>(
+CustomPathTable::CustomPathTable()
+    : EditableTableOption_t<CustomPathTableRow>(
         "<b>Custom Path Table:</b><br>"
         "Set a sequence of actions to navigate the map. By default, the shiny detected behavior is \"Enroute Shiny Action\".<br>"
         "<font color=\"red\">If you wish to ignore enroute shinies, make sure you set \"Enroute Shiny Action\" to ignore shinies.</font>",
@@ -275,38 +308,38 @@ CustomPathTable2::CustomPathTable2()
         make_defaults()
     )
 {}
-std::vector<std::string> CustomPathTable2::make_header() const{
+std::vector<std::string> CustomPathTable::make_header() const{
     return std::vector<std::string>{
         "Action",
         "Parameters",
     };
 }
-std::vector<std::unique_ptr<EditableTableRow>> CustomPathTable2::make_defaults(){
+std::vector<std::unique_ptr<EditableTableRow>> CustomPathTable::make_defaults(){
     std::vector<std::unique_ptr<EditableTableRow>> ret;
-    auto row = std::make_unique<CustomPathTableRow2>(*this);
+    auto row = std::make_unique<CustomPathTableRow>(*this);
     row->action.set(PathAction::START_LISTEN);
     ret.emplace_back(std::move(row));
 
-    row = std::make_unique<CustomPathTableRow2>(*this);
+    row = std::make_unique<CustomPathTableRow>(*this);
     row->action.set(PathAction::CHANGE_MOUNT);
     row->parameters.mount.set(PathMount::WYRDEER);
     ret.emplace_back(std::move(row));
 
-    row = std::make_unique<CustomPathTableRow2>(*this);
+    row = std::make_unique<CustomPathTableRow>(*this);
     row->action.set(PathAction::MOVE_IN_DIRECTION);
-    row->parameters.move_forward_ticks.set(400);
+    row->parameters.move_forward.set("3200 ms");
     row->parameters.left_x.set(-1.0);
     row->parameters.left_y.set(1.0);
     ret.emplace_back(std::move(row));
 
-    row = std::make_unique<CustomPathTableRow2>(*this);
+    row = std::make_unique<CustomPathTableRow>(*this);
     row->action.set(PathAction::CENTER_CAMERA);
     ret.emplace_back(std::move(row));
 
-    row = std::make_unique<CustomPathTableRow2>(*this);
+    row = std::make_unique<CustomPathTableRow>(*this);
     row->action.set(PathAction::MOVE_FORWARD);
     row->parameters.move_speed.set(PathSpeed::DASH);
-    row->parameters.move_forward_ticks.set(400);
+    row->parameters.move_forward.set("3200 ms");
     ret.emplace_back(std::move(row));
 
     return ret;
@@ -320,7 +353,7 @@ std::vector<std::unique_ptr<EditableTableRow>> CustomPathTable2::make_defaults()
 
 
 
-CustomPathTable::CustomPathTable()
+CustomPathTableFromJubilife::CustomPathTableFromJubilife()
     : BatchOption(LockMode::LOCK_WHILE_RUNNING)
 //    : PATH(
 //        "<b>Custom Path Table:</b><br>"
@@ -336,7 +369,7 @@ CustomPathTable::CustomPathTable()
 
 class CustomPathTableWidget : public QWidget, public ConfigWidget{
 public:
-    CustomPathTableWidget(QWidget& parent, CustomPathTable& value)
+    CustomPathTableWidget(QWidget& parent, CustomPathTableFromJubilife& value)
         : QWidget(&parent)
         , ConfigWidget(value, *this)
     {
@@ -363,7 +396,7 @@ public:
 
         connect(load_button,  &QPushButton::clicked, this, [&value, this](bool){
             std::string path = QFileDialog::getOpenFileName(this, tr("Open option file"), ".", "*.json").toStdString();
-            std::cout << "Load CustomPathTable from " << path << std::endl;
+            std::cout << "Load CustomPathTableFromJubilife from " << path << std::endl;
             if (path.empty()){
                 return;
             }
@@ -382,7 +415,7 @@ public:
 
         connect(save_button,  &QPushButton::clicked, this, [&value, this](bool){
             std::string path = QFileDialog::getSaveFileName(this, tr("Open option file"), ".", "*.json").toStdString();
-            std::cout << "Save CustomPathTable from " << path << std::endl;
+            std::cout << "Save CustomPathTableFromJubilife from " << path << std::endl;
             if (path.size() > 0){
                 try{
                     JsonObject root;
@@ -402,7 +435,7 @@ private:
     ConfigWidget* m_table_widget = nullptr;
 };
 
-ConfigWidget* CustomPathTable::make_QtWidget(QWidget& parent){
+ConfigWidget* CustomPathTableFromJubilife::make_QtWidget(QWidget& parent){
     return new CustomPathTableWidget(parent, *this);
 }
 

@@ -1,11 +1,11 @@
 /*  Autonomous Ball Thrower
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Inference/Pokemon_NameReader.h"
 #include "Pokemon/Pokemon_Strings.h"
@@ -25,9 +25,9 @@ AutonomousBallThrower_Descriptor::AutonomousBallThrower_Descriptor()
         STRING_POKEMON + " SV", "Autonomous Ball Thrower",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/AutonomousBallThrower.md",
         "Repeatedly throw a ball until you catch the pokemon.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct AutonomousBallThrower_Descriptor::Stats : public StatsTracker{
@@ -78,7 +78,7 @@ AutonomousBallThrower::AutonomousBallThrower()
 
 
 
-void AutonomousBallThrower::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void AutonomousBallThrower::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
     AutonomousBallThrower_Descriptor::Stats& stats = env.current_stats<AutonomousBallThrower_Descriptor::Stats>();

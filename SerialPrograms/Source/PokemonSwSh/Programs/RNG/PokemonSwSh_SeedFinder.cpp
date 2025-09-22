@@ -1,6 +1,6 @@
 /*  RNG Manipulation SeedFinder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -26,9 +26,9 @@ SeedFinder_Descriptor::SeedFinder_Descriptor()
         STRING_POKEMON + " SwSh", "Seed Finder",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSwSh/SeedFinder.md",
         "Finds the current state to be used for manual RNG manipulation.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -91,7 +91,7 @@ SeedFinder::SeedFinder()
 
 
 
-void SeedFinder::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void SeedFinder::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     Xoroshiro128PlusState state(0, 0);
     // sanitize STATE_0 and STATE_1 and make ints
     if (UPDATE_STATE){

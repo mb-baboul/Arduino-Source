@@ -1,6 +1,6 @@
 /*  Serial Connection for Windows
  * 
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  * 
  */
 
@@ -44,7 +44,7 @@ public:
             throw ConnectionException(nullptr, "Unable to open serial connection (" + name + "). Error = " + std::to_string(error));
         }
 
-        DCB serial_params{0};
+        DCB serial_params{};
         serial_params.DCBlength = sizeof(serial_params);
 
         if (!GetCommState(m_handle, &serial_params)){
@@ -67,7 +67,7 @@ public:
         }
 
 #if 1
-        COMMTIMEOUTS timeouts{0};
+        COMMTIMEOUTS timeouts{};
         if (!GetCommTimeouts(m_handle, &timeouts)){
             DWORD error = GetLastError();
             CloseHandle(m_handle);
@@ -118,13 +118,24 @@ public:
     }
 
 private:
-    void clear_error(){
+    void process_error(const std::string& message){
+        m_errors++;
+        if (m_errors < 100 || m_errors % 1000 == 0){
+            log(message);
+        }
+
+        std::string clear_error;
         DWORD comm_error;
         if (ClearCommError(m_handle, &comm_error, nullptr) == 0){
             DWORD error = GetLastError();
-            log("ClearCommError() failed. Error = " + std::to_string(error));
+            clear_error = "ClearCommError() failed. Error = " + std::to_string(error);
+        }else{
+            clear_error = "ClearCommError error flag = " + std::to_string(comm_error);
         }
-        log("ClearCommError error flag = " + std::to_string(comm_error));
+
+        if (m_errors < 100 || m_errors % 1000 == 0){
+            log(clear_error);
+        }
     }
 
 
@@ -141,12 +152,11 @@ private:
         DWORD written;
         if (WriteFile(m_handle, data, (DWORD)bytes, &written, nullptr) == 0 || bytes != written){
             DWORD error = GetLastError();
-            log(
+            process_error(
                 "Failed to write: " + std::to_string(written) +
                 " / " + std::to_string(bytes) +
                 ", error = " + std::to_string(error)
             );
-            clear_error();
         }
 //        auto stop = current_time();
 //        cout << "WriteFile() : " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() << endl;
@@ -164,8 +174,7 @@ private:
             DWORD read;
             if (ReadFile(m_handle, buffer, 32, &read, nullptr) == 0){
                 DWORD error = GetLastError();
-                log("ReadFile() failed. Error = " + std::to_string(error));
-                clear_error();
+                process_error("ReadFile() failed. Error = " + std::to_string(error));
             }
 //            auto stop = current_time();
 //            cout << "ReadFile() : " << std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count() << endl;
@@ -202,6 +211,7 @@ private:
 private:
     HANDLE m_handle;
     std::atomic<bool> m_exit;
+    uint64_t m_errors = 0;
     SpinLock m_send_lock;
     std::thread m_listener;
 };

@@ -1,16 +1,16 @@
 /*  Dialog Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlay.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonBDSP_DialogDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -32,7 +32,7 @@ void ShortDialogDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_right_white);
     items.add(m_color, m_right);
 }
-bool ShortDialogDetector::detect(const ImageViewRGB32& screen) const{
+bool ShortDialogDetector::detect(const ImageViewRGB32& screen){
     ImageStats left_white = image_stats(extract_box_reference(screen, m_left_white));
     if (!is_white(left_white)){
         return false;
@@ -59,17 +59,6 @@ bool ShortDialogDetector::detect(const ImageViewRGB32& screen) const{
 }
 
 
-ShortDialogWatcher::ShortDialogWatcher(Color color)
-    : ShortDialogDetector(color)
-    , VisualInferenceCallback("ShortDialogWatcher")
-{}
-void ShortDialogWatcher::make_overlays(VideoOverlaySet& items) const{
-    ShortDialogDetector::make_overlays(items);
-}
-bool ShortDialogWatcher::process_frame(const ImageViewRGB32& frame, WallClock){
-    return detect(frame);
-}
-
 
 
 
@@ -86,7 +75,7 @@ void BattleDialogDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_left);
     items.add(m_color, m_right);
 }
-bool BattleDialogDetector::detect(const ImageViewRGB32& screen) const{
+bool BattleDialogDetector::detect(const ImageViewRGB32& screen){
     ImageStats left_white = image_stats(extract_box_reference(screen, m_left_white));
     if (!is_white(left_white)){
         return false;

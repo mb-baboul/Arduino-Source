@@ -1,15 +1,14 @@
 /*  Box Detection
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/Containers/FixedLimitVector.tpp"
 #include "Common/Cpp/Exceptions.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSV_BoxDetection.h"
 
@@ -62,7 +61,7 @@ void SomethingInBoxSlotDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_bottom);
     items.add(m_color, m_body);
 }
-bool SomethingInBoxSlotDetector::detect(const ImageViewRGB32& screen) const{
+bool SomethingInBoxSlotDetector::detect(const ImageViewRGB32& screen){
     ImageStats right = image_stats(extract_box_reference(screen, m_right));
 //    extract_box_reference(screen, m_right).save("test.png");
 //    cout << right.average << right.stddev << endl;
@@ -106,10 +105,10 @@ void BoxSelectDetector::make_overlays(VideoOverlaySet& items) const{
     m_dialog.make_overlays(items);
     m_gradient.make_overlays(items);
 }
-bool BoxSelectDetector::exists(const ImageViewRGB32& screen) const{
+bool BoxSelectDetector::exists(const ImageViewRGB32& screen){
     return m_exists.detect(screen);
 }
-bool BoxSelectDetector::detect(const ImageViewRGB32& screen) const{
+bool BoxSelectDetector::detect(const ImageViewRGB32& screen){
     if (!exists(screen)){
         return false;
     }
@@ -138,7 +137,7 @@ void BoxDetector::make_overlays(VideoOverlaySet& items) const{
     m_search.make_overlays(items);
     m_slots.make_overlays(items);
 }
-bool BoxDetector::detect(const ImageViewRGB32& screen) const{
+bool BoxDetector::detect(const ImageViewRGB32& screen){
     if (m_party.detect(screen)){
         return true;
     }
@@ -156,7 +155,7 @@ bool BoxDetector::detect(const ImageViewRGB32& screen) const{
     }
     return false;
 }
-std::pair<BoxCursorLocation, BoxCursorCoordinates> BoxDetector::detect_location(const ImageViewRGB32& screen) const{
+std::pair<BoxCursorLocation, BoxCursorCoordinates> BoxDetector::detect_location(const ImageViewRGB32& screen){
     if (m_box_change.detect(screen)){
         return {BoxCursorLocation::BOX_CHANGE, {0, 0}};
     }
@@ -222,7 +221,7 @@ bool BoxDetector::to_coordinates(int& x, int& y, BoxCursorLocation side, uint8_t
     }
     return true;
 }
-void BoxDetector::move_vertical(BotBaseContext& context, int current, int desired) const{
+void BoxDetector::move_vertical(ProControllerContext& context, int current, int desired) const{
     int diff = (current - desired + 7) % 7;
 //    cout << "diff = " << diff << endl;
     if (diff <= 3){
@@ -235,7 +234,7 @@ void BoxDetector::move_vertical(BotBaseContext& context, int current, int desire
         }
     }
 }
-void BoxDetector::move_horizontal(BotBaseContext& context, int current, int desired) const{
+void BoxDetector::move_horizontal(ProControllerContext& context, int current, int desired) const{
     int diff = (current - desired + 7) % 7;
     if (diff <= 3){
         for (int c = 0; c < diff; c++){
@@ -250,13 +249,13 @@ void BoxDetector::move_horizontal(BotBaseContext& context, int current, int desi
 
 
 void BoxDetector::move_cursor(
-    const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context,
+    const ProgramInfo& info, VideoStream& stream, ProControllerContext& context,
     BoxCursorLocation side, uint8_t row, uint8_t col
-) const{
+){
     int desired_x = 0, desired_y = 0;
     if (!to_coordinates(desired_x, desired_y, side, row, col)){
         throw InternalProgramError(
-            &console.logger(), PA_CURRENT_FUNCTION,
+            &stream.logger(), PA_CURRENT_FUNCTION,
             "BoxDetector::move_cursor() called with BoxCursorLocation::NONE."
         );
     }
@@ -267,20 +266,20 @@ void BoxDetector::move_cursor(
     while (true){
         if (current_time() - start > std::chrono::seconds(60)){
             dump_image_and_throw_recoverable_exception(
-                info, console, "BoxMoveCursor",
+                info, stream, "BoxMoveCursor",
                 "Failed to move cursor to desired location after 1 minute."
             );
         }
 
         context.wait_for_all_requests();
-        VideoSnapshot screen = console.video().snapshot();
+        VideoSnapshot screen = stream.video().snapshot();
         std::pair<BoxCursorLocation, BoxCursorCoordinates> current = this->detect_location(screen);
 
         int current_x = 0, current_y = 0;
         if (!to_coordinates(current_x, current_y, current.first, current.second.row, current.second.col)){
             consecutive_fails++;
             if (consecutive_fails > 100){
-                dump_image_and_throw_recoverable_exception(info, console, "BoxSystemNotDetected", "move_cursor(): Unable to detect box system.");
+                dump_image_and_throw_recoverable_exception(info, stream, "BoxSystemNotDetected", "move_cursor(): Unable to detect box system.");
             }
             context.wait_for(std::chrono::milliseconds(100));
             continue;
@@ -351,7 +350,7 @@ void BoxEmptySlotDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_box);
 }
 
-bool BoxEmptySlotDetector::detect(const ImageViewRGB32& frame) const{
+bool BoxEmptySlotDetector::detect(const ImageViewRGB32& frame){
     const auto stats = image_stats(extract_box_reference(frame, m_box));
     return stats.stddev.sum() < 20.0;
 }

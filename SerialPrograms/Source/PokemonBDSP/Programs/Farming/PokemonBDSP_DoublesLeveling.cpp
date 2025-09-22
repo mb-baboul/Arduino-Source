@@ -1,12 +1,13 @@
 /*  Double Battle Leveling
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/VisualDetectors/FrozenImageDetector.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSwSh/ShinyHuntTracker.h"
 #include "PokemonBDSP/Inference/PokemonBDSP_SelectionArrow.h"
@@ -27,9 +28,9 @@ DoublesLeveling_Descriptor::DoublesLeveling_Descriptor()
         STRING_POKEMON + " BDSP", "Double Battle Leveling",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/DoublesLeveling.md",
         "Level up your party by spamming spread moves in a double battle with a partner that heals you forever.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct DoublesLeveling_Descriptor::Stats : public PokemonSwSh::ShinyHuntTracker{
@@ -62,11 +63,10 @@ DoublesLeveling::DoublesLeveling()
     , m_advanced_options(
         "<font size=4><b>Advanced Options:</b> You should not need to touch anything below here.</font>"
     )
-    , EXIT_BATTLE_TIMEOUT(
+    , EXIT_BATTLE_TIMEOUT0(
         "<b>Exit Battle Timeout:</b><br>After running, wait this long to return to overworld.",
         LockMode::LOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "10 * TICKS_PER_SECOND"
+        "10 s"
     )
 {
     PA_ADD_OPTION(GO_HOME_WHEN_DONE);
@@ -80,8 +80,8 @@ DoublesLeveling::DoublesLeveling()
     PA_ADD_OPTION(NOTIFICATIONS);
 
     PA_ADD_STATIC(m_advanced_options);
-//    PA_ADD_OPTION(WATCHDOG_TIMER);
-    PA_ADD_OPTION(EXIT_BATTLE_TIMEOUT);
+//    PA_ADD_OPTION(WATCHDOG_TIMER0);
+    PA_ADD_OPTION(EXIT_BATTLE_TIMEOUT0);
 }
 
 
@@ -90,7 +90,7 @@ DoublesLeveling::DoublesLeveling()
 
 
 
-bool DoublesLeveling::battle(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool DoublesLeveling::battle(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     DoublesLeveling_Descriptor::Stats& stats = env.current_stats<DoublesLeveling_Descriptor::Stats>();
 
     env.log("Starting battle!");
@@ -102,15 +102,17 @@ bool DoublesLeveling::battle(SingleSwitchProgramEnvironment& env, BotBaseContext
         BattleMenuWatcher battle_menu(BattleType::STANDARD);
         EndBattleWatcher end_battle;
         SelectionArrowFinder learn_move(env.console, {0.50, 0.62, 0.40, 0.18}, COLOR_YELLOW);
-        int ret = run_until(
+        FrozenImageDetector overworld(std::chrono::seconds(5), 10);
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [](BotBaseContext& context){
+            [](ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_B, 120 * TICKS_PER_SECOND);
             },
             {
-                {battle_menu},
-                {end_battle},
-                {learn_move},
+                battle_menu,
+                end_battle,
+                learn_move,
+                overworld,
             }
         );
         switch (ret){
@@ -131,25 +133,31 @@ bool DoublesLeveling::battle(SingleSwitchProgramEnvironment& env, BotBaseContext
                 break;
             }
             return true;
+        case 3:
+            env.log("Detected possible overworld!", COLOR_BLUE);
+            pbf_mash_button(context, BUTTON_B, 250);
+            return false;
         default:
             env.log("Timed out.", COLOR_RED);
             stats.add_error();
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Timed out after 2 minutes."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Timed out after 2 minutes.",
+                env.console
             );
         }
     }
 
     OperationFailedException::fire(
-        env.console, ErrorReport::SEND_ERROR_REPORT,
-        "No progress detected after 5 battle menus. Are you out of PP?"
+        ErrorReport::SEND_ERROR_REPORT,
+        "No progress detected after 5 battle menus. Are you out of PP?",
+        env.console
     );
 }
 
 
 
-void DoublesLeveling::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void DoublesLeveling::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     DoublesLeveling_Descriptor::Stats& stats = env.current_stats<DoublesLeveling_Descriptor::Stats>();
     env.update_stats();
 
@@ -170,7 +178,7 @@ void DoublesLeveling::program(SingleSwitchProgramEnvironment& env, BotBaseContex
         if (!battle){
             // Unexpected battle: detect battle menu but not battle starting animation.
             stats.add_error();
-            handler.run_away_due_to_error(EXIT_BATTLE_TIMEOUT);
+            handler.run_away_due_to_error(EXIT_BATTLE_TIMEOUT0);
             continue;
         }
 

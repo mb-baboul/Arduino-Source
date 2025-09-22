@@ -1,9 +1,10 @@
 /*  Multi-Host Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
+#include "Common/NintendoSwitch/NintendoSwitch_SlotDatabase.h"
 #include "PokemonSwSh_MultiHostTable.h"
 
 namespace PokemonAutomation{
@@ -22,7 +23,7 @@ MultiHostSlot::MultiHostSlot(EditableTableOption& parent_table)
     , accept_FRs(LockMode::LOCK_WHILE_RUNNING, true)
     , move_slot(LockMode::LOCK_WHILE_RUNNING, 0, 0, 4)
     , dynamax(LockMode::LOCK_WHILE_RUNNING, true)
-    , post_raid_delay(LockMode::LOCK_WHILE_RUNNING, TICKS_PER_SECOND, "0 * TICKS_PER_SECOND")
+    , post_raid_delay(LockMode::LOCK_WHILE_RUNNING, "0 s")
 {
     PA_ADD_OPTION(game_slot);
     PA_ADD_OPTION(user_slot);

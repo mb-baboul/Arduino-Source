@@ -1,18 +1,17 @@
 /*  Battle Menu Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Compiler.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/ImageTools/ColorClustering.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/Images/ColorClustering.h"
 #include "PokemonSwSh_BattleMenuDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 //#define DEBUG_StandardBattleMenuDetector
 
@@ -57,7 +56,7 @@ void StandardBattleMenuDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_text_bag);
     items.add(m_color, m_text_run);
 }
-bool StandardBattleMenuDetector::detect(const ImageViewRGB32& screen) const{
+bool StandardBattleMenuDetector::detect(const ImageViewRGB32& screen){
     if (!m_den){
         if (!is_white(extract_box_reference(screen, m_ball_left))){
             return false;

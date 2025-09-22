@@ -1,13 +1,13 @@
 /*  Pokemon Scarlet/Violet Item Sprites
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_ItemSprites_H
 #define PokemonAutomation_PokemonSV_ItemSprites_H
 
-#include "CommonFramework/Resources/SpriteDatabase.h"
+#include "CommonTools/Resources/SpriteDatabase.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

@@ -1,6 +1,6 @@
 /*  Overworld Target Tracker
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,10 +10,10 @@
 #include <vector>
 #include <deque>
 #include <map>
+#include "Common/Cpp/AbstractLogger.h"
 #include "Common/Cpp/Concurrency/SpinLock.h"
-#include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
 #include "PokemonSwSh/Programs/OverworldBot/PokemonSwSh_OverworldTrajectory.h"
 
 namespace PokemonAutomation{

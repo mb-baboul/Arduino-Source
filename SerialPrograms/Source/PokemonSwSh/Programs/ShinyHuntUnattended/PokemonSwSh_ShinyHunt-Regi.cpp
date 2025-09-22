@@ -1,6 +1,6 @@
 /*  Regi Routines
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -14,14 +14,14 @@ namespace PokemonSwSh{
 
 
 void move_to_corner(
-    Logger& logger, BotBaseContext& context,
-    bool correction, uint16_t TRANSITION_DELAY
+    Logger& logger, ProControllerContext& context,
+    bool correction, Milliseconds TRANSITION_DELAY
 ){
     if (correction){
         logger.log("Performing auto-correction.");
         //  Move down to building exit and exit.
-        pbf_move_left_joystick(context, 128, 255, 500, TRANSITION_DELAY);
-        pbf_move_left_joystick(context, 128, 255, 300, TRANSITION_DELAY);
+        pbf_move_left_joystick(context, 128, 255, 4000ms, TRANSITION_DELAY);
+        pbf_move_left_joystick(context, 128, 255, 2400ms, TRANSITION_DELAY);
 
         //  Navigate back into the corner.
         pbf_move_left_joystick(context, 255, 64, 200, 0);
@@ -34,28 +34,28 @@ void move_to_corner(
 }
 
 
-void regirock(BotBaseContext& context){
+void regirock(ProControllerContext& context){
     pbf_move_left_joystick(context, 0, 232, 169, 0);
     pbf_move_left_joystick(context, 128, 255, 135, 0);
     pbf_move_left_joystick(context, 0, 128, 109, 0);
     pbf_move_left_joystick(context, 128, 0, 140, 0);
     pbf_move_left_joystick(context, 226, 255, 90, 0);
     pbf_move_left_joystick(context, 128, 0, 20, 0);
-    pbf_mash_button(context, BUTTON_A, 5 * TICKS_PER_SECOND);
+    pbf_mash_button(context, BUTTON_A, 5000ms);
     pbf_move_left_joystick(context, 128, 0, 200, 0);
 }
-void regice(BotBaseContext& context){
+void regice(ProControllerContext& context){
     pbf_move_left_joystick(context, 80, 255, 182, 0);
     pbf_move_left_joystick(context, 0, 128, 114, 0);
     pbf_move_left_joystick(context, 128, 255, 56, 0);
     pbf_move_left_joystick(context, 32, 0, 76, 0);
     pbf_move_left_joystick(context, 0, 128, 54, 0);
-    pbf_move_left_joystick(context, 255, 68, 154, 0);
+    pbf_move_left_joystick(context, 255, 68, 153, 0);
     pbf_move_left_joystick(context, 128, 0, 20, 0);
-    pbf_mash_button(context, BUTTON_A, 5 * TICKS_PER_SECOND - 20);
+    pbf_mash_button(context, BUTTON_A, 5000ms);
     pbf_move_left_joystick(context, 128, 0, 170, 0);
 }
-void registeel(BotBaseContext& context){
+void registeel(ProControllerContext& context){
     pbf_move_left_joystick(context, 0, 232, 169, 0);
     pbf_move_left_joystick(context, 192, 255, 64, 0);
     pbf_move_left_joystick(context, 64, 255, 64, 0);
@@ -64,34 +64,35 @@ void registeel(BotBaseContext& context){
     pbf_move_left_joystick(context, 192, 0, 66, 0);
     pbf_move_left_joystick(context, 230, 255, 90, 0);
     pbf_move_left_joystick(context, 128, 0, 50, 0);
-    pbf_mash_button(context, BUTTON_A, 5 * TICKS_PER_SECOND);
+    pbf_mash_button(context, BUTTON_A, 5000ms);
     pbf_move_left_joystick(context, 128, 0, 250, 0);
 }
-void regieleki(BotBaseContext& context){
+void regieleki(ProControllerContext& context){
     pbf_move_left_joystick(context, 16, 255, 162, 0);
     pbf_move_left_joystick(context, 64, 255, 52, 0);
     pbf_move_left_joystick(context, 200, 255, 52, 0);
     pbf_move_left_joystick(context, 0, 50, 122, 0);
     pbf_move_left_joystick(context, 0, 206, 93, 0);
-    pbf_move_left_joystick(context, 216, 0, 78, 0);
-    pbf_move_left_joystick(context, 56, 0, 80, 0);
-    pbf_mash_button(context, BUTTON_A, 5 * TICKS_PER_SECOND);
+    pbf_move_left_joystick(context, 208, 0, 78, 0);
+    pbf_move_left_joystick(context, 60, 0, 80, 0);
+    pbf_mash_button(context, BUTTON_A, 5000ms);
     pbf_move_left_joystick(context, 216, 0, 170, 0);
 }
-void regidrago(BotBaseContext& context){
+void regidrago(ProControllerContext& context){
     pbf_move_left_joystick(context, 16, 255, 160, 0);
     pbf_move_left_joystick(context, 72, 255, 50, 0);
-    pbf_move_left_joystick(context, 48, 255, 104, 0);
+    pbf_move_left_joystick(context, 48, 255, 106, 0);
     pbf_move_left_joystick(context, 128, 0, 48, 0);
     pbf_move_left_joystick(context, 0, 56, 60, 0);
     pbf_move_left_joystick(context, 64, 0, 60, 0);
-    pbf_move_left_joystick(context, 255, 148, 75, 0);
-    pbf_mash_button(context, BUTTON_A, 5 * TICKS_PER_SECOND);
+    pbf_move_left_joystick(context, 255, 152, 80, 0);
+    pbf_move_left_joystick(context, 128, 0, 20, 0);
+    pbf_mash_button(context, BUTTON_A, 5000ms);
     pbf_move_left_joystick(context, 128, 0, 180, 0);
 }
 
 void run_regi_light_puzzle(
-    Logger& logger, BotBaseContext& context,
+    Logger& logger, ProControllerContext& context,
     RegiGolem regi, uint64_t encounter
 ){
     switch (regi){

@@ -1,6 +1,6 @@
 /*  Program Session
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *      ProgramSession represents the real-time state of a program.
  *
@@ -16,11 +16,11 @@
 #ifndef PokemonAutomation_CommonFramework_ProgramSession_H
 #define PokemonAutomation_CommonFramework_ProgramSession_H
 
-#include <set>
 #include <mutex>
 #include <atomic>
 #include <thread>
 #include "Common/Cpp/Time.h"
+#include "Common/Cpp/ListenerSet.h"
 #include "CommonFramework/Globals.h"
 #include "CommonFramework/Logging/Logger.h"
 #include "Integrations/ProgramTrackerInterfaces.h"
@@ -138,7 +138,7 @@ private:
     std::unique_ptr<StatsTracker> m_current_stats;
 //    CancellableScope* m_scope = nullptr;
 
-    std::set<Listener*> m_listeners;
+    ListenerSet<Listener> m_listeners;
 };
 
 

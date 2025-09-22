@@ -1,6 +1,6 @@
 /*  Button Diagram
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,12 +9,15 @@
 
 namespace PokemonAutomation{
 
+// The window that shows button mapping: which keyboard keys are mapped to which
+// Switch controller buttons.
 class ButtonDiagram : public QMainWindow{
 public:
     ButtonDiagram(QWidget* parent = nullptr);
     ~ButtonDiagram();
 
 private:
+    void set_image(const std::string& resource_name);
     void resizeEvent(QResizeEvent*);
 
 private:

@@ -1,21 +1,17 @@
 /*  Auto Host
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/PrettyPrint.h"
-#include "ClientSource/Connection/BotBase.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-//#include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-//#include "CommonFramework/InferenceInfra/InferenceSession.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Inference/BlackScreenDetector.h"
-//#include "CommonFramework/OCR/OCR_StringNormalization.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/VisualDetectors/BlackScreenDetector.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSV/PokemonSV_Settings.h"
@@ -24,7 +20,7 @@
 #include "PokemonSV/Inference/Tera/PokemonSV_TeraCardDetector.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_ConnectToInternet.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
 #include "PokemonSV/Programs/FastCodeEntry/PokemonSV_CodeEntry.h"
 #include "PokemonSV/Programs/TeraRaids/PokemonSV_TeraBattler.h"
 #include "PokemonSV/Programs/TeraRaids/PokemonSV_TeraRoutines.h"
@@ -49,9 +45,9 @@ AutoHost_Descriptor::AutoHost_Descriptor()
         STRING_POKEMON + " SV", "Auto-Host",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/AutoHost.md",
         "Auto-host a Tera raid.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct AutoHost_Descriptor::Stats : public StatsTracker{
@@ -133,12 +129,12 @@ AutoHost::AutoHost()
 
 
 WallClock AutoHost::wait_for_lobby_open(
-    SingleSwitchProgramEnvironment& env, BotBaseContext& context,
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
     std::string& lobby_code
 ){
     VideoOverlaySet overlays(env.console.overlay());
 
-    TeraLobbyWatcher lobby(env.logger(), env.realtime_dispatcher(), COLOR_RED);
+    TeraLobbyWatcher lobby(env.logger(), COLOR_RED);
     lobby.make_overlays(overlays);
 
     int ret = wait_until(
@@ -148,16 +144,17 @@ WallClock AutoHost::wait_for_lobby_open(
     );
     if (ret < 0){
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Unable to detect Tera lobby after 60 seconds."
+            ErrorReport::SEND_ERROR_REPORT,
+            "Unable to detect Tera lobby after 60 seconds.",
+            env.console
         );
     }
     WallClock start_time = current_time();
     context.wait_for(std::chrono::seconds(1));
 
     VideoSnapshot snapshot = env.console.video().snapshot();
-    lobby_code = lobby.raid_code(env.logger(), env.inference_dispatcher(), snapshot);
-    std::string code = lobby.raid_code(env.logger(), env.inference_dispatcher(), snapshot);
+    lobby_code = lobby.raid_code(env.logger(), snapshot);
+    std::string code = lobby.raid_code(env.logger(), snapshot);
     normalize_code(lobby_code, code);
 
     send_host_announcement(
@@ -184,7 +181,7 @@ void AutoHost::update_stats_on_raid_start(SingleSwitchProgramEnvironment& env, u
     stats.m_raiders += player_count - 1;
 }
 bool AutoHost::start_raid(
-    SingleSwitchProgramEnvironment& env, BotBaseContext& context,
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
     WallClock start_time,
     uint8_t player_count
 ){
@@ -197,9 +194,9 @@ bool AutoHost::start_raid(
         WhiteScreenOverWatcher start_raid(COLOR_BLUE);
         TeraBattleMenuWatcher battle_menu(COLOR_CYAN);
         context.wait_for_all_requests();
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [start_time](BotBaseContext& context){
+            [start_time](ProControllerContext& context){
                 while (true){
                     pbf_press_button(context, BUTTON_A, 20, 105);
                     context.wait_for_all_requests();
@@ -226,8 +223,9 @@ bool AutoHost::start_raid(
             return true;
         default:
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Stuck in lobby for 4 minutes."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Stuck in lobby for 4 minutes.",
+                env.console
             );
         }
     }
@@ -235,7 +233,7 @@ bool AutoHost::start_raid(
 
 
 bool AutoHost::run_lobby(
-    SingleSwitchProgramEnvironment& env, BotBaseContext& context,
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
     std::string& lobby_code,
     std::array<std::map<Language, std::string>, 4>& player_names
 ){
@@ -267,7 +265,7 @@ bool AutoHost::run_lobby(
     return start_raid(env, context, start_time, waiter.last_known_players());
 }
 
-void AutoHost::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void AutoHost::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
     AutoHost_Descriptor::Stats& stats = env.current_stats<AutoHost_Descriptor::Stats>();
@@ -296,7 +294,7 @@ void AutoHost::program(SingleSwitchProgramEnvironment& env, BotBaseContext& cont
         fail_tracker.on_raid_start();
 
         if (!skip_reset){
-            pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+            pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY1);
             if (ROLLOVER_PREVENTION){
                 WallClock now = current_time();
                 if (last_time_fix == WallClock::min() || now - last_time_fix > std::chrono::hours(4)){

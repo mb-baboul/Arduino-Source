@@ -1,6 +1,6 @@
 /*  Group Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -27,7 +27,7 @@ public:
 //    void set_options_enabled(bool enabled);
 
     virtual void update_value() override;
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 private:
     virtual void mouseDoubleClickEvent(QMouseEvent* event) override;

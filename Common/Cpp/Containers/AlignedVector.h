@@ -1,6 +1,6 @@
 /*  Aligned Vector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -18,12 +18,14 @@ public:
     ~AlignedVector();
     AlignedVector(AlignedVector&& x) noexcept;
     void operator=(AlignedVector&& x) noexcept;
-    AlignedVector(const AlignedVector&);
-    void operator=(const AlignedVector&);
+    AlignedVector(const AlignedVector& x);
+    void operator=(const AlignedVector& x);
 
 public:
     AlignedVector();
     AlignedVector(size_t items);
+
+    void clear() noexcept;
 
 public:
     size_t empty() const{ return m_size == 0; }
@@ -41,8 +43,6 @@ public:
     template <class... Args>
     void emplace_back(Args&&... args);
     void pop_back();
-
-    void clear();
 
     const Object* begin() const;
     Object* begin();

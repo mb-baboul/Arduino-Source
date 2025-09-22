@@ -1,13 +1,12 @@
 /*  Experience Gain Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Compiler.h"
 #include "Common/Cpp/Containers/FixedLimitVector.tpp"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonSwSh_ExperienceGainDetector.h"
 
 #include <iostream>
@@ -43,7 +42,7 @@ void ExperienceGainDetector::make_overlays(VideoOverlaySet& items) const{
         items.add(m_color, item.second);
     }
 }
-bool ExperienceGainDetector::detect(const ImageViewRGB32& screen) const{
+bool ExperienceGainDetector::detect(const ImageViewRGB32& screen){
     if (!m_dialog.detect(screen)){
         return false;
     }

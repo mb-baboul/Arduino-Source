@@ -1,6 +1,6 @@
 /*  Under Attack Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,10 +11,8 @@
 #include <map>
 #include <atomic>
 #include "Common/Cpp/AbstractLogger.h"
-//#include "Common/Cpp/Concurrency/SpinLock.h"
-//#include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -22,7 +20,7 @@ namespace PokemonLA{
 
 
 enum class UnderAttackState{
-    UNKONWN,
+    UNKNOWN,
     SAFE,
     UNDER_ATTACK,
 };

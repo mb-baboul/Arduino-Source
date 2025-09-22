@@ -1,16 +1,16 @@
 /*  Message Pretty Printing
  * 
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  * 
  */
 
-#include <set>
+//#include <set>
 #include <map>
 #include <sstream>
-#include "Common/Microcontroller/MessageProtocol.h"
+#include "Common/SerialPABotBase/SerialPABotBase_Protocol.h"
 #include "Common/Cpp/Exceptions.h"
-#include "Common/NintendoSwitch/NintendoSwitch_Protocol_PushButtons.h"
-#include "Common/PokemonSwSh/PokemonProgramIDs.h"
+//#include "Common/Microcontroller/PABotBaseIDs.h"
+//#include "Common/NintendoSwitch/NintendoSwitch_Protocol_PushButtons.h"
 #include "ClientSource/Connection/BotBaseMessage.h"
 #include "MessageConverter.h"
 
@@ -123,6 +123,17 @@ int register_message_converters_framework_errors(){
             return ss.str();
         }
     );
+    register_message_converter(
+        PABB_MSG_ERROR_DISCONNECTED,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_ERROR_DISCONNECTED - ";
+            if (body.size() != sizeof(pabb_MsgInfoDisconnected)){ ss << "(invalid size)" << std::endl; return ss.str(); }
+            const auto* params = (const pabb_MsgInfoDisconnected*)body.c_str();
+            ss << "error code = " << params->error_code;
+            return ss.str();
+        }
+    );
     return 0;
 }
 int register_message_converters_framework_acks(){
@@ -184,6 +195,24 @@ int register_message_converters_framework_acks(){
             return ss.str();
         }
     );
+    register_message_converter(
+        PABB_MSG_ACK_REQUEST_DATA,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_ACK_REQUEST_DATA - ";
+//            if (body.size() != sizeof(pabb_MsgAckRequestI32)){ ss << "(invalid size)" << std::endl; return ss.str(); }
+            const auto* params = (const pabb_MsgAckRequestI32*)body.c_str();
+            ss << "seqnum = " << (uint64_t)params->seqnum;
+            ss << ", bytes = " << body.size() - sizeof(seqnum_t);
+            ss << ", data =";
+            static const char HEX_DIGITS[] = "0123456789abcdef";
+            for (size_t c = sizeof(seqnum_t); c < body.size(); c++){
+                uint8_t byte = body[c];
+                ss << " " << HEX_DIGITS[(byte >> 4)] << HEX_DIGITS[byte & 15];
+            }
+            return ss.str();
+        }
+    );
     return 0;
 }
 int register_message_converters_framework_requests(){
@@ -227,6 +256,28 @@ int register_message_converters_framework_requests(){
             ss << "PABB_MSG_REQUEST_PROGRAM_ID - ";
             if (body.size() != sizeof(pabb_MsgRequestProgramID)){ ss << "(invalid size)" << std::endl; return ss.str(); }
             const auto* params = (const pabb_MsgRequestProgramID*)body.c_str();
+            ss << "seqnum = " << (uint64_t)params->seqnum;
+            return ss.str();
+        }
+    );
+    register_message_converter(
+        PABB_MSG_REQUEST_PROGRAM_NAME,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_REQUEST_PROGRAM_NAME - ";
+            if (body.size() != sizeof(pabb_MsgRequestProgramName)){ ss << "(invalid size)" << std::endl; return ss.str(); }
+            const auto* params = (const pabb_MsgRequestProgramName*)body.c_str();
+            ss << "seqnum = " << (uint64_t)params->seqnum;
+            return ss.str();
+        }
+    );
+    register_message_converter(
+        PABB_MSG_REQUEST_CONTROLLER_LIST,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_REQUEST_CONTROLLER_LIST - ";
+            if (body.size() != sizeof(pabb_MsgRequestControllerList)){ ss << "(invalid size)" << std::endl; return ss.str(); }
+            const auto* params = (const pabb_MsgRequestControllerList*)body.c_str();
             ss << "seqnum = " << (uint64_t)params->seqnum;
             return ss.str();
         }
@@ -289,16 +340,53 @@ int register_message_converters_framework_requests(){
         }
     );
     register_message_converter(
-        PABB_MSG_COMMAND_END_PROGRAM_CALLBACK,
+        PABB_MSG_REQUEST_READ_CONTROLLER_MODE,
         [](const std::string& body){
             std::ostringstream ss;
-            ss << "end_program_callback() - ";
-            if (body.size() != sizeof(pabb_end_program_callback)){ ss << "(invalid size)" << std::endl; return ss.str(); }
-            const auto* params = (const pabb_end_program_callback*)body.c_str();
+            ss << "PABB_MSG_REQUEST_READ_CONTROLLER_MODE - ";
+            if (body.size() != sizeof(pabb_MsgRequestReadControllerMode)){ ss << "(invalid size)" << std::endl; return ss.str(); }
+            const auto* params = (const pabb_MsgRequestReadControllerMode*)body.c_str();
             ss << "seqnum = " << (uint64_t)params->seqnum;
             return ss.str();
         }
     );
+    register_message_converter(
+        PABB_MSG_REQUEST_CHANGE_CONTROLLER_MODE,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_REQUEST_CHANGE_CONTROLLER_MODE - ";
+            if (body.size() != sizeof(pabb_MsgRequestChangeControllerMode)){ ss << "(invalid size)" << std::endl; return ss.str(); }
+            const auto* params = (const pabb_MsgRequestChangeControllerMode*)body.c_str();
+            ss << "seqnum = " << (uint64_t)params->seqnum;
+            ss << ", controller_id = " << params->controller_id;
+            return ss.str();
+        }
+    );
+    register_message_converter(
+        PABB_MSG_REQUEST_RESET_TO_CONTROLLER,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_REQUEST_RESET_TO_CONTROLLER - ";
+            if (body.size() != sizeof(pabb_MsgRequestChangeControllerMode)){ ss << "(invalid size)" << std::endl; return ss.str(); }
+            const auto* params = (const pabb_MsgRequestChangeControllerMode*)body.c_str();
+            ss << "seqnum = " << (uint64_t)params->seqnum;
+            ss << ", controller_id = " << params->controller_id;
+            return ss.str();
+        }
+    );
+    register_message_converter(
+        PABB_MSG_REQUEST_READ_MAC_ADDRESS,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_REQUEST_READ_MAC_ADDRESS - ";
+            if (body.size() != sizeof(pabb_MsgRequestReadMacAddress)){ ss << "(invalid size)" << std::endl; return ss.str(); }
+            const auto* params = (const pabb_MsgRequestReadMacAddress*)body.c_str();
+            ss << "seqnum = " << (uint64_t)params->seqnum;
+            ss << ", mode = " << params->mode;
+            return ss.str();
+        }
+    );
+#if 0
     register_message_converter(
         PABB_MSG_COMMAND_SET_LED_STATE,
         [](const std::string& body){
@@ -311,6 +399,7 @@ int register_message_converters_framework_requests(){
             return ss.str();
         }
     );
+#endif
     return 0;
 }
 int register_message_converters_custom_info(){
@@ -321,8 +410,70 @@ int register_message_converters_custom_info(){
             ss << "PABB_MSG_INFO_I32 - ";
             if (body.size() != sizeof(pabb_MsgInfoI32)){ ss << "(invalid size)" << std::endl; return ss.str(); }
             const auto* params = (const pabb_MsgInfoI32*)body.c_str();
-            ss << "tag = " << (unsigned)params->tag;
-            ss << ", data = " << params->data;
+//            switch (params->tag){
+//            case PABB_MSG_INFO_I32_TAG_SCHEDULE_THROTTLED:
+//                ss << "Command schedule throttled by: " << params->data;
+//                break;
+//            default:
+                ss << "tag = " << (unsigned)params->tag;
+                ss << ", data = " << params->data;
+//            }
+            return ss.str();
+        }
+    );
+    register_message_converter(
+        PABB_MSG_INFO_DATA,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_INFO_DATA - ";
+            const auto* params = (const pabb_MsgInfoData*)body.c_str();
+            ss << "tag = " << (uint32_t)params->tag;
+            ss << ", bytes = " << body.size() - sizeof(uint32_t);
+            ss << ", data =";
+            static const char HEX_DIGITS[] = "0123456789abcdef";
+            for (size_t c = sizeof(seqnum_t); c < body.size(); c++){
+                uint8_t byte = body[c];
+                ss << " " << HEX_DIGITS[(byte >> 4)] << HEX_DIGITS[byte & 15];
+            }
+            return ss.str();
+        }
+    );
+    register_message_converter(
+        PABB_MSG_INFO_STRING,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_INFO_STRING - ";
+            ss << body;
+            return ss.str();
+        }
+    );
+    register_message_converter(
+        PABB_MSG_INFO_I32_LABEL,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_INFO_I32_LABEL - ";
+            if (body.size() < sizeof(uint32_t)){
+                ss << "(invalid size)" << std::endl;
+                return ss.str();
+            }
+            const auto* params = (const pabb_MsgInfoI32Label*)body.c_str();
+            ss << std::string(body.data() + sizeof(uint32_t), body.size() - sizeof(uint32_t));
+            ss << ": " << params->value;
+            return ss.str();
+        }
+    );
+    register_message_converter(
+        PABB_MSG_INFO_H32_LABEL,
+        [](const std::string& body){
+            std::ostringstream ss;
+            ss << "PABB_MSG_INFO_H32_LABEL - ";
+            if (body.size() < sizeof(uint32_t)){
+                ss << "(invalid size)" << std::endl;
+                return ss.str();
+            }
+            const auto* params = (const pabb_MsgInfoI32Label*)body.c_str();
+            ss << std::string(body.data() + sizeof(uint32_t), body.size() - sizeof(uint32_t));
+            ss << ": 0x" << std::hex << params->value;
             return ss.str();
         }
     );
@@ -348,15 +499,6 @@ std::string message_to_string(const BotBaseMessage& message){
     return iter->second(message.body);
 }
 
-
-std::string program_name(uint8_t id){
-    switch (id){
-    case PABB_PID_UNSPECIFIED:              return "Microcontroller Program";
-    case PABB_PID_PABOTBASE_12KB:           return "PABotBase-12KB";
-    case PABB_PID_PABOTBASE_31KB:           return "PABotBase-31KB";
-    default: return "Unknown ID";
-    }
-}
 
 
 

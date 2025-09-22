@@ -1,6 +1,6 @@
 /*  Panel Elements
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -30,7 +30,7 @@ CollapsibleGroupBox* make_panel_header(
 
     std::string name_text = "<b>Name:</b> " + display_name;
     if (!doc_link.empty()){
-        std::string path = ONLINE_DOC_URL + doc_link;
+        std::string path = ONLINE_DOC_URL_BASE + doc_link;
         name_text += " (" + make_text_url(path, "online documentation") + ")";
     }
     QLabel* name_label = new QLabel(QString::fromStdString(name_text), header);
@@ -55,65 +55,43 @@ CollapsibleGroupBox* make_panel_header(
     const std::string& display_name,
     const std::string& doc_link,
     const std::string& description,
-    FeedbackType feedback,
-    PABotBaseLevel serial_level
+    ProgramControllerClass color_class
 ){
     CollapsibleGroupBox* header = make_panel_header(parent, display_name, doc_link, description);
     QLayout* layout = header->widget()->layout();
 
-    QLabel* text = nullptr;
-    switch (feedback){
-    case FeedbackType::NONE:
-        text = new QLabel(
-            QString::fromStdString(html_color_text("(This program does not use feedback. It can run without video input.)", COLOR_PURPLE)),
-            header
-        );
-        break;
-    case FeedbackType::OPTIONAL_:
-        text = new QLabel(
-            QString::fromStdString(html_color_text("(This program will use video feedback if it is available. Video input is not required.)", COLOR_PURPLE)),
-            header
-        );
-        break;
-    case FeedbackType::REQUIRED:
-        text = new QLabel(
-            "<font color=\"green\">(This program requires video feedback. Please make sure you choose the correct capture device.)</font>",
-            header
-        );
-        break;
-    case FeedbackType::VIDEO_AUDIO:
-        text = new QLabel(
-            "<font color=\"green\">(This program requires video and audio feedback. Please make sure you choose the correct capture device, as well as the correct audio device.)</font>",
-            header
-        );
-        break;
-    }
-    text->setWordWrap(true);
-    layout->addWidget(text);
+    std::string text;
+    switch (color_class){
+    case ProgramControllerClass::StandardController_NoRestrictions:
+        return header;
 
-    switch (serial_level){
-    case PABotBaseLevel::NOT_PABOTBASE:
-        break;
-    case PABotBaseLevel::PABOTBASE_12KB:{
-#if 0
-        QLabel* text = new QLabel(
-            "<font color=\"blue\">(This program will run on both Arduino Uno R3 and Teensy 2.0.</font>)",
-            header
+    case ProgramControllerClass::StandardController_PerformanceClassSensitive:
+        text = html_color_text(
+            "(This program is sensitive to the performance of the controller. "
+            "Wired controllers are better than wireless. "
+            "And wireless is better than tick-imprecise controller.)",
+            COLOR_DARKGREEN
         );
-        text->setWordWrap(true);
-        layout->addWidget(text);
-#endif
         break;
-    }case PABotBaseLevel::PABOTBASE_31KB:{
-        QLabel* label = new QLabel(
-            "<font color=\"red\">(This program requires a Teensy or higher. PABotBase for Arduino Uno R3 does not have all the features required by this program.)</font>",
-            header
-        );
-        label->setWordWrap(true);
-        layout->addWidget(label);
+
+    case ProgramControllerClass::StandardController_RequiresPrecision:
+        text = html_color_text("(This program requires a tick-precise controller.)", COLOR_PURPLE);
         break;
+
+    case ProgramControllerClass::StandardController_WithRestrictions:
+        text = html_color_text("(This program may require a specific controller in a specific environment.)", COLOR_RED);
+        break;
+
+    case ProgramControllerClass::SpecializedController:
+        text = html_color_text("(This program requires a specific type of controller.)", COLOR_MAGENTA);
+        break;
+
     }
-    }
+
+    QLabel* label = new QLabel(QString::fromStdString(text), header);
+    label->setWordWrap(true);
+    layout->addWidget(label);
+
     return header;
 }
 

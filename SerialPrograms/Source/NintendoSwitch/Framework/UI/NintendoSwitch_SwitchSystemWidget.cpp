@@ -1,6 +1,6 @@
 /*  Switch System
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -12,14 +12,18 @@
 #include "Common/Cpp/Concurrency/FireForgetDispatcher.h"
 #include "Common/Cpp/Json/JsonValue.h"
 #include "Common/Qt/CollapsibleGroupBox.h"
+#include "CommonFramework/Globals.h"
 #include "CommonFramework/AudioPipeline/UI/AudioSelectorWidget.h"
 #include "CommonFramework/AudioPipeline/UI/AudioDisplayWidget.h"
-#include "CommonFramework/ControllerDevices/SerialPortWidget.h"
-#include "CommonFramework/VideoPipeline/UI/CameraSelectorWidget.h"
+#include "CommonFramework/VideoPipeline/UI/VideoSourceSelectorWidget.h"
 #include "CommonFramework/VideoPipeline/UI/VideoDisplayWidget.h"
-#include "CommonFramework/Globals.h"
+#include "Controllers/ControllerSelectorWidget.h"
 #include "NintendoSwitch_CommandRow.h"
 #include "NintendoSwitch_SwitchSystemWidget.h"
+
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -27,14 +31,12 @@ namespace NintendoSwitch{
 
 
 SwitchSystemWidget::~SwitchSystemWidget(){
-    m_serial_widget->stop();
-
     //  Delete all the UI elements first since they reference the states.
     delete m_audio_display;
     delete m_audio_widget;
     delete m_video_display;
-    delete m_camera_widget;
-    delete m_serial_widget;
+    delete m_video_selector;
+    delete m_controller;
 }
 
 SwitchSystemWidget::SwitchSystemWidget(
@@ -55,42 +57,55 @@ SwitchSystemWidget::SwitchSystemWidget(
     QWidget* widget = new QWidget(m_group_box);
     m_group_box->set_widget(widget);
     {
-        QVBoxLayout* group_layout = new QVBoxLayout(widget);
-        group_layout->setAlignment(Qt::AlignTop);
-        group_layout->setContentsMargins(0, 0, 0, 0);
-
-        m_serial_widget = new SerialPortWidget(*this, m_session.serial_session(), m_session.logger());
-        group_layout->addWidget(m_serial_widget);
-
         m_audio_display = new AudioDisplayWidget(*this, m_session.logger(), m_session.audio_session());
         layout->addWidget(m_audio_display);
 
         QVBoxLayout* video_holder = new QVBoxLayout();
         layout->addLayout(video_holder);
         video_holder->setContentsMargins(0, 0, 0, 0);
+
         m_video_display = new VideoDisplayWidget(
             *this, *video_holder,
             m_session.console_number(),
             *this,
-            m_session.camera_session(),
+            m_session.video_session(),
             m_session.overlay_session()
         );
         video_holder->addWidget(m_video_display);
+    }
+    {
+        QVBoxLayout* group_layout = new QVBoxLayout(widget);
+        group_layout->setAlignment(Qt::AlignTop);
+        group_layout->setContentsMargins(0, 0, 0, 0);
 
-        m_camera_widget = new CameraSelectorWidget(
-            m_session.camera_session(),
-            m_session.logger(),
-            *m_video_display
-        );
-        group_layout->addWidget(m_camera_widget);
+        m_controller = new ControllerSelectorWidget(*this, m_session.controller_session());
+        group_layout->addWidget(m_controller);
 
-        m_audio_widget = new AudioSelectorWidget(*widget, m_session.logger(), m_session.audio_session());
+        m_video_selector = new VideoSourceSelectorWidget(m_session.logger(), m_session.video_session());
+        group_layout->addWidget(m_video_selector);
+
+        m_audio_widget = new AudioSelectorWidget(*widget, m_session.audio_session());
         group_layout->addWidget(m_audio_widget);
+
+#if 0
+        //  Experiment with multiple controller layouts.
+        m_controller = new ControllerSelectorWidget(*this, m_session.controller_session());
+        group_layout->addWidget(m_controller);
+
+        group_layout->addWidget(new ControllerSelectorWidget(*this, m_session.controller_session()));
+        group_layout->addWidget(new ControllerSelectorWidget(*this, m_session.controller_session()));
+        group_layout->addWidget(new ControllerSelectorWidget(*this, m_session.controller_session()));
+        group_layout->addWidget(new ControllerSelectorWidget(*this, m_session.controller_session()));
+        group_layout->addWidget(new ControllerSelectorWidget(*this, m_session.controller_session()));
+        group_layout->addWidget(new ControllerSelectorWidget(*this, m_session.controller_session()));
+        group_layout->addWidget(new ControllerSelectorWidget(*this, m_session.controller_session()));
+#endif
 
         m_command = new CommandRow(
             *widget,
-            m_serial_widget->botbase(),
+            m_session.controller_session(),
             m_session.overlay_session(),
+            m_session.console_type(),
             m_session.allow_commands_while_running()
         );
         group_layout->addWidget(m_command);
@@ -99,12 +114,12 @@ SwitchSystemWidget::SwitchSystemWidget(
     setFocusPolicy(Qt::StrongFocus);
 
 
-    connect(
-        m_serial_widget, &SerialPortWidget::signal_on_ready,
-        m_command, [this](bool ready){
-            m_command->update_ui();
-        }
-    );
+//    connect(
+//        m_serial_widget, &SerialPortWidget::signal_on_ready,
+//        m_command, [this](bool ready){
+//            m_command->update_ui();
+//        }
+//    );
     connect(
         m_command, &CommandRow::load_profile,
         m_command, [this](){
@@ -113,7 +128,7 @@ SwitchSystemWidget::SwitchSystemWidget(
                 return;
             }
 
-            SwitchSystemOption option(m_session.min_pabotbase(), m_session.allow_commands_while_running());
+            SwitchSystemOption option(m_session.allow_commands_while_running());
 
             //  Deserialize into this local option instance.
             option.load_json(load_json_file(path));
@@ -129,8 +144,8 @@ SwitchSystemWidget::SwitchSystemWidget(
                 return;
             }
 
-            // Create a copy of option, to be able to serialize it later on
-            SwitchSystemOption option(m_session.min_pabotbase(), m_session.allow_commands_while_running());
+            //  Create a copy of option, to be able to serialize it later on
+            SwitchSystemOption option(m_session.allow_commands_while_running());
 
             m_session.get(option);
 
@@ -141,7 +156,7 @@ SwitchSystemWidget::SwitchSystemWidget(
         m_command, &CommandRow::screenshot_requested,
         m_video_display, [this](){
             global_dispatcher.dispatch([this]{
-                VideoSnapshot image = m_session.camera_session().snapshot();
+                VideoSnapshot image = m_session.video_session().snapshot();
                 if (!image){
                     return;
                 }
@@ -165,30 +180,34 @@ SwitchSystemWidget::SwitchSystemWidget(
 
 
 void SwitchSystemWidget::update_ui(ProgramState state){
-    if (!m_session.allow_commands_while_running()){
-        m_session.set_allow_user_commands(state == ProgramState::STOPPED);
-    }
-    switch (state){
-    case ProgramState::NOT_READY:
-        m_serial_widget->set_options_enabled(false);
-        break;
-    case ProgramState::STOPPED:
-        m_serial_widget->set_options_enabled(true);
-        break;
-    case ProgramState::RUNNING:
-    case ProgramState::STOPPING:
-        m_serial_widget->set_options_enabled(false);
-        break;
+    m_session.controller_session().set_options_locked(state != ProgramState::STOPPED);
+    if (m_session.allow_commands_while_running()){
+        m_session.set_allow_user_commands("");
+    }else{
+        switch (state){
+        case ProgramState::NOT_READY:
+            m_session.set_allow_user_commands("Program is not ready.");
+            break;
+        case ProgramState::STOPPED:
+            m_session.set_allow_user_commands("");
+            break;
+        case ProgramState::RUNNING:
+        case ProgramState::STOPPING:
+            m_session.set_allow_user_commands("Program is running.");
+            break;
+        }
     }
     m_command->on_state_changed(state);
 }
 
-bool SwitchSystemWidget::key_press(QKeyEvent* event){
-    return m_command->on_key_press((Qt::Key)event->key());
+void SwitchSystemWidget::key_press(QKeyEvent* event){
+//    cout << "press:   " << event->nativeVirtualKey() << endl;
+    m_command->on_key_press(*event);
 }
 
-bool SwitchSystemWidget::key_release(QKeyEvent* event){
-    return m_command->on_key_release((Qt::Key)event->key());
+void SwitchSystemWidget::key_release(QKeyEvent* event){
+//    cout << "release: " << event->nativeVirtualKey() << endl;
+    m_command->on_key_release(*event);
 }
 
 void SwitchSystemWidget::focus_in(QFocusEvent* event){
@@ -200,14 +219,14 @@ void SwitchSystemWidget::focus_out(QFocusEvent* event){
 }
 
 void SwitchSystemWidget::keyPressEvent(QKeyEvent* event){
-    if (!key_press(event)){
-        QWidget::keyPressEvent(event);
-    }
+//    cout << "SwitchSystemWidget::keyPressEvent()" << endl;
+    key_press(event);
+//    QWidget::keyPressEvent(event);
 }
 void SwitchSystemWidget::keyReleaseEvent(QKeyEvent* event){
-    if (!key_release(event)){
-        QWidget::keyReleaseEvent(event);
-    }
+//    cout << "SwitchSystemWidget::keyReleaseEvent()" << endl;
+    key_release(event);
+//    QWidget::keyReleaseEvent(event);
 }
 void SwitchSystemWidget::focusInEvent(QFocusEvent* event){
 //    cout << "focusInEvent" << endl;

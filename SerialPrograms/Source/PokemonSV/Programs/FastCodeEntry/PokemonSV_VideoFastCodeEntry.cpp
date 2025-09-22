@@ -1,18 +1,18 @@
 /*  Video Fast Code Entry
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/CancellableScope.h"
-#include "Common/Cpp/Concurrency/AsyncDispatcher.h"
-//#include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
-#include "CommonFramework/ImageMatch/ImageDiff.h"
+#include "CommonFramework/ImageTools/ImageDiff.h"
+#include "CommonFramework/Tools/GlobalThreadPools.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/OCR/OCR_RawOCR.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "CommonTools/Images/ImageFilter.h"
+#include "CommonTools/OCR/OCR_RawOCR.h"
+#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
+#include "NintendoSwitch/Inference/NintendoSwitch_ConsoleTypeDetector.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSV/Inference/Tera/PokemonSV_TeraCodeReader.h"
 #include "PokemonSV_CodeEntry.h"
@@ -56,7 +56,7 @@ void wait_for_video_code_and_join(
     MultiSwitchProgramEnvironment& env, CancellableScope& scope,
     ScreenWatchOption& screen_watcher,
     VideoFceSettings& join_method,
-    FastCodeEntrySettingsOption& fce_settings
+    const FastCodeEntrySettings& settings
 ){
     bool skip_initial = join_method.SKIP_INITIAL_CODE;
     VideoSnapshot snapshot;
@@ -92,21 +92,21 @@ void wait_for_video_code_and_join(
             env.log("OCR: " + code);
             break;
         case VideoFceOcrMethod::BLACK_TEXT:{
-            ImageRGB32 filtered = to_blackwhite_rgb32_range(snapshot, 0xff000000, 0xff7f7f7f, true);
+            ImageRGB32 filtered = to_blackwhite_rgb32_range(snapshot, true, 0xff000000, 0xff7f7f7f);
             code = OCR::ocr_read(Language::English, filtered);
             env.log("OCR: " + code);
             break;
         }
         case VideoFceOcrMethod::WHITE_TEXT:{
-            ImageRGB32 filtered = to_blackwhite_rgb32_range(snapshot, 0xffc0c0c0, 0xffffffff, true);
+            ImageRGB32 filtered = to_blackwhite_rgb32_range(snapshot, true, 0xffc0c0c0, 0xffffffff);
             code = OCR::ocr_read(Language::English, filtered);
             env.log("OCR: " + code);
             break;
         }
         case VideoFceOcrMethod::TERA_CARD:
-            code = read_raid_code(env.logger(), env.realtime_dispatcher(), snapshot);
+            code = read_raid_code(env.logger(), snapshot);
         }
-        const char* error = enter_code(env, scope, fce_settings, code, false);
+        const char* error = enter_code(env, scope, settings, code, false, false);
         if (error == nullptr){
             break;
         }else{
@@ -125,9 +125,9 @@ VideoFastCodeEntry_Descriptor::VideoFastCodeEntry_Descriptor()
         STRING_POKEMON + " SV", "Video Fast Code Entry (V-FCE)",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/VideoFastCodeEntry.md",
         "Read a 4, 6, or 8 digit link code from someone on your screen and enter it as quickly as possible.",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::NONE,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB,
         1, 4, 1
     )
 {}
@@ -149,7 +149,6 @@ VideoFastCodeEntry::VideoFastCodeEntry()
         LockMode::LOCK_WHILE_RUNNING,
         false
     )
-    , FCE_SETTINGS(LockMode::LOCK_WHILE_RUNNING)
     , NOTIFICATIONS({
         &NOTIFICATION_PROGRAM_FINISH,
     })
@@ -158,21 +157,23 @@ VideoFastCodeEntry::VideoFastCodeEntry()
     PA_ADD_OPTION(MODE);
     PA_ADD_OPTION(SKIP_CONNECT_TO_CONTROLLER);
     PA_ADD_OPTION(JOIN_METHOD);
-    PA_ADD_OPTION(FCE_SETTINGS);
+    PA_ADD_OPTION(SETTINGS);
     PA_ADD_OPTION(NOTIFICATIONS);
 
-    //  Preload the OCR data.
+    //  Preload
+    GlobalThreadPools::realtime_inference().ensure_threads(6);
     OCR::ensure_instances(Language::English, 6);
     preload_code_templates();
+}
+void VideoFastCodeEntry::update_active_consoles(size_t switch_count){
+    SETTINGS.set_active_consoles(switch_count);
 }
 
 
 void VideoFastCodeEntry::program(MultiSwitchProgramEnvironment& env, CancellableScope& scope){
-    FastCodeEntrySettings settings(FCE_SETTINGS);
-
     if (MODE == Mode::MANUAL){
-        std::string code = read_raid_code(env.logger(), env.realtime_dispatcher(), SCREEN_WATCHER.screenshot());
-        const char* error = enter_code(env, scope, settings, code, !SKIP_CONNECT_TO_CONTROLLER);
+        std::string code = read_raid_code(env.logger(), SCREEN_WATCHER.screenshot());
+        const char* error = enter_code(env, scope, SETTINGS, code, false, !SKIP_CONNECT_TO_CONTROLLER);
         if (error){
             env.log("No valid code found: " + std::string(error), COLOR_RED);
         }
@@ -180,14 +181,20 @@ void VideoFastCodeEntry::program(MultiSwitchProgramEnvironment& env, Cancellable
     }
 
     //  Connect the controller.
-    env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
-        pbf_press_button(context, BUTTON_PLUS, 5, 3);
+    env.run_in_parallel(scope, [&](CancellableScope& scope, ConsoleHandle& console){
+        auto* procon = console.controller().cast<ProController>();
+        if (procon == nullptr){
+            return;
+        }
+        ProControllerContext context(scope, *procon);
+        ssf_press_button_ptv(context, BUTTON_R | BUTTON_L);
+        detect_console_type_from_in_game(console, context);
     });
 
     //  Preload 6 threads to OCR the code.
-    env.realtime_dispatcher().ensure_threads(6);
+//    env.realtime_dispatcher().ensure_threads(6);
 
-    wait_for_video_code_and_join(env, scope, SCREEN_WATCHER, JOIN_METHOD, FCE_SETTINGS);
+    wait_for_video_code_and_join(env, scope, SCREEN_WATCHER, JOIN_METHOD, SETTINGS);
 
     send_program_finished_notification(env, NOTIFICATION_PROGRAM_FINISH);
 }

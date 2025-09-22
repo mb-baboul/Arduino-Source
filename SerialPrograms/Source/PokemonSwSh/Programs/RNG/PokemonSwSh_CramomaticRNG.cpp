@@ -1,6 +1,6 @@
 /*  Cram-o-matic RNG Manipulation
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  Credit goes to Anubis for discovering how the Cram-o-matic works
  *  and for the original code to calculate how many advances are needed
@@ -12,14 +12,15 @@
 #include <set>
 #include "CommonFramework/Exceptions/ProgramFinishedException.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonFramework/ImageTools/ImageStats.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/Tools/StatsTracking.h"
 #include "CommonFramework/Tools/DebugDumper.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "Pokemon/Inference/Pokemon_PokeballNameReader.h"
@@ -46,9 +47,9 @@ CramomaticRNG_Descriptor::CramomaticRNG_Descriptor()
         STRING_POKEMON + " SwSh", "Cram-o-matic RNG",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSwSh/CramomaticRNG.md",
         "Perform RNG manipulation to get rare balls from the Cram-o-matic.",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -131,14 +132,18 @@ CramomaticRNG::CramomaticRNG()
         300
     )
     , ADVANCE_PRESS_DURATION(
-        "<b>Advance Press Duration:</b><br>Hold the button down for this long to advance once.",
+        "<b>Advance Press Duration:</b><br>"
+        "Hold the button down for this long to advance once.<br>"
+        "<font color=\"red\">For tick-imprecise controllers, this number will be increased automatically.</font>",
         LockMode::LOCK_WHILE_RUNNING,
-        10
+        "80 ms"
     )
     , ADVANCE_RELEASE_DURATION(
-        "<b>Advance Release Duration:</b><br>After releasing the button, wait this long before pressing it again.",
+        "<b>Advance Release Duration:</b><br>"
+        "After releasing the button, wait this long before pressing it again.<br>"
+        "<font color=\"red\">For tick-imprecise controllers, this number will be increased automatically.</font>",
         LockMode::LOCK_WHILE_RUNNING,
-        10
+        "80 ms"
     )
     , SAVE_SCREENSHOTS(
         "<b>Save Debug Screenshots:</b>",
@@ -172,10 +177,10 @@ CramomaticRNG::CramomaticRNG()
     PA_ADD_OPTION(LOG_VALUES);
 }
 
-void CramomaticRNG::navigate_to_party(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void CramomaticRNG::navigate_to_party(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     pbf_press_button(context, BUTTON_X, 10, 125);
-    pbf_press_button(context, BUTTON_A, 10, 10);
-    pbf_wait(context, 2 * TICKS_PER_SECOND);
+    pbf_press_button(context, BUTTON_A, 20, 10);
+    pbf_wait(context, 2000ms);
 }
 
 CramomaticTarget CramomaticRNG::calculate_target(SingleSwitchProgramEnvironment& env, Xoroshiro128PlusState state, std::vector<CramomaticSelection> selected_balls){
@@ -188,13 +193,9 @@ CramomaticTarget CramomaticRNG::calculate_target(SingleSwitchProgramEnvironment&
     // priority_advances only starts counting up after the first good result is found
     while (priority_advances <= MAX_PRIORITY_ADVANCES){
         // calculate the result for the current temp_rng state
-        Xoroshiro128Plus temp_rng(rng.get_state());
+        Xoroshiro128PlusState temp_state = predict_state_after_menu_close(rng.get_state(), NUM_NPCS);
+        Xoroshiro128Plus temp_rng(temp_state);
 
-        for (size_t i = 0; i < NUM_NPCS; i++){
-            temp_rng.nextInt(91);
-        }
-        temp_rng.next();
-        temp_rng.nextInt(60);
 
         /*uint64_t item_roll =*/ temp_rng.nextInt(4);
         uint64_t ball_roll = temp_rng.nextInt(100);
@@ -280,15 +281,15 @@ CramomaticTarget CramomaticRNG::calculate_target(SingleSwitchProgramEnvironment&
     return possible_targets[0];
 }
 
-void CramomaticRNG::leave_to_overworld_and_interact(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
-    pbf_press_button(context, BUTTON_B, 2 * TICKS_PER_SECOND, 5);
+void CramomaticRNG::leave_to_overworld_and_interact(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    pbf_press_button(context, BUTTON_B, 2000ms, 40ms);
     pbf_press_button(context, BUTTON_B, 10, 70);
 
     pbf_mash_button(context, BUTTON_A, 320);
     pbf_wait(context, 125);
 }
 
-void CramomaticRNG::choose_apricorn(SingleSwitchProgramEnvironment& env, BotBaseContext& context, bool sport){
+void CramomaticRNG::choose_apricorn(SingleSwitchProgramEnvironment& env, ProControllerContext& context, bool sport){
     // check whether the bag is open
     context.wait_for_all_requests();
     VideoOverlaySet boxes(env.console);
@@ -298,13 +299,14 @@ void CramomaticRNG::choose_apricorn(SingleSwitchProgramEnvironment& env, BotBase
     int ret = wait_until(env.console, context, Milliseconds(5000), { bag_arrow_detector });
     if (ret < 0){
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Could not detect bag."
+            ErrorReport::SEND_ERROR_REPORT,
+            "Could not detect bag.",
+            env.console
         );
     }
 
     // select the apricorn(s)
-    pbf_wait(context, 1 * TICKS_PER_SECOND);
+    pbf_wait(context, 1000ms);
     pbf_press_button(context, BUTTON_A, 10, 30);
     if (sport){
         pbf_press_dpad(context, DPAD_DOWN, 20, 10);
@@ -316,10 +318,10 @@ void CramomaticRNG::choose_apricorn(SingleSwitchProgramEnvironment& env, BotBase
     }
     pbf_press_button(context, BUTTON_A, 10, 30);
 
-    pbf_mash_button(context, BUTTON_A, 5 * TICKS_PER_SECOND);
+    pbf_mash_button(context, BUTTON_A, 5000ms);
 }
 
-std::pair<bool, std::string> CramomaticRNG::receive_ball(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+std::pair<bool, std::string> CramomaticRNG::receive_ball(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     // receive ball and refuse to use the cram-o-matic again
     VideoOverlaySet boxes(env.console);
 
@@ -366,22 +368,22 @@ std::pair<bool, std::string> CramomaticRNG::receive_ball(SingleSwitchProgramEnvi
             arrow_detected = true;
         }
     }
-    pbf_press_button(context, BUTTON_B, 10, TICKS_PER_SECOND);
+    pbf_press_button(context, BUTTON_B, 80ms, 1000ms);
     return {arrow_detected, best_ball};
 }
 
-void CramomaticRNG::recover_from_wrong_state(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void CramomaticRNG::recover_from_wrong_state(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     // Mash the B button to exit potential menus or dialog boxes
-    pbf_mash_button(context, BUTTON_B, 30 * TICKS_PER_SECOND);
+    pbf_mash_button(context, BUTTON_B, 30s);
 
     // take a step in case Hyde repositioned the player
-    pbf_move_left_joystick(context, 128, 0, TICKS_PER_SECOND, 10);
+    pbf_move_left_joystick(context, 128, 0, 1000ms, 80ms);
 
     context.wait_for_all_requests();
 }
 
 
-void CramomaticRNG::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void CramomaticRNG::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     CramomaticRNG_Descriptor::Stats& stats = env.current_stats<CramomaticRNG_Descriptor::Stats>();
     env.update_stats();
 
@@ -435,8 +437,8 @@ void CramomaticRNG::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
         //  Touch the date.
         if (TOUCH_DATE_INTERVAL.ok_to_touch_now()){
             env.log("Touching date to prevent rollover.");
-            pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY_SAFE);
-            touch_date_from_home(context, ConsoleSettings::instance().SETTINGS_TO_HOME_DELAY);
+            ssf_press_button(context, BUTTON_HOME, GameSettings::instance().GAME_TO_HOME_DELAY_SAFE0, 160ms);
+            touch_date_from_home(env.console, context, ConsoleSettings::instance().SETTINGS_TO_HOME_DELAY0);
             resume_game_no_interact(env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
         }
 
@@ -463,8 +465,9 @@ void CramomaticRNG::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
             state_errors++;
             if (state_errors >= 3){
                 OperationFailedException::fire(
-                    env.console, ErrorReport::SEND_ERROR_REPORT,
-                    "Detected invalid RNG state three times in a row."
+                    ErrorReport::SEND_ERROR_REPORT,
+                    "Detected invalid RNG state three times in a row.",
+                    env.console
                 );
             }
             VideoSnapshot screen = env.console.video().snapshot();
@@ -480,7 +483,13 @@ void CramomaticRNG::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
         num_apricorn_one -= sport ? 2 : 4;
         num_apricorn_two -= sport ? 2 : 0;
 
-        do_rng_advances(env.console, context, rng, target.needed_advances, ADVANCE_PRESS_DURATION, ADVANCE_RELEASE_DURATION);
+        do_rng_advances(
+            env.console, context,
+            rng,
+            target.needed_advances,
+            ADVANCE_PRESS_DURATION,
+            ADVANCE_RELEASE_DURATION
+        );
         leave_to_overworld_and_interact(env, context);
 
         try{
@@ -488,17 +497,21 @@ void CramomaticRNG::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
         }catch (OperationFailedException& e){
             stats.errors++;
             env.update_stats();
-            e.send_notification(env, NOTIFICATION_ERROR_RECOVERABLE);
 
             apricorn_selection_errors++;
             if (apricorn_selection_errors >= 3){
                 OperationFailedException::fire(
-                    env.console, ErrorReport::SEND_ERROR_REPORT,
-                    "Could not detect the bag three times on a row."
+                    ErrorReport::SEND_ERROR_REPORT,
+                    "Could not detect the bag three times on a row.",
+                env.console
                 );
             }
-            VideoSnapshot screen = env.console.video().snapshot();
-            send_program_recoverable_error_notification(env, NOTIFICATION_ERROR_RECOVERABLE, "Could not detect the bag.", screen);
+            send_program_recoverable_error_notification(
+                env,
+                NOTIFICATION_ERROR_RECOVERABLE,
+                e.message(),
+                e.screenshot_view()
+            );
             is_state_valid = false;
             recover_from_wrong_state(env, context);
             continue;

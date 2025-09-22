@@ -1,6 +1,6 @@
 /*  Let's Go Tools
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,18 +10,20 @@
 #include <deque>
 #include <atomic>
 #include "Common/Cpp/Time.h"
-//#include "Common/Cpp/Options/BooleanCheckBoxOption.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
-//#include "CommonFramework/Notifications/EventNotificationOption.h"
-#include "CommonFramework/InferenceInfra/InferenceSession.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceSession.h"
+#include "CommonTools/Options/LanguageOCROption.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "Pokemon/Pokemon_EncounterStats.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_LetsGoKillDetector.h"
 #include "PokemonSV/Inference/Battles/PokemonSV_EncounterWatcher.h"
 
+//#include <iostream>
+//using std::cout;
+//using std::endl;
+
 namespace PokemonAutomation{
     class CancellableScope;
-    class BotBaseContext;
     class ProgramEnvironment;
 namespace NintendoSwitch{
 namespace PokemonSV{
@@ -113,9 +115,10 @@ public:
 class LetsGoEncounterBotTracker{
 public:
     LetsGoEncounterBotTracker(
-        ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
+        ProgramEnvironment& env,
+        VideoStream& stream,
         LetsGoEncounterBotStats& stats,
-        OCR::LanguageOCROption& language
+        LetsGoKillSoundDetector& kill_sound
     );
 
     void throw_if_no_sound(std::chrono::milliseconds min_duration = std::chrono::milliseconds(10000)) const{
@@ -128,7 +131,10 @@ public:
     WallClock last_kill() const{
         return m_kill_sound.last_kill();
     }
-    const EncounterFrequencies& encounter_frequencies() const{
+    EncounterRateTracker& encounter_rate_tracker(){
+        return m_encounter_rate;
+    }
+    EncounterFrequencies& encounter_frequencies(){
         return m_encounter_frequencies;
     }
 
@@ -144,25 +150,12 @@ public:
         m_encounter_rate.report_start();
     }
 
-    //  Returns true if you should save the game.
-    void process_battle(
-        bool& caught, bool& should_save,
-        EncounterWatcher& watcher, EncounterBotCommonOptions& settings
-    );
-
 private:
-    ProgramEnvironment& m_env;
-    ConsoleHandle& m_console;
-    BotBaseContext& m_context;
-    LetsGoEncounterBotStats& m_stats;
-
-    OCR::LanguageOCROption& m_language;
+    LetsGoKillSoundDetector& m_kill_sound;
 
     EncounterRateTracker m_encounter_rate;
     EncounterFrequencies m_encounter_frequencies;
 
-    LetsGoKillSoundDetector m_kill_sound;
-    InferenceSession m_session;
 };
 
 
@@ -174,11 +167,37 @@ private:
 //  The function tracks kill chain by sound detection from `tracker`. The function
 //  does not handle any pokemon battle encounters (turn-based battles).
 bool use_lets_go_to_clear_in_front(
-    ConsoleHandle& console, BotBaseContext& context,
+    VideoStream& stream, ProControllerContext& context,
     LetsGoEncounterBotTracker& tracker,
     bool throw_ball_if_bubble,
-    std::function<void(BotBaseContext& context)>&& command
+    std::function<void(ProControllerContext& context)>&& command
 );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

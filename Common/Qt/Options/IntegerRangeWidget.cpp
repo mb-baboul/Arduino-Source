@@ -1,6 +1,6 @@
 /*  Integer Range Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -78,7 +78,7 @@ void IntegerRangeCellWidget<Type>::update_value(){
     m_hi->setText(QString::number(hi));
 }
 template <typename Type>
-void IntegerRangeCellWidget<Type>::value_changed(void* object){
+void IntegerRangeCellWidget<Type>::on_config_value_changed(void* object){
     QMetaObject::invokeMethod(this, [this]{
         update_value();
     }, Qt::QueuedConnection);

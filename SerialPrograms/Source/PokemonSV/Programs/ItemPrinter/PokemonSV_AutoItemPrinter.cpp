@@ -1,21 +1,21 @@
 /*  Auto Item Printer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSwSh/Inference/PokemonSwSh_IvJudgeReader.h"
 #include "PokemonSV/Inference/PokemonSV_WhiteButtonDetector.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_OverworldDetector.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
 #include "PokemonSV_ItemPrinterTools.h"
 #include "PokemonSV_AutoItemPrinter.h"
 
@@ -34,9 +34,10 @@ AutoItemPrinter_Descriptor::AutoItemPrinter_Descriptor()
         STRING_POKEMON + " SV", "Auto Item Printer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/AutoItemPrinter.md",
         "Automate the Item Printer for rare items.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        true
     )
 {}
 struct AutoItemPrinter_Descriptor::Stats : public StatsTracker{
@@ -80,7 +81,7 @@ AutoItemPrinter::AutoItemPrinter()
 }
 
 
-void AutoItemPrinter::enter_printing_mode(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void AutoItemPrinter::enter_printing_mode(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     env.console.log("Entering printing mode...");
 
     while (true){
@@ -111,8 +112,9 @@ void AutoItemPrinter::enter_printing_mode(SingleSwitchProgramEnvironment& env, B
             continue;
         default:
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "enter_printing_mode(): No recognized state after 120 seconds."
+                ErrorReport::SEND_ERROR_REPORT,
+                "enter_printing_mode(): No recognized state after 120 seconds.",
+                env.console
             );
         }
     }
@@ -121,7 +123,7 @@ void AutoItemPrinter::enter_printing_mode(SingleSwitchProgramEnvironment& env, B
 
 
 
-void AutoItemPrinter::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void AutoItemPrinter::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
     AutoItemPrinter_Descriptor::Stats& stats = env.current_stats<AutoItemPrinter_Descriptor::Stats>();
@@ -132,8 +134,13 @@ void AutoItemPrinter::program(SingleSwitchProgramEnvironment& env, BotBaseContex
     enter_printing_mode(env, context);
 
     for (uint16_t i = 0; i < NUM_ROUNDS; i++){
-        item_printer_start_print(env.inference_dispatcher(), env.console, context, LANGUAGE, ItemPrinterJobs::Jobs_10);
-        item_printer_finish_print(env.inference_dispatcher(), env.console, context, Language::None);
+        item_printer_start_print(
+            env.console, context, LANGUAGE,
+            ItemPrinterJobs::Jobs_10
+        );
+        item_printer_finish_print(
+            env.console, context, Language::None
+        );
 
         env.console.log("Print completed.");
         stats.m_rounds++;

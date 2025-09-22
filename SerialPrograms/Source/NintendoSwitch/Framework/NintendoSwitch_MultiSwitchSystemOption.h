@@ -1,6 +1,6 @@
 /*  Multi-Switch System Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  This class represents the serializable state of a set of Switch.
  *  consoles. Specifically, it holds a SwitchSystemOption for each of the
@@ -15,6 +15,8 @@
 
 #include <memory>
 #include <vector>
+#include "CommonFramework/Globals.h"
+#include "CommonFramework/Panels/ProgramDescriptor.h"
 #include "NintendoSwitch_SwitchSystemOption.h"
 
 namespace PokemonAutomation{
@@ -29,7 +31,6 @@ public:
 
 public:
     MultiSwitchSystemOption(
-        PABotBaseLevel min_pabotbase,
         FeedbackType feedback,
         AllowCommandsWhenRunning allow_commands_while_running,
         size_t min_switches,
@@ -37,7 +38,6 @@ public:
         size_t switches
     );
     MultiSwitchSystemOption(
-        PABotBaseLevel min_pabotbase,
         FeedbackType feedback,
         AllowCommandsWhenRunning allow_commands_while_running,
         size_t min_switches,
@@ -60,7 +60,6 @@ public:
 private:
     friend class MultiSwitchSystemWidget;
 
-    const PABotBaseLevel m_min_pabotbase;
     const bool m_allow_commands_while_running;
 
     const size_t m_min_switches;

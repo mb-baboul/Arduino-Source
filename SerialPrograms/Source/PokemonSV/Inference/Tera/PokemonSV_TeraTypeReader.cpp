@@ -1,14 +1,18 @@
 /*  Tera Type Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/ImageMatch/ImageCropper.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
+#include "CommonTools/Images/ImageFilter.h"
+#include "CommonTools/ImageMatch/ImageCropper.h"
 #include "PokemonSV/Resources/PokemonSV_PokemonSprites.h"
-
 #include "PokemonSV_TeraTypeReader.h"
+
+#include "CommonFramework/Logging/Logger.h"
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -41,28 +45,54 @@ ImageMatch::ImageMatchResult TeraTypeReader::read(const ImageViewRGB32& screen) 
     static constexpr double MAX_ALPHA = 100;
     static constexpr double ALPHA_SPREAD = 20;
 
-    // Get a loose crop of the tera type icon
-    ImageViewRGB32 cropped_image = extract_box_reference(screen, m_box);
-    //cropped_image.save("cropped_image.png");
+    const std::vector<uint32_t> BRIGHTNESS_THRESHOLDS{
+        200,
+        150,
+        100,
+        125,
+        175,
+        225,
+    };
 
-    // Get a tight crop
-    const ImagePixelBox tight_box = ImageMatch::enclosing_rectangle_with_pixel_filter(
-        cropped_image,
-        // The filter is a lambda function that returns true on black tera type pixels.
-        [](Color pixel){
-            return (uint32_t)pixel.red() + pixel.green() + pixel.blue() < 200;
+//    static int c = 0;
+    for (uint32_t threshold : BRIGHTNESS_THRESHOLDS){
+
+        // Get a loose crop of the tera type icon
+        ImageViewRGB32 cropped_image = extract_box_reference(screen, m_box);
+        //cropped_image.save("cropped_image.png");
+
+        // Get a tight crop
+        const ImagePixelBox tight_box = ImageMatch::enclosing_rectangle_with_pixel_filter(
+            cropped_image,
+            // The filter is a lambda function that returns true on black tera type pixels.
+            [=](Color pixel){
+                return (uint32_t)pixel.red() + pixel.green() + pixel.blue() <= threshold;
+            }
+        );
+
+        if (tight_box.area() == 0){
+            continue;
         }
-    );
-    ImageRGB32 processed_image = extract_box_reference(cropped_image, tight_box).copy();
-    //processed_image.save("processed_image.png");
 
-    ImageRGB32 filtered_image = to_blackwhite_rgb32_range(processed_image, 0xff000000, 0xff5f5f5f, true);
-    //filtered_image.save("filtered_image.png");
+        ImageRGB32 processed_image = extract_box_reference(cropped_image, tight_box).copy();
+        processed_image.save("processed_image-" + std::to_string(threshold) + ".png");
 
-    ImageMatch::ImageMatchResult types = m_matcher.match(filtered_image, ALPHA_SPREAD);
-    types.clear_beyond_alpha(MAX_ALPHA);
+        ImageRGB32 filtered_image = to_blackwhite_rgb32_brightness(
+            processed_image, true,
+            0x00010101, 0, threshold
+        );
+        filtered_image.save("filtered_image-" + std::to_string(threshold) + ".png");
 
-    return types;
+        ImageMatch::ImageMatchResult types = m_matcher.match(filtered_image, ALPHA_SPREAD);
+//        types.log(global_logger_tagged(), MAX_ALPHA);
+        types.clear_beyond_alpha(MAX_ALPHA);
+
+        if (types.results.size() == 1){
+            return types;
+        }
+    }
+
+    return ImageMatch::ImageMatchResult();
 }
 
 

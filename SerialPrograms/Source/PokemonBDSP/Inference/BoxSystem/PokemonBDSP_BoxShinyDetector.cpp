@@ -1,17 +1,17 @@
 /*  Box Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonBDSP_BoxShinyDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -36,7 +36,7 @@ bool BoxShinyDetector::is_panel(const ImageViewRGB32& screen) const{
     }
     return true;
 }
-bool BoxShinyDetector::detect(const ImageViewRGB32& screen) const{
+bool BoxShinyDetector::detect(const ImageViewRGB32& screen){
     if (!is_panel(screen)){
         return false;
     }

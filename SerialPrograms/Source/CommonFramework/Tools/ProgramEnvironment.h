@@ -1,6 +1,6 @@
 /*  Program Environment
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -41,8 +41,14 @@ public:
 
 public:
     //  Thread Pools
+
+    //  A high-priority dispatcher for program and logic threads that cannot
+    //  tolerate being delayed.
     AsyncDispatcher& realtime_dispatcher();
-    AsyncDispatcher& inference_dispatcher();
+
+    //  A high-priority dispatcher for inference where starvation may cause the
+    //  program to encounter issues.
+    AsyncDispatcher& realtime_inference_dispatcher();
 
 public:
     //  Stats Management

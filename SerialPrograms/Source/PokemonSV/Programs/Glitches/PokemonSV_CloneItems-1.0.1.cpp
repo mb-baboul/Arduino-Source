@@ -1,18 +1,19 @@
 /*  Clone Items
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/FatalProgramException.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/StatsTracking.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/StartProgramChecks.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_GradientArrowDetector.h"
@@ -38,9 +39,9 @@ CloneItems101_Descriptor::CloneItems101_Descriptor()
         STRING_POKEMON + " SV", "Clone Items (1.0.1)",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/CloneItems-101.md",
         "Clone items using the add-to-party glitch.",
+        ProgramControllerClass::StandardController_RequiresPrecision,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct CloneItems101_Descriptor::Stats : public StatsTracker{
@@ -122,7 +123,7 @@ CloneItems101::CloneItems101()
 
 
 
-bool CloneItems101::clone_item(ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context){
+bool CloneItems101::clone_item(ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context){
     CloneItems101_Descriptor::Stats& stats = env.current_stats<CloneItems101_Descriptor::Stats>();
 
     bool item_held = false;
@@ -130,12 +131,12 @@ bool CloneItems101::clone_item(ProgramEnvironment& env, ConsoleHandle& console, 
     while (true){
         if (current_time() - start > std::chrono::minutes(5)){
             dump_image_and_throw_recoverable_exception(
-                env.program_info(), console, "CloneItemFailed",
+                env.program_info(), stream, "CloneItemFailed",
                 "Failed to clone an item after 5 minutes."
             );
         }
 
-        OverworldWatcher overworld(console, COLOR_RED);
+        OverworldWatcher overworld(stream.logger(), COLOR_RED);
         MainMenuWatcher main_menu(COLOR_YELLOW);
         GradientArrowWatcher party_select_top(COLOR_GREEN, GradientArrowType::RIGHT, {0.30, 0.27, 0.10, 0.08});
         GradientArrowWatcher party_select_return(COLOR_GREEN, GradientArrowType::RIGHT, {0.30, 0.57, 0.10, 0.08});
@@ -148,7 +149,7 @@ bool CloneItems101::clone_item(ProgramEnvironment& env, ConsoleHandle& console, 
 
         context.wait_for_all_requests();
         int ret = wait_until(
-            console, context,
+            stream, context,
             std::chrono::seconds(10),
             {
                 overworld,
@@ -164,18 +165,18 @@ bool CloneItems101::clone_item(ProgramEnvironment& env, ConsoleHandle& console, 
 
         switch (ret){
         case 0:
-            console.log("Detected overworld. (unexpected)", COLOR_RED);
+            stream.log("Detected overworld. (unexpected)", COLOR_RED);
             stats.m_errors++;
             pbf_press_button(context, BUTTON_X, 20, 105);
             continue;
         case 1:
-            console.log("Detected main menu.");
+            stream.log("Detected main menu.");
             try{
                 if (item_held){
-                    main_menu.move_cursor(env.program_info(), console, context, MenuSide::RIGHT, 1, true);
+                    main_menu.move_cursor(env.program_info(), stream, context, MenuSide::RIGHT, 1, true);
                     pbf_press_button(context, BUTTON_A, 20, 20);
                 }else{
-                    main_menu.move_cursor(env.program_info(), console, context, MenuSide::LEFT, 1, true);
+                    main_menu.move_cursor(env.program_info(), stream, context, MenuSide::LEFT, 1, true);
                     pbf_press_button(context, BUTTON_A, 20, 50);
                     pbf_press_dpad(context, DPAD_UP, 10, 10);
                     pbf_press_dpad(context, DPAD_UP, 20, 10);
@@ -186,26 +187,26 @@ bool CloneItems101::clone_item(ProgramEnvironment& env, ConsoleHandle& console, 
             }
             continue;
         case 2:
-            console.log("Detected 6th slot select top. (unexpected)", COLOR_RED);
+            stream.log("Detected 6th slot select top. (unexpected)", COLOR_RED);
             stats.m_errors++;
             pbf_press_dpad(context, DPAD_UP, 10, 10);
             pbf_press_dpad(context, DPAD_UP, 10, 10);
             continue;
         case 3:
-            console.log("Detected 6th slot select return. (unexpected)", COLOR_RED);
+            stream.log("Detected 6th slot select return. (unexpected)", COLOR_RED);
             stats.m_errors++;
             pbf_press_button(context, BUTTON_A, 20, 20);
             continue;
         case 4:
-            console.log("Detected 6th slot select back. (unexpected)", COLOR_RED);
+            stream.log("Detected 6th slot select back. (unexpected)", COLOR_RED);
             stats.m_errors++;
             pbf_press_dpad(context, DPAD_UP, 20, 30);
             continue;
         case 5:{
-            console.log("Detected dialog.");
+            stream.log("Detected dialog.");
 
             //  Resolve ambiguities.
-            VideoSnapshot snapshot = console.video().snapshot();
+            VideoSnapshot snapshot = stream.video().snapshot();
 
             //  Confirmation prompt for returning your ride back to ride form.
             if (return_to_ride_prompt.detect(snapshot)){
@@ -219,7 +220,7 @@ bool CloneItems101::clone_item(ProgramEnvironment& env, ConsoleHandle& console, 
             continue;
         }
         case 6:{
-            console.log("Detected box slot 1.");
+            stream.log("Detected box slot 1.");
 
             if (!item_held){
                 pbf_press_button(context, BUTTON_B, 20, 105);
@@ -227,7 +228,7 @@ bool CloneItems101::clone_item(ProgramEnvironment& env, ConsoleHandle& console, 
                 return true;
             }
 
-            VideoSnapshot snapshot = console.video().snapshot();
+            VideoSnapshot snapshot = stream.video().snapshot();
 
             //  Not on the battle teams.
             if (!battle_team.detect(snapshot)){
@@ -248,7 +249,7 @@ bool CloneItems101::clone_item(ProgramEnvironment& env, ConsoleHandle& console, 
         }
         default:
             stats.m_errors++;
-            console.log("No recognized state after 10 seconds.", COLOR_RED);
+            stream.log("No recognized state after 10 seconds.", COLOR_RED);
             return false;
 //            dump_image_and_throw_recoverable_exception(
 //                env, console, NOTIFICATION_ERROR_RECOVERABLE,
@@ -259,7 +260,8 @@ bool CloneItems101::clone_item(ProgramEnvironment& env, ConsoleHandle& console, 
     }
 }
 
-void CloneItems101::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void CloneItems101::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    StartProgramChecks::check_performance_class_wired_or_wireless(context);
     assert_16_9_720p_min(env.logger(), env.console);
 
     CloneItems101_Descriptor::Stats& stats = env.current_stats<CloneItems101_Descriptor::Stats>();
@@ -289,9 +291,9 @@ void CloneItems101::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
         OverworldWatcher overworld(env.console, COLOR_RED);
         MainMenuWatcher main_menu(COLOR_YELLOW);
         context.wait_for_all_requests();
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [](BotBaseContext& context){
+            [](ProControllerContext& context){
                 for (size_t c = 0; c < 10; c++){
                     pbf_press_button(context, BUTTON_B, 20, 230);
                 }

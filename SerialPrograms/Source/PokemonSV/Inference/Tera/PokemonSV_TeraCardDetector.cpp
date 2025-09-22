@@ -1,35 +1,30 @@
 /*  Tera Card Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include <cmath>
 #include <array>
+#include <list>
 #include <map>
 #include "Common/Cpp/PrettyPrint.h"
-//#include "Kernels/Waterfill/Kernels_Waterfill.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
 #include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/ImageTypes/ImageRGB32.h"
 #include "CommonFramework/ImageTypes/BinaryImage.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
-//#include "CommonFramework/ImageTools/ImageManip.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-//#include "CommonFramework/ImageTools/ImageFilter.h"
-#include "CommonFramework/OCR/OCR_RawOCR.h"
-//#include "CommonFramework/OCR/OCR_NumberReader.h"
 #include "CommonFramework/Tools/DebugDumper.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
-//#include "CommonFramework/OCR/OCR_Routines.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
+#include "CommonTools/OCR/OCR_RawOCR.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_GradientArrowDetector.h"
 #include "PokemonSV_TeraCodeReader.h"
 #include "PokemonSV_TeraCardDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -72,7 +67,7 @@ bool TeraCardReader::is_card_label(const ImageViewRGB32& screen){
         || is_solid(label, {0.258888, 0.369491, 0.371621}, 0.15, 15);   //  Kitakami Card
 }
 
-bool TeraCardReader::detect(const ImageViewRGB32& screen) const{
+bool TeraCardReader::detect(const ImageViewRGB32& screen){
     ImageStats top = image_stats(extract_box_reference(screen, m_top));
 //    cout << top.average << top.stddev << endl;
     if (!is_solid(top, {0.354167, 0.345833, 0.3})){
@@ -127,25 +122,80 @@ uint8_t TeraCardReader::stars(
 
     ImageViewRGB32 cropped = extract_box_reference(screen, m_stars);
 
-    {
-        ImageStats background = image_stats(extract_box_reference(screen, ImageFloatBox{0.55, 0.62, 0.20, 0.03}));
-        Color background_average = background.average.round();
+    ImageViewRGB32 background = extract_box_reference(screen, ImageFloatBox{0.55, 0.62, 0.20, 0.03});
+//        background.save("background.png");
+    ImageStats background_stats = image_stats(background);
+    Color background_average = background_stats.average.round();
 
-        PackedBinaryMatrix matrix = compress_rgb32_to_binary_euclidean(cropped, (uint32_t)background_average, 100);
+    //  Iterate through multiple distance filters and find how many
+    //  possible stars are in each one. Then do a majority vote.
+    const std::vector<double> DISTANCES{70, 80, 90, 100, 110, 120, 130};
+
+    std::map<size_t, size_t> count_map;
+
+    for (double distance : DISTANCES){
+        PackedBinaryMatrix matrix = compress_rgb32_to_binary_euclidean(cropped, (uint32_t)background_average, distance);
 
         matrix.invert();
 //        cout << matrix.dump() << endl;
         std::unique_ptr<WaterfillSession> session = make_WaterfillSession(matrix);
         auto iter = session->make_iterator(100);
         WaterfillObject object;
-        size_t count = 0;
+
+        std::list<ImagePixelBox> objects;
         while (iter->find_next(object, false)){
-//            extract_box_reference(cropped, object).save("test-" + std::to_string(count) + ".png");
-            count++;
+            //  Attempt to merge with existing objects.
+            ImagePixelBox current(object);
+            bool changed;
+            do{
+                changed = false;
+                for (auto iter1 = objects.begin(); iter1 != objects.end();){
+                    if (current.overlaps_with(*iter1)){
+                        changed = true;
+                        current.merge_with(*iter1);
+                        objects.erase(iter1);
+                        break;
+                    }else{
+                        ++iter1;
+                    }
+                }
+            }while (changed);
+            objects.emplace_back(std::move(current));
         }
-        if (1 <= count && count <= 7){
-            return (uint8_t)count;
+
+#if 0
+        static size_t count = 0;
+        for (const ImagePixelBox& obj : objects){
+            extract_box_reference(cropped, obj).save("test-" + std::to_string(count++) + ".png");
         }
+        cout << "objects.size() = " << objects.size() << endl;
+#endif
+
+
+        count_map[objects.size()]++;
+    }
+
+    count_map.erase(0);
+
+    if (count_map.empty()){
+        dump_image(logger, info, "ReadStarsFailed", screen);
+        return 0;
+    }
+
+    auto best = count_map.begin();
+    for (auto iter = count_map.begin(); iter != count_map.end(); ++iter){
+        if (iter->first == 0){
+            continue;
+        }
+        if (iter->second > best->second){
+            best = iter;
+        }
+    }
+
+    size_t stars = best->first;
+
+    if (1 <= stars && stars <= 7){
+        return (uint8_t)stars;
     }
 
     dump_image(logger, info, "ReadStarsFailed", screen);
@@ -168,22 +218,28 @@ std::string TeraCardReader::tera_type(
 
     return best_type;
 }
-std::string TeraCardReader::pokemon_slug(
+std::set<std::string> TeraCardReader::pokemon_slug(
     Logger& logger, const ProgramInfo& info, const ImageViewRGB32& screen
 ) const{
     ImageMatch::ImageMatchResult silhouette = m_silhouette.read(screen);
-    silhouette.log(logger, 100);
-    std::string best_silhouette;
-    if (!silhouette.results.empty()){
-        best_silhouette = silhouette.results.begin()->second;
-    }
+    silhouette.log(logger, 110);
+//    std::string best_silhouette;
+//    if (!silhouette.results.empty()){
+//        best_silhouette = silhouette.results.begin()->second;
+//    }
     if (silhouette.results.empty()){
         dump_image(logger, info, "ReadSilhouetteFailed", screen);
-    }else if (PreloadSettings::debug().IMAGE_TEMPLATE_MATCHING){
-        dump_debug_image(logger, "PokemonSV/TeraRoller/" + best_silhouette, "", screen);
+    }
+//    else if (PreloadSettings::debug().IMAGE_TEMPLATE_MATCHING){
+//        dump_debug_image(logger, "PokemonSV/TeraRoller/" + best_silhouette, "", screen);
+//    }
+
+    std::set<std::string> results;
+    for (const auto& item : silhouette.results){
+        results.insert(std::move(item.second));
     }
 
-    return best_silhouette;
+    return results;
 }
 
 
@@ -212,9 +268,8 @@ std::string TeraLobbyNameMatchResult::to_str() const{
 
 
 
-TeraLobbyReader::TeraLobbyReader(Logger& logger, AsyncDispatcher& dispatcher, Color color)
+TeraLobbyReader::TeraLobbyReader(Logger& logger, Color color)
     : m_logger(logger)
-    , m_dispatcher(dispatcher)
     , m_color(color)
     , m_bottom_right(0.73, 0.85, 0.12, 0.02)
     , m_label(TeraCardReader::CARD_LABEL_BOX())
@@ -243,7 +298,7 @@ void TeraLobbyReader::make_overlays(VideoOverlaySet& items) const{
         items.add(m_color, m_player_ready[c]);
     }
 }
-bool TeraLobbyReader::detect(const ImageViewRGB32& screen) const{
+bool TeraLobbyReader::detect(const ImageViewRGB32& screen){
     ImageStats bottom_right = image_stats(extract_box_reference(screen, m_bottom_right));
 //    cout << bottom_right.average << bottom_right.stddev << endl;
     if (!is_solid(bottom_right, {0.354167, 0.345833, 0.3})){
@@ -261,7 +316,7 @@ bool TeraLobbyReader::detect(const ImageViewRGB32& screen) const{
         return false;
     }
 
-    if (seconds_left(m_logger, m_dispatcher, screen) < 0){
+    if (seconds_left(m_logger, screen) < 0){
         return false;
     }
 
@@ -303,13 +358,13 @@ uint8_t TeraLobbyReader::ready_joiners(const ImageViewRGB32& screen, uint8_t hos
     return total;
 }
 
-int16_t TeraLobbyReader::seconds_left(Logger& logger, AsyncDispatcher& dispatcher, const ImageViewRGB32& screen) const{
+int16_t TeraLobbyReader::seconds_left(Logger& logger, const ImageViewRGB32& screen) const{
     ImageViewRGB32 image = extract_box_reference(screen, m_timer);
-    return read_raid_timer(logger, dispatcher, image);
+    return read_raid_timer(logger, image);
 }
-std::string TeraLobbyReader::raid_code(Logger& logger, AsyncDispatcher& dispatcher, const ImageViewRGB32& screen) const{
+std::string TeraLobbyReader::raid_code(Logger& logger, const ImageViewRGB32& screen) const{
     ImageViewRGB32 image = extract_box_reference(screen, m_code);
-    return read_raid_code(logger, dispatcher, image);
+    return read_raid_code(logger, image);
 }
 
 ImageRGB32 filter_name_image(const ImageViewRGB32& image){
@@ -399,32 +454,6 @@ std::array<std::map<Language, std::string>, 4> TeraLobbyReader::read_names(
 
 
 
-
-
-#if 0
-TeraLobbyReadyWaiter::TeraLobbyReadyWaiter(
-    Logger& logger, AsyncDispatcher& dispatcher,
-    Color color, uint8_t desired_players
-)
-    : TeraLobbyReader(logger, dispatcher, color)
-    , VisualInferenceCallback("TeraLobbyReadyWaiter")
-    , m_desired_players(desired_players)
-    , m_last_known_total_players(-1)
-{}
-
-void TeraLobbyReadyWaiter::make_overlays(VideoOverlaySet& items) const{
-    TeraLobbyReader::make_overlays(items);
-}
-bool TeraLobbyReadyWaiter::process_frame(const ImageViewRGB32& frame, WallClock timestamp){
-    if (!detect(frame)){
-        return false;
-    }
-    uint8_t total_players = this->total_players(frame);
-    uint8_t ready_players = this->ready_players(frame);
-    m_last_known_total_players.store(total_players);
-    return ready_players + 1 >= m_desired_players;
-}
-#endif
 
 
 

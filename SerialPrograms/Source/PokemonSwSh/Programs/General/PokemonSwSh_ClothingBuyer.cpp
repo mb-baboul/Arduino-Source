@@ -1,6 +1,6 @@
 /*  Clothing Buyer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -22,9 +22,9 @@ ClothingBuyer_Descriptor::ClothingBuyer_Descriptor()
         STRING_POKEMON + " SwSh", "Clothing Buyer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSwSh/ClothingBuyer.md",
         "Buy out all the clothing in a store.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -41,7 +41,7 @@ ClothingBuyer::ClothingBuyer()
     PA_ADD_OPTION(CATEGORY_ROTATION);
 }
 
-void ClothingBuyer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void ClothingBuyer::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     if (START_LOCATION.start_in_grip_menu()){
         grip_menu_connect_go_home(context);
         resume_game_no_interact(env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);

@@ -1,6 +1,6 @@
 /*  Battle Pokemon Switch Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  Detect the screen of switching to another pokemon during battle.
  */
@@ -10,7 +10,7 @@
 
 #include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_ButtonDetector.h"
 
 namespace PokemonAutomation{

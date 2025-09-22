@@ -1,6 +1,6 @@
 /*  Single Battle Move Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,8 +11,8 @@ namespace NintendoSwitch{
 namespace PokemonSV{
 
 
-const EnumDatabase<SinglesMoveType>& singles_move_enum_database_wild(){
-    static EnumDatabase<SinglesMoveType> database{
+const EnumDropdownDatabase<SinglesMoveType>& singles_move_enum_database_wild(){
+    static EnumDropdownDatabase<SinglesMoveType> database{
         {SinglesMoveType::Move1,    "move1",    "Move 1"},
         {SinglesMoveType::Move2,    "move2",    "Move 2"},
         {SinglesMoveType::Move3,    "move3",    "Move 3"},
@@ -21,8 +21,8 @@ const EnumDatabase<SinglesMoveType>& singles_move_enum_database_wild(){
     };
     return database;
 }
-const EnumDatabase<SinglesMoveType>& singles_move_enum_database_trainer(){
-    static EnumDatabase<SinglesMoveType> database{
+const EnumDropdownDatabase<SinglesMoveType>& singles_move_enum_database_trainer(){
+    static EnumDropdownDatabase<SinglesMoveType> database{
         {SinglesMoveType::Move1,    "move1",    "Move 1"},
         {SinglesMoveType::Move2,    "move2",    "Move 2"},
         {SinglesMoveType::Move3,    "move3",    "Move 3"},
@@ -72,7 +72,7 @@ SinglesMoveTableRow::SinglesMoveTableRow(EditableTableOption& parent_table)
     PA_ADD_OPTION(terastallize);
     PA_ADD_OPTION(notes);
 
-    SinglesMoveTableRow::value_changed(this);
+    SinglesMoveTableRow::on_config_value_changed(this);
     type.add_listener(*this);
 }
 std::unique_ptr<EditableTableRow> SinglesMoveTableRow::clone() const{
@@ -85,7 +85,7 @@ std::unique_ptr<EditableTableRow> SinglesMoveTableRow::clone() const{
 SinglesMoveEntry SinglesMoveTableRow::snapshot() const{
     return SinglesMoveEntry{type, terastallize};
 }
-void SinglesMoveTableRow::value_changed(void* object){
+void SinglesMoveTableRow::on_config_value_changed(void* object){
 
 }
 

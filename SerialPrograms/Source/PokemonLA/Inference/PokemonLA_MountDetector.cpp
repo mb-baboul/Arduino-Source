@@ -1,21 +1,18 @@
 /*  Mount Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include <sstream>
 #include "Common/Cpp/Exceptions.h"
-//#include "Kernels/ImageFilters/Kernels_ImageFilter_Basic.h"
-//#include "Kernels/Waterfill/Kernels_Waterfill.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
 #include "CommonFramework/Globals.h"
+#include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
-#include "CommonFramework/ImageMatch/WaterfillTemplateMatcher.h"
-//#include "CommonFramework/ImageMatch/SubObjectTemplateMatcher.h"
 #include "CommonFramework/Notifications/ProgramInfo.h"
+#include "CommonTools/Images/ImageFilter.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
+#include "CommonTools/ImageMatch/WaterfillTemplateMatcher.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_ButtonDetector.h"
 #include "PokemonLA_MountDetector.h"
 
@@ -363,7 +360,12 @@ struct MountDetectorFilteredImage{
 std::vector<MountDetectorFilteredImage> run_filters(const ImageViewRGB32& image, const std::vector<std::pair<uint32_t, uint32_t>>& range){
     std::vector<FilterRgb32Range> filters;
     for (size_t c = 0; c < range.size(); c++){
-        filters.emplace_back(FilterRgb32Range{range[c].first, range[c].second, COLOR_BLACK, false});
+        filters.emplace_back(
+            FilterRgb32Range{
+                COLOR_BLACK, false,
+                range[c].first, range[c].second
+            }
+        );
     }
 
     std::vector<PackedBinaryMatrix> matrices = compress_rgb32_to_binary_range(image, range);

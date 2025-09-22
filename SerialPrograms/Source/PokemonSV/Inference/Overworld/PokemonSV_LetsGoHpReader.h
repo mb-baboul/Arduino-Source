@@ -1,6 +1,6 @@
 /*  Let's Go HP Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,7 +11,7 @@
 #include "Common/Cpp/Color.h"
 #include "Common/Cpp/Concurrency/SpinLock.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
 
 namespace PokemonAutomation{
     class Logger;

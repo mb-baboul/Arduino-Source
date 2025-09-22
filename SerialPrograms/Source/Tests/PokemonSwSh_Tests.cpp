@@ -1,6 +1,6 @@
 /*  PokemonLA Tests
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -29,6 +29,12 @@ using std::cerr;
 using std::endl;
 
 namespace PokemonAutomation{
+
+namespace NintendoSwitch{
+namespace PokemonSwSh{
+std::vector<ImagePixelBox> find_selection_arrows(const ImageViewRGB32& image, size_t min_area);
+}
+}
 
 using namespace NintendoSwitch::PokemonSwSh;
 
@@ -122,6 +128,15 @@ int test_pokemonSwSh_BoxGenderDetector(const ImageViewRGB32& image, int target){
     BoxGenderDetector detector;
     const int result = int(detector.detect(image));
     TEST_RESULT_EQUAL(result, target);
+    return 0;
+}
+
+int test_pokemonSwSh_SelectionArrowFinder(const ImageViewRGB32& image, int target){
+    std::vector<ImagePixelBox> boxes = find_selection_arrows(image, 10);
+    for(const auto& box : boxes){
+        std::cout << "Found box: " << box.min_x << " " << box.max_x << " " << box.min_y << " " << box.max_y << std::endl;
+    }
+    TEST_RESULT_EQUAL(boxes.size(), (size_t)target);
     return 0;
 }
 

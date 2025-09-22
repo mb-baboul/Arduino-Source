@@ -1,6 +1,6 @@
 /*  Cancellable Scope
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *      A cancellable scope is a node with a tree. If "cancel()" is called on
  *  a scope, only the scope and all child scopes will be canceled. Parents are
@@ -61,7 +61,7 @@ public:
 
     //  If object has not been cancelled, return false.
     //  If object has been cancelled with no exception, return true.
-    //  If object has been cancelled with exception, rethrow the exception.
+    //  If object has been cancelled with an exception, rethrow the exception.
     bool throw_if_cancelled_with_exception() const;
 
     //  Returns true if it was already cancelled.
@@ -111,7 +111,7 @@ class CancellableScope : public Cancellable{
 public:
     virtual ~CancellableScope() override;
 
-    virtual bool cancel(std::exception_ptr exception) noexcept override;
+    virtual bool cancel(std::exception_ptr exception = nullptr) noexcept override;
 
     void wait_for(std::chrono::milliseconds duration);
     void wait_until(WallClock stop);

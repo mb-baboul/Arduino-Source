@@ -1,6 +1,6 @@
 /*  TotK Surf Item Duper
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -26,7 +26,7 @@ public:
 class SurfItemDuper : public SingleSwitchProgramInstance{
 public:
     SurfItemDuper();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     SimpleIntegerOption<uint32_t> ATTEMPTS;

@@ -1,6 +1,6 @@
 /*  Max Lair AI Select Move
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -134,7 +134,7 @@ std::pair<uint8_t, bool> select_move(
     );
 
     if (state.opponent.empty()){
-        logger.log("Don't know the opponent is. Picking a random move...", COLOR_RED);
+        logger.log("Don't know who the opponent is. Picking a random move...", COLOR_RED);
         return {(uint8_t)random(0, 3), false};
     }
 

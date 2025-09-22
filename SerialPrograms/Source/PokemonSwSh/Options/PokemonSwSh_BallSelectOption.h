@@ -1,13 +1,13 @@
 /*  Pokemon Ball Select
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSwSh_PokemonBallSelect_H
 #define PokemonAutomation_PokemonSwSh_PokemonBallSelect_H
 
-#include "CommonFramework/Options/StringSelectOption.h"
+#include "CommonTools/Options/StringSelectOption.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

@@ -1,16 +1,16 @@
 /*  Run from Battle
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_RunFromBattle_H
 #define PokemonAutomation_PokemonBDSP_RunFromBattle_H
 
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 
 namespace PokemonAutomation{
-    class BotBaseContext;
 namespace NintendoSwitch{
 namespace PokemonBDSP{
 
@@ -20,8 +20,8 @@ namespace PokemonBDSP{
 // Return true if a black screen is detected, false if not detected after
 // `exit_battle_time` of ticks have passed. 
 bool run_from_battle(
-    ConsoleHandle& console, BotBaseContext& context,
-    uint16_t exit_battle_time
+    VideoStream& stream, ProControllerContext& context,
+    Milliseconds exit_battle_time
 );
 
 

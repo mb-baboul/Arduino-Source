@@ -1,35 +1,25 @@
 /*  Tera Roller
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <cmath>
-#include <set>
-#include <sstream>
-#include "Common/Cpp/Exceptions.h"
 #include "CommonFramework/Exceptions/ProgramFinishedException.h"
-//#include "CommonFramework/GlobalSettingsPanel.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Inference/VisualDetector.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
 #include "CommonFramework/VideoPipeline/VideoOverlay.h"
-//#include "CommonFramework/Tools/DebugDumper.h"
-//#include "CommonFramework/Tools/ErrorDumper.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "Pokemon/Pokemon_Notification.h"
 #include "PokemonSV/PokemonSV_Settings.h"
 #include "PokemonSV/Inference/Boxes/PokemonSV_BoxShinyDetector.h"
-#include "PokemonSV/Inference/Tera/PokemonSV_TeraCardDetector.h"
-//#include "PokemonSV/Inference/Tera/PokemonSV_TeraSilhouetteReader.h"
-//#include "PokemonSV/Inference/Tera/PokemonSV_TeraTypeReader.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
 #include "PokemonSV/Programs/TeraRaids/PokemonSV_TeraRoutines.h"
 #include "PokemonSV_TeraRoller.h"
 
@@ -50,9 +40,9 @@ TeraRoller_Descriptor::TeraRoller_Descriptor()
         STRING_POKEMON + " SV", "Tera Roller",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/TeraRoller.md",
         "Roll Tera raids to find shiny " + STRING_POKEMON + ".",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct TeraRoller_Descriptor::Stats : public StatsTracker{
@@ -120,7 +110,7 @@ TeraRoller::TeraRoller()
 }
 
 
-void TeraRoller::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void TeraRoller::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
     TeraRoller_Descriptor::Stats& stats = env.current_stats<TeraRoller_Descriptor::Stats>();
@@ -131,13 +121,24 @@ void TeraRoller::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
     bool first = true;
     uint32_t skip_counter = 0;
 
+    //  Keep track of when we last reset.
+    //  Day skips too soon out of a reset may fail.
+    WallClock last_reset = WallClock::min();
+
     while (true){
         env.update_stats();
         send_program_status_notification(env, NOTIFICATION_STATUS_UPDATE);
 
         if (!first){
             day_skip_from_overworld(env.console, context);
-            pbf_wait(context, GameSettings::instance().RAID_SPAWN_DELAY);
+
+            //  Do it again if we're fresh out of a reset.
+            while (last_reset + std::chrono::seconds(20) > current_time()){
+                env.log("Fresh out of a reset. Skipping again.");
+                day_skip_from_overworld(env.console, context);
+            }
+
+            pbf_wait(context, GameSettings::instance().RAID_SPAWN_DELAY0);
             context.wait_for_all_requests();
             stats.m_skips++;
             skip_counter++;
@@ -150,6 +151,7 @@ void TeraRoller::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
             env.log("Resetting game to clear framerate.");
             save_game_from_overworld(env.program_info(), env.console, context);
             reset_game(env.program_info(), env.console, context);
+            last_reset = current_time();
             skip_counter = 0;
             stats.m_resets++;
         }
@@ -181,7 +183,7 @@ void TeraRoller::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
         env.console.overlay().add_log("Entering tera raid...", COLOR_WHITE);
 
         // Run away from the tera raid battle
-        run_from_tera_battle(env.program_info(), env.console, context);
+        run_from_tera_battle(env, env.console, context, &stats.m_errors);
         context.wait_for_all_requests();
 
         env.console.log("Checking if tera raid is shiny...");

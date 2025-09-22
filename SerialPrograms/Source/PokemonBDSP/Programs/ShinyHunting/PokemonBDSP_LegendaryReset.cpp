@@ -1,16 +1,15 @@
 /*  Shiny Hunt - Legendary Reset
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Cpp/Exceptions.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "NintendoSwitch/Programs/NintendoSwitch_GameEntry.h"
 #include "PokemonSwSh/ShinyHuntTracker.h"
-#include "PokemonBDSP/PokemonBDSP_Settings.h"
 #include "PokemonBDSP/Inference/Battles/PokemonBDSP_StartBattleDetector.h"
 #include "PokemonBDSP/Inference/Battles/PokemonBDSP_BattleMenuDetector.h"
 #include "PokemonBDSP/Inference/ShinyDetection/PokemonBDSP_ShinyEncounterDetector.h"
@@ -29,9 +28,9 @@ LegendaryReset_Descriptor::LegendaryReset_Descriptor()
         STRING_POKEMON + " BDSP", "Legendary Reset",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/LegendaryReset.md",
         "Shiny hunt a standing legendary " + STRING_POKEMON + ".",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 std::unique_ptr<StatsTracker> LegendaryReset_Descriptor::make_stats() const{
@@ -68,7 +67,7 @@ LegendaryReset::LegendaryReset()
 
 
 
-void LegendaryReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void LegendaryReset::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     PokemonSwSh::ShinyHuntTracker& stats = env.current_stats<PokemonSwSh::ShinyHuntTracker>();
 
     StandardEncounterHandler handler(
@@ -87,7 +86,7 @@ void LegendaryReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext
         env.update_stats();
 
         if (reset){
-            pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
+            go_home(env.console, context);
             if (!reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST)){
                 stats.add_error();
                 continue;
@@ -98,9 +97,9 @@ void LegendaryReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext
         StartBattleDetector start_battle(env.console);
         BattleMenuWatcher battle_menu(BattleType::STANDARD);
 
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [this](BotBaseContext& context){
+            [this](ProControllerContext& context){
                 size_t stop = WALK_UP ? 30 : 60;
                 for (size_t c = 0; c < stop; c++){
                     if (WALK_UP){

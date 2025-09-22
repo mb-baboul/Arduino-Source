@@ -1,20 +1,16 @@
 /*  Gradient Arrow Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_GradientArrowDetector_H
 #define PokemonAutomation_PokemonSV_GradientArrowDetector_H
 
-#include <vector>
 #include "Common/Cpp/Color.h"
-//#include "Common/Cpp/Containers/FixedLimitVector.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-//#include "CommonFramework/VideoPipeline/VideoFeed.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-//#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonTools/VisualDetector.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -35,7 +31,7 @@ public:
     );
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     //  If arrow is found, returns true and "box" contains the box for the arrow.
     //  Otherwise, returns false and "box" is undefined.

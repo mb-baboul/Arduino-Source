@@ -1,6 +1,6 @@
 /*  Max Lair Options
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -27,6 +27,7 @@ extern const std::chrono::milliseconds INFERENCE_RATE;
 class HostingSwitch : public IntegerEnumDropdownOption{
 public:
     HostingSwitch();
+    using ConfigOption::check_validity;
     std::string check_validity(size_t consoles) const;
 };
 

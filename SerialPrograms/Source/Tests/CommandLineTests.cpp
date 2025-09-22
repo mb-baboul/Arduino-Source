@@ -1,6 +1,6 @@
 /*  Command Line Tests
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -180,6 +180,7 @@ int run_command_line_tests(){
     }
 
     QFileInfo test_root_info(root_folder_name.c_str());
+    cout << "Looking for tests under test root folder: " << root_folder_name << endl;
 
     size_t num_passed = 0;
 

@@ -1,6 +1,6 @@
 /*  String Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -20,13 +20,17 @@ public:
         bool is_password,
         LockMode lock_while_program_is_running,
         std::string default_value,
-        std::string placeholder_text
+        std::string placeholder_text,
+        bool signal_all_text_changes = false
     );
-//    virtual std::unique_ptr<ConfigOption> clone() const override;
 
     bool is_password() const;
     const std::string& placeholder_text() const;
     const std::string default_value() const;
+    bool signal_all_text_changes() const;
+
+    bool is_locked() const;
+    void set_locked(bool locked);
 
     operator std::string() const;
     void set(std::string x);
@@ -54,7 +58,8 @@ public:
         std::string label,
         LockMode lock_while_program_is_running,
         std::string default_value,
-        std::string placeholder_text
+        std::string placeholder_text,
+        bool signal_all_text_changes = false
     );
 
     const std::string& label() const{ return m_label; }

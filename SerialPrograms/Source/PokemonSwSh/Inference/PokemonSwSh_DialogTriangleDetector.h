@@ -1,6 +1,6 @@
 /*  Dialog Triangle Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,9 @@
 #define PokemonAutomation_PokemonSwSh_DialogTriangleDetector_H
 
 #include <atomic>
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "Common/Cpp/AbstractLogger.h"
+#include "CommonFramework/VideoPipeline/VideoOverlay.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

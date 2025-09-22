@@ -1,6 +1,6 @@
 /*  Turbo Button
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -17,10 +17,10 @@ PushJoySticks_Descriptor::PushJoySticks_Descriptor()
         "NintendoSwitch:PushJoySticks",
         "Nintendo Switch", "Push Joy Sticks",
         "ComputerControl/blob/master/Wiki/Programs/NintendoSwitch/PushJoySticks.md",
-        "Push Joy Sticks continously.",
+        "Push Joy Sticks continuously.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -60,7 +60,7 @@ PushJoySticks::PushJoySticks()
     PA_ADD_OPTION(RIGHT_Y);
 }
 
-void PushJoySticks::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void PushJoySticks::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     while(true){
         pbf_controller_state(context, BUTTON_LCLICK, DPAD_NONE,
             LEFT_X, LEFT_Y, RIGHT_X, RIGHT_Y, TICKS_PER_SECOND);

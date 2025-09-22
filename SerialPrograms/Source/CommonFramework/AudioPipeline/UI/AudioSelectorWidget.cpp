@@ -1,6 +1,6 @@
 /*  Audio Selector Widget
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -17,9 +17,9 @@
 #include "AudioSelectorWidget.h"
 #include "CommonFramework/GlobalSettingsPanel.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 
@@ -29,11 +29,7 @@ AudioSelectorWidget::~AudioSelectorWidget(){
     m_session.remove_state_listener(*this);
 }
 
-AudioSelectorWidget::AudioSelectorWidget(
-    QWidget& parent,
-    Logger& logger,
-    AudioSession& session
-)
+AudioSelectorWidget::AudioSelectorWidget(QWidget& parent, AudioSession& session)
     : QWidget(&parent)
     , m_session(session)
 //    , m_slider_active(false)
@@ -52,15 +48,9 @@ AudioSelectorWidget::AudioSelectorWidget(
         QHBoxLayout* input_layout = new QHBoxLayout();
         row0->addLayout(input_layout, 10);
 
-//        if (PreloadSettings::instance().DEVELOPER_MODE){
-//            m_audio_input_box = new NoWheelComboBox(this);
-//            input_layout->addWidget(m_audio_input_box, 7);
-//            m_load_file_button = new QPushButton("Load File", this);
-//            input_layout->addWidget(m_load_file_button, 3);
-//        }else{
-            m_audio_input_box = new NoWheelComboBox(this);
-            input_layout->addWidget(m_audio_input_box, 10);
-//        }
+        m_audio_input_box = new NoWheelComboBox(this);
+        m_audio_input_box->setMaxVisibleItems(20);
+        input_layout->addWidget(m_audio_input_box, 10);
         row0->addSpacing(5);
 
         m_audio_format_box = new NoWheelComboBox(this);
@@ -81,13 +71,13 @@ AudioSelectorWidget::AudioSelectorWidget(
 
         QHBoxLayout* output_layout = new QHBoxLayout();
         row1->addLayout(output_layout, 10);
+        m_audio_output_box = new NoWheelComboBox(this);
+        m_audio_output_box->setMaxVisibleItems(20);
         if (GlobalSettings::instance().AUDIO_PIPELINE->SHOW_RECORD_FREQUENCIES){
-            m_audio_output_box = new NoWheelComboBox(this);
             output_layout->addWidget(m_audio_output_box, 7);
             m_record_button = new QPushButton("Record Frequencies", this);
             output_layout->addWidget(m_record_button, 3);
         }else{
-            m_audio_output_box = new NoWheelComboBox(this);
             output_layout->addWidget(m_audio_output_box, 10);
         }
         row1->addSpacing(5);
@@ -115,7 +105,7 @@ AudioSelectorWidget::AudioSelectorWidget(
             if (index <= 0 || index >= (int)m_input_audios.size() + 2){
                 m_session.clear_audio_input();
             }else if (index == 1){
-                std::string path = QFileDialog::getOpenFileName(this, tr("Open audio file"), ".", "*.wav *.mp3").toStdString();
+                std::string path = QFileDialog::getOpenFileName(this, "Open audio file", ".", "*.wav *.mp3").toStdString();
                 if (path.empty()){
                     m_session.clear_audio_input();
                 }else{

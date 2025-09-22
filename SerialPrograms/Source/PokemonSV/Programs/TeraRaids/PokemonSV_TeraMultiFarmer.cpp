@@ -1,35 +1,38 @@
 /*  Tera Multi-Farmer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/PrettyPrint.h"
 //#include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-//#include "CommonFramework/Tools/ErrorDumper.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "Pokemon/Inference/Pokemon_NameReader.h"
 #include "PokemonSV/PokemonSV_Settings.h"
-#include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
+//#include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
 #include "PokemonSV/Inference/Tera/PokemonSV_TeraCardDetector.h"
 #include "PokemonSV/Inference/Tera/PokemonSV_TeraRaidSearchDetector.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
 #include "PokemonSV/Programs/PokemonSV_ConnectToInternet.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
 #include "PokemonSV/Programs/FastCodeEntry/PokemonSV_CodeEntry.h"
 #include "PokemonSV_TeraRoutines.h"
 #include "PokemonSV_TeraBattler.h"
 #include "PokemonSV_AutoHostTools.h"
 #include "PokemonSV_AutoHostLobbyWaiter.h"
 #include "PokemonSV_TeraMultiFarmer.h"
+
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -74,6 +77,7 @@ TeraFarmerPerConsoleOptions::TeraFarmerPerConsoleOptions(std::string label, cons
 {
     PA_ADD_STATIC(is_host_label);
     PA_ADD_OPTION(language);
+    PA_ADD_OPTION(keyboard_layout);
     PA_ADD_OPTION(catch_on_win);
     PA_ADD_OPTION(ball_select);
     PA_ADD_OPTION(battle_ai);
@@ -84,9 +88,9 @@ TeraFarmerPerConsoleOptions::TeraFarmerPerConsoleOptions(std::string label, cons
 }
 void TeraFarmerPerConsoleOptions::set_host(bool is_host){
     this->is_host = is_host;
-    TeraFarmerPerConsoleOptions::value_changed(this);
+    TeraFarmerPerConsoleOptions::on_config_value_changed(this);
 }
-void TeraFarmerPerConsoleOptions::value_changed(void* object){
+void TeraFarmerPerConsoleOptions::on_config_value_changed(void* object){
     if (this->is_host){
         is_host_label.set_visibility(ConfigOptionState::ENABLED);
         catch_on_win.set_visibility(ConfigOptionState::DISABLED);
@@ -106,9 +110,9 @@ TeraMultiFarmer_Descriptor::TeraMultiFarmer_Descriptor()
         STRING_POKEMON + " SV", "Tera Multi-Farmer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/TeraMultiFarmer.md",
         "Farm items and " + STRING_POKEMON + " from your own Tera raid using multiple Switches.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB,
         2, 4, 2
     )
 {}
@@ -225,7 +229,7 @@ TeraMultiFarmer::TeraMultiFarmer()
 
     PA_ADD_OPTION(NOTIFICATIONS);
 
-    TeraMultiFarmer::value_changed(this);
+    TeraMultiFarmer::on_config_value_changed(this);
 
     HOSTING_SWITCH.add_listener(*this);
     HOSTING_MODE.add_listener(*this);
@@ -235,7 +239,7 @@ void TeraMultiFarmer::update_active_consoles(size_t switch_count){
         PLAYERS[c]->set_visibility(c < switch_count ? ConfigOptionState::ENABLED : ConfigOptionState::HIDDEN);
     }
 }
-void TeraMultiFarmer::value_changed(void* object){
+void TeraMultiFarmer::on_config_value_changed(void* object){
     size_t host = HOSTING_SWITCH.current_value();
     for (size_t c = 0; c < 4; c++){
         PLAYERS[c]->set_host(host == c);
@@ -250,8 +254,8 @@ void TeraMultiFarmer::value_changed(void* object){
 }
 
 
-void TeraMultiFarmer::reset_host(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
-    pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+void TeraMultiFarmer::reset_host(const ProgramInfo& info, ConsoleHandle& console, ProControllerContext& context){
+    pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY1);
     if (ROLLOVER_PREVENTION){
         WallClock now = current_time();
         if (m_last_time_fix == WallClock::min() || now - m_last_time_fix > std::chrono::hours(4)){
@@ -261,11 +265,11 @@ void TeraMultiFarmer::reset_host(const ProgramInfo& info, ConsoleHandle& console
     }
     reset_game_from_home(info, console, context, 5 * TICKS_PER_SECOND);
 }
-void TeraMultiFarmer::reset_joiner(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
-    pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+void TeraMultiFarmer::reset_joiner(const ProgramInfo& info, ConsoleHandle& console, ProControllerContext& context){
+    pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY1);
     reset_game_from_home(info, console, context, 5 * TICKS_PER_SECOND);
 }
-bool TeraMultiFarmer::run_raid_host(ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context){
+bool TeraMultiFarmer::run_raid_host(ProgramEnvironment& env, ConsoleHandle& console, ProControllerContext& context){
     TeraMultiFarmer_Descriptor::Stats& stats = env.current_stats<TeraMultiFarmer_Descriptor::Stats>();
     TeraFarmerPerConsoleOptions& option = *PLAYERS[console.index()];
 
@@ -280,19 +284,19 @@ bool TeraMultiFarmer::run_raid_host(ProgramEnvironment& env, ConsoleHandle& cons
             exit_tera_win_without_catching(env.program_info(), console, context, 0);
         }
         reset_host(env.program_info(), console, context);
-        if (HOSTING_MODE == Mode::HOST_ONLINE){
-            connect_to_internet_from_overworld(env.program_info(), console, context);
-        }
+//        if (HOSTING_MODE == Mode::HOST_ONLINE){
+//            connect_to_internet_from_overworld(env.program_info(), console, context);
+//        }
     }else{
         stats.m_losses++;
         env.update_stats();
     }
 
-    open_raid(console, context);
+//    open_raid(console, context);
 
     return win;
 }
-void TeraMultiFarmer::run_raid_joiner(ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context){
+void TeraMultiFarmer::run_raid_joiner(ProgramEnvironment& env, ConsoleHandle& console, ProControllerContext& context){
     TeraFarmerPerConsoleOptions& option = *PLAYERS[console.index()];
 
     bool win = run_tera_battle(env, console, context, option.battle_ai);
@@ -310,97 +314,25 @@ void TeraMultiFarmer::run_raid_joiner(ProgramEnvironment& env, ConsoleHandle& co
         save_game_from_menu(env.program_info(), console, context);
     }
 
-    enter_tera_search(env.program_info(), console, context, HOSTING_MODE == Mode::HOST_ONLINE);
+//    enter_tera_search(env.program_info(), console, context, HOSTING_MODE == Mode::HOST_ONLINE);
 }
-void TeraMultiFarmer::join_lobby(
-    ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
-    size_t host_index, const std::string& normalized_code
-){
-    if (console.index() == host_index){
-        return;
-    }
 
-    TeraMultiFarmer_Descriptor::Stats& stats = env.current_stats<TeraMultiFarmer_Descriptor::Stats>();
 
-    for (size_t attempts = 0;; attempts++){
-        if (attempts >= 3){
-            OperationFailedException::fire(
-                console, ErrorReport::SEND_ERROR_REPORT,
-                "Failed to join lobby 3 times."
-            );
-        }
-
-        enter_code(console, context, FastCodeEntrySettings(), normalized_code, false);
-
-        TeraLobbyWatcher lobby(console.logger(), env.realtime_dispatcher(), COLOR_RED);
-        AdvanceDialogWatcher wrong_code(COLOR_YELLOW);
-        CodeEntryWatcher incomplete_code(COLOR_GREEN);
-        context.wait_for_all_requests();
-        context.wait_for(std::chrono::seconds(3));
-        int ret = wait_until(
-            console, context, std::chrono::seconds(60),
-            {
-                {lobby, std::chrono::milliseconds(500)},
-                wrong_code,
-                incomplete_code,
-            }
-        );
-        switch (ret){
-        case 0:
-            console.log("Entered raid lobby!");
-            pbf_mash_button(context, BUTTON_A, 125);
-            break;
-        case 1:
-            console.log("Wrong code! Backing out and trying again...", COLOR_RED);
-            stats.m_errors++;
-            pbf_press_button(context, BUTTON_B, 20, 230);
-            enter_tera_search(env.program_info(), console, context, HOSTING_MODE == Mode::HOST_ONLINE);
-            continue;
-        case 2:
-            console.log("Failed to enter code! Backing out and trying again...", COLOR_RED);
-            stats.m_errors++;
-            pbf_press_button(context, BUTTON_X, 20, 230);
-            enter_tera_search(env.program_info(), console, context, HOSTING_MODE == Mode::HOST_ONLINE);
-            continue;
-        default:
-            OperationFailedException::fire(
-                console, ErrorReport::SEND_ERROR_REPORT,
-                "Unable to join lobby."
-            );
-        }
-        break;
-    }
-}
-bool TeraMultiFarmer::run_raid(
-    MultiSwitchProgramEnvironment& env, CancellableScope& scope,
+bool TeraMultiFarmer::start_sequence_host(
+    MultiSwitchProgramEnvironment& env, ConsoleHandle& console, ProControllerContext& context,
+    RaidWaiter& raid_waiter, CancellableScope& joiner_scope,
     std::string& lobby_code,
     std::array<std::map<Language, std::string>, 4>& player_names
 ){
     TeraMultiFarmer_Descriptor::Stats& stats = env.current_stats<TeraMultiFarmer_Descriptor::Stats>();
-    size_t host_index = HOSTING_SWITCH.current_value();
-    ConsoleHandle& host_console = env.consoles[host_index];
-    BotBaseContext host_context(scope, host_console.botbase());
 
-    //  Get everyone ready.
-    env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
-        try{
-            if (console.index() == host_index){
-                TeraCardReader card_detector(COLOR_RED);
-                if (!card_detector.detect(console.video().snapshot())){
-                    if (HOSTING_MODE == Mode::HOST_ONLINE){
-                        connect_to_internet_from_overworld(env.program_info(), console, context);
-                    }
-                    open_raid(console, context);
-                }
-            }else{
-                enter_tera_search(env.program_info(), console, context, HOSTING_MODE == Mode::HOST_ONLINE);
-            }
-        }catch (OperationFailedException&){
-            stats.m_errors++;
-            m_reset_required[console.index()] = true;
-            throw;
+    TeraCardReader card_detector(COLOR_RED);
+    if (!card_detector.detect(console.video().snapshot())){
+        if (HOSTING_MODE == Mode::HOST_ONLINE){
+            connect_to_internet_from_overworld(env.program_info(), console, context);
         }
-    });
+        open_raid(console, context);
+    }
 
     if (HOSTING_MODE != Mode::FARM_ALONE){
         BAN_LIST.refresh_online_table(env.logger());
@@ -409,49 +341,43 @@ bool TeraMultiFarmer::run_raid(
     //  Open lobby and read code.
     WallClock lobby_start_time;
     try{
-        TeraLobbyReader lobby_reader(host_console.logger(), env.realtime_dispatcher());
+        TeraLobbyReader lobby_reader(console.logger());
         open_hosting_lobby(
-            env, host_console, host_context,
+            env, console, context,
             HOSTING_MODE == Mode::HOST_ONLINE
                 ? HostingMode::ONLINE_CODED
                 : HostingMode::LOCAL
         );
         lobby_start_time = current_time();
-        std::string code = lobby_reader.raid_code(env.logger(), env.realtime_dispatcher(), host_console.video().snapshot());
+        std::string code = lobby_reader.raid_code(
+            env.logger(),
+            console.video().snapshot()
+        );
+
+//        code.back() = '0';
+
         const char* error = normalize_code(lobby_code, code);
         if (error){
             OperationFailedException::fire(
-                host_console, ErrorReport::SEND_ERROR_REPORT,
-                "Unable to read raid code."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Unable to read raid code.",
+                console
             );
         }
     }catch (OperationFailedException&){
         stats.m_errors++;
-        m_reset_required[host_index] = true;
+        m_reset_required[console.index()].store(true, std::memory_order_relaxed);
         throw;
     }
 
-//    normalized_code[0] = '0';
-
-    //  Join the lobby with local joiners. If anything throws, we need to reset everyone.
-    try{
-        env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
-            join_lobby(env, console, context, host_index, lobby_code);
-        });
-    }catch (OperationFailedException&){
-        stats.m_errors++;
-        m_reset_required[0] = true;
-        m_reset_required[1] = true;
-        m_reset_required[2] = true;
-        m_reset_required[3] = true;
-        throw;
-    }
+    raid_waiter.signal_raid_code_is_ready(lobby_code);
+    raid_waiter.wait_for_joiners(env.consoles.size() - 1);
 
 #if 1
     //  Put it up on auto-host.
     if (HOSTING_MODE != Mode::FARM_ALONE){
         send_host_announcement(
-            env, host_console,
+            env, console,
             lobby_code,
             HOSTING_OPTIONS.SHOW_RAID_CODE,
             HOSTING_OPTIONS.DESCRIPTION,
@@ -459,7 +385,7 @@ bool TeraMultiFarmer::run_raid(
         );
 
         TeraLobbyWaiter waiter(
-            env, host_console, host_context,
+            env, console, context,
             (uint8_t)env.consoles.size(),
             lobby_code, lobby_start_time,
             HOSTING_OPTIONS.LOBBY_WAIT_DELAY,
@@ -474,10 +400,10 @@ bool TeraMultiFarmer::run_raid(
 
         if (result == TeraLobbyWaiter::LobbyResult::BANNED_PLAYER){
             stats.m_banned++;
-            m_reset_required[0] = true;
-            m_reset_required[1] = true;
-            m_reset_required[2] = true;
-            m_reset_required[3] = true;
+            m_reset_required[0].store(true, std::memory_order_relaxed);
+            m_reset_required[1].store(true, std::memory_order_relaxed);
+            m_reset_required[2].store(true, std::memory_order_relaxed);
+            m_reset_required[3].store(true, std::memory_order_relaxed);
         }
         if (result != TeraLobbyWaiter::LobbyResult::RAID_STARTED){
             return false;
@@ -485,22 +411,101 @@ bool TeraMultiFarmer::run_raid(
 
         uint8_t hosts = (uint8_t)env.consoles.size();
         uint8_t players = waiter.last_known_players();
-        stats.m_joiners += players - hosts;
+        if (players > hosts){
+            stats.m_joiners += players - hosts;
+        }
         if (players == 4){
             stats.m_full++;
         }else if (players == hosts){
             stats.m_empty++;
         }
+
+
     }
 #endif
 
+    //  Start the raid.
+    pbf_mash_button(context, BUTTON_A, 10 * TICKS_PER_SECOND);
+
+    return true;
+}
+void TeraMultiFarmer::start_sequence_joiner(
+    ProgramEnvironment& env, ConsoleHandle& console, ProControllerContext& context,
+    RaidWaiter& raid_waiter
+){
+    join_raid(
+        env.program_info(), console, context,
+        HOSTING_MODE == Mode::HOST_ONLINE,
+        PLAYERS[console.index()]->keyboard_layout,
+        raid_waiter
+    );
+
+    raid_waiter.signal_joiner_is_ready();
+
+    //  Mash A to ready up. Even though this runs for 3 minutes, it will
+    //  automatically be cancelled by the host when the host starts the raid.
+    pbf_mash_button(context, BUTTON_A, std::chrono::minutes(3));
+}
+
+bool TeraMultiFarmer::run_raid(
+    MultiSwitchProgramEnvironment& env, CancellableScope& scope,
+    std::string& lobby_code,
+    std::array<std::map<Language, std::string>, 4>& player_names
+){
+    TeraMultiFarmer_Descriptor::Stats& stats = env.current_stats<TeraMultiFarmer_Descriptor::Stats>();
+    size_t host_index = HOSTING_SWITCH.current_value();
+
+    CancellableHolder<RaidWaiter> raid_waiter(scope);
+    CancellableHolder<CancellableScope> joiner_scope((CancellableScope&)raid_waiter);
+
+    env.run_in_parallel(scope, [&](ConsoleHandle& console, ProControllerContext& context){
+        try{
+            if (console.index() == host_index){
+                start_sequence_host(
+                    env, console, context,
+                    raid_waiter,
+                    joiner_scope,
+                    lobby_code,
+                    player_names
+                );
+                joiner_scope.cancel();
+                return;
+            }
+
+            ProControllerContext sub_context(joiner_scope, context.controller());
+            start_sequence_joiner(
+                env, console, sub_context,
+                raid_waiter
+            );
+            sub_context.wait_for_all_requests();
+
+        }catch (OperationCancelledException&){
+        }catch (OperationFailedException&){
+            stats.m_errors++;
+#if 0
+            m_reset_required[console.index()].store(true, std::memory_order_relaxed);
+#else
+            m_reset_required[0].store(true, std::memory_order_relaxed);
+            m_reset_required[1].store(true, std::memory_order_relaxed);
+            m_reset_required[2].store(true, std::memory_order_relaxed);
+            m_reset_required[3].store(true, std::memory_order_relaxed);
+#endif
+            raid_waiter.cancel();
+//            cout << "OperationFailedException: " << console.index() << endl;
+            throw;
+        }catch (...){
+            raid_waiter.cancel();
+//            cout << "General Exception: " << console.index() << endl;
+            throw;
+        }
+//        cout << "Finishing: " << console.index() << endl;
+    });
+
+
     bool win = false;
 
-    //  Start the raid.
-    pbf_mash_button(host_context, BUTTON_A, 10 * TICKS_PER_SECOND);
-
     //  Run the raid.
-    env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
+    env.run_in_parallel(scope, [&](ConsoleHandle& console, ProControllerContext& context){
         try{
             if (console.index() == host_index){
                 win = run_raid_host(env, console, context);
@@ -511,7 +516,7 @@ bool TeraMultiFarmer::run_raid(
             //  Host throws. Reset the host and keep going.
             stats.m_errors++;
             env.update_stats();
-            m_reset_required[console.index()] = true;
+            m_reset_required[console.index()].store(true, std::memory_order_relaxed);
             throw;
         }
     });
@@ -523,7 +528,7 @@ void TeraMultiFarmer::program(MultiSwitchProgramEnvironment& env, CancellableSco
     if (host_index >= env.consoles.size()){
         throw UserSetupError(env.logger(), "The host Switch doesn't exist.");
     }
-    env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
+    env.run_in_parallel(scope, [&](ConsoleHandle& console, ProControllerContext& context){
         assert_16_9_720p_min(console.logger(), console);
     });
 
@@ -534,13 +539,13 @@ void TeraMultiFarmer::program(MultiSwitchProgramEnvironment& env, CancellableSco
     std::string report_name = "PokemonSV-AutoHost-JoinReport-" + now_to_filestring() + ".txt";
     MultiLanguageJoinTracker join_tracker((uint8_t)env.consoles.size());
 
-    m_reset_required[0] = false;
-    m_reset_required[1] = false;
-    m_reset_required[2] = false;
-    m_reset_required[3] = false;
+    m_reset_required[0].store(false, std::memory_order_relaxed);
+    m_reset_required[1].store(false, std::memory_order_relaxed);
+    m_reset_required[2].store(false, std::memory_order_relaxed);
+    m_reset_required[3].store(false, std::memory_order_relaxed);
 
     if (RECOVERY_MODE == RecoveryMode::SAVE_AND_RESET){
-        env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
+        env.run_in_parallel(scope, [&](ConsoleHandle& console, ProControllerContext& context){
             if (console.index() != host_index){
                 //  Do 2 presses in quick succession in case one drops or is
                 //  needed to connect the controller.
@@ -571,9 +576,9 @@ void TeraMultiFarmer::program(MultiSwitchProgramEnvironment& env, CancellableSco
         }
 
         //  Reset all errored Switches.
-        env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
+        env.run_in_parallel(scope, [&](ConsoleHandle& console, ProControllerContext& context){
             size_t index = console.index();
-            if (!m_reset_required[index]){
+            if (!m_reset_required[index].load(std::memory_order_relaxed)){
                 return;
             }
             if (index == host_index){
@@ -581,7 +586,7 @@ void TeraMultiFarmer::program(MultiSwitchProgramEnvironment& env, CancellableSco
             }else{
                 reset_joiner(env.program_info(), console, context);
             }
-            m_reset_required[index] = false;
+            m_reset_required[index].store(false, std::memory_order_relaxed);
         });
 
         //  Check kill-switch now before we go online.
@@ -610,12 +615,14 @@ void TeraMultiFarmer::program(MultiSwitchProgramEnvironment& env, CancellableSco
             }
             fail_tracker.report_successful_raid();
         }catch (OperationFailedException& e){
+//            cout << "caught: TeraMultiFarmer::program" << endl;
+
             e.send_notification(env, NOTIFICATION_ERROR_RECOVERABLE);
             if (RECOVERY_MODE != RecoveryMode::SAVE_AND_RESET){
                 //  Iterate the errored Switches. If a non-host has errored,
                 //  rethrow the exception to stop the program.
                 for (size_t c = 0; c < 4; c++){
-                    if (m_reset_required[c] && c != host_index){
+                    if (m_reset_required[c].load(std::memory_order_relaxed) && c != host_index){
                         throw;
                     }
                 }

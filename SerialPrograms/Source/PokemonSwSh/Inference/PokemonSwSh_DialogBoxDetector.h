@@ -1,6 +1,6 @@
 /*  Dialog Box Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,7 @@
 #define PokemonAutomation_PokemonSwSh_DialogBoxDetector_H
 
 #include <atomic>
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

@@ -1,6 +1,6 @@
 /*  Pokemon Names
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -68,7 +68,6 @@ const std::string& PokemonNames::display_name(Language language) const{
     }
     return iter->second;
 }
-
 
 
 const PokemonNames& get_pokemon_name(const std::string& slug){

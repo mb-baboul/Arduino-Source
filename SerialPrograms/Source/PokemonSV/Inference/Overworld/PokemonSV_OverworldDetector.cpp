@@ -1,17 +1,16 @@
 /*  Overworld Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
+#include "Kernels/Waterfill/Kernels_Waterfill_Types.h"
 #include "CommonFramework/Globals.h"
+#include "CommonFramework/ImageTools/ImageDiff.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/ImageMatch/ImageDiff.h"
-#include "CommonFramework/ImageMatch/ExactImageMatcher.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
-#include "CommonFramework/ImageTools/WaterfillUtilities.h"
-#include "CommonFramework/ImageMatch/WaterfillTemplateMatcher.h"
+#include "CommonTools/Images/WaterfillUtilities.h"
+#include "CommonTools/ImageMatch/ExactImageMatcher.h"
+#include "CommonTools/ImageMatch/WaterfillTemplateMatcher.h"
 #include "PokemonSV_OverworldDetector.h"
 
 //#include <iostream>
@@ -59,7 +58,7 @@ void OverworldDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_radar);
     items.add(m_color, m_radar_inside);
 }
-bool OverworldDetector::detect(const ImageViewRGB32& screen) const{
+bool OverworldDetector::detect(const ImageViewRGB32& screen){
     return locate_ball(screen, false).first > 0;
 }
 
@@ -130,7 +129,7 @@ std::pair<double, double> OverworldDetector::locate_ball(const ImageViewRGB32& s
 
 
 
-OverworldWatcher::OverworldWatcher(Logger& logger, Color color, bool detect_event)
+OverworldWatcher::OverworldWatcher(Logger& logger, Color color)
      : OverworldDetector(color)
      , VisualInferenceCallback("OverworldWatcher")
      , m_logger(logger)
@@ -139,7 +138,6 @@ OverworldWatcher::OverworldWatcher(Logger& logger, Color color, bool detect_even
      , m_north_hold_duration(std::chrono::milliseconds(1000))
      , m_last_ball(WallClock::min())
      , m_last_north(WallClock::min())
-     , m_detect_event(detect_event)
 {
     m_direction_detector = DirectionDetector(COLOR_RED);
 }
@@ -176,7 +174,7 @@ bool OverworldWatcher::process_frame(const VideoSnapshot& frame){
     }
 
     //  Ball held for long enough. (5 seconds)
-    if (!m_detect_event && (frame.timestamp - m_last_ball >= m_ball_hold_duration)){
+    if (frame.timestamp - m_last_ball >= m_ball_hold_duration){
         return true;
     }
 
@@ -197,8 +195,8 @@ bool OverworldWatcher::process_frame(const VideoSnapshot& frame){
     // Check if radar map stays still for 1 second.
 
     //  Mismatching image sizes.
-    ImageViewRGB32 start = extract_box_reference(m_start_of_detection, m_detect_event ? m_ball : m_radar_inside);
-    ImageViewRGB32 current = extract_box_reference(frame, m_detect_event ? m_ball : m_radar_inside);
+    ImageViewRGB32 start = extract_box_reference(m_start_of_detection, m_radar_inside);
+    ImageViewRGB32 current = extract_box_reference(frame, m_radar_inside);
     if (start.width() != current.width() || start.height() != current.height()){
         m_start_of_detection = frame;
         return false;

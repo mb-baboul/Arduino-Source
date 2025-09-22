@@ -7,13 +7,6 @@
 #ifndef PokemonAutomation_PokemonSV_AutoStory_Segment_22_H
 #define PokemonAutomation_PokemonSV_AutoStory_Segment_22_H
 
-#include <functional>
-#include "Common/Cpp/Options/EnumDropdownOption.h"
-#include "CommonFramework/Notifications/EventNotificationsTable.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
-#include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
-#include "Common/NintendoSwitch/NintendoSwitch_ControllerDefs.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 
 namespace PokemonAutomation{
@@ -27,22 +20,52 @@ public:
     virtual std::string end_text() const override;
     virtual void run_segment(
         SingleSwitchProgramEnvironment& env, 
-        BotBaseContext& context,
-        AutoStoryOptions options) const override;
+        ProControllerContext& context,
+        AutoStoryOptions options,
+        AutoStoryStats& stats
+    ) const override;
 };
 
 
-// start: At East Province (Area One) Pokecenter.
-// end: 
-void checkpoint_47(SingleSwitchProgramEnvironment& env, BotBaseContext& context, EventNotificationOption& notif_status_update);  
+// start: Defeated Team Star (Fire). At East Province (Area Two) Pokecenter.
+// end: At Levincia (South) Pokecenter.
+void checkpoint_50(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
 
-// start: 
-// end: 
-void checkpoint_48(SingleSwitchProgramEnvironment& env, BotBaseContext& context, EventNotificationOption& notif_status_update);  
+// start: At Levincia (South) Pokecenter.
+// end: At Levincia gym building. Talked to Hassel, met Rika.
+void checkpoint_51(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
 
-// start: 
-// end: 
-void checkpoint_49(SingleSwitchProgramEnvironment& env, BotBaseContext& context, EventNotificationOption& notif_status_update);  
+
+// start: At Levincia gym building. Talked to Hassel, met Rika.
+// end: Finished Levincia gym challenge.
+void checkpoint_52(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
+
+
+// start: Finished Levincia gym challenge. Standing outside Levincia gym.
+// end: Defeated Levincia Gym (Electric). At Levincia (North) Pokecenter.
+void checkpoint_53(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
+
+
 
 
 

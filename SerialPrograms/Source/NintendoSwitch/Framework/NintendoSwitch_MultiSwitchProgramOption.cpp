@@ -1,6 +1,6 @@
 /*  Multi-Switch Program Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -19,7 +19,6 @@ MultiSwitchProgramOption::MultiSwitchProgramOption(const MultiSwitchProgramDescr
     : PanelInstance(descriptor)
     , m_descriptor(descriptor)
     , m_system(
-        descriptor.min_pabotbase_level(),
         descriptor.feedback(),
         descriptor.allow_commands_while_running()
             ? AllowCommandsWhenRunning::ENABLE_COMMANDS

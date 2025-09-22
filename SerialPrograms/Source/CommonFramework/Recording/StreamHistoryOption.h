@@ -1,6 +1,6 @@
 /*  Stream History Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -21,7 +21,7 @@ public:
     StreamHistoryOption();
     ~StreamHistoryOption();
 
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
     StaticTextOption DESCRIPTION;
     SimpleIntegerOption<uint16_t> HISTORY_SECONDS;

@@ -1,6 +1,6 @@
 /*  PokemonLA Tests
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,6 +11,8 @@
 #include "CommonFramework/Language.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
 #include "CommonFramework/Recording/StreamHistorySession.h"
+#include "NintendoSwitch/Controllers/SerialPABotBase/NintendoSwitch_SerialPABotBase_WiredController.h"
+#include "NintendoSwitch/NintendoSwitch_ConsoleHandle.h"
 #include "PokemonLA/Inference/Battles/PokemonLA_BattleMenuDetector.h"
 #include "PokemonLA/Inference/Battles/PokemonLA_BattlePokemonSwitchDetector.h"
 #include "PokemonLA/Inference/Battles/PokemonLA_BattleSpriteWatcher.h"
@@ -49,6 +51,7 @@ using std::endl;
 
 namespace PokemonAutomation{
 
+using namespace NintendoSwitch;
 using namespace NintendoSwitch::PokemonLA;
 
 int test_pokemonLA_BattleMenuDetector(const ImageViewRGB32& image, bool target){
@@ -488,12 +491,18 @@ int test_pokemonLA_SaveScreenDetector(const ImageViewRGB32& image, const std::ve
 int test_pokemonLA_shinySoundDetector(const std::vector<AudioSpectrum>& spectrums, bool target){
     auto& logger = global_logger_command_line();
     DummyBotBase botbase(logger);
+    SerialPABotBase::SerialPABotBase_Connection connection(logger, nullptr, false);
+    SerialPABotBase_WiredController controller(
+        logger, connection,
+        ControllerType::NintendoSwitch_WiredController,
+        ControllerResetMode::DO_NOT_RESET
+    );
     DummyVideoFeed video_feed;
     DummyVideoOverlay video_overlay;
     DummyAudioFeed audio_feed;
     StreamHistorySession history(logger);
 
-    ConsoleHandle console(0, logger, &botbase, video_feed, video_overlay, audio_feed, history);
+    ConsoleHandle console(0, logger, controller, video_feed, video_overlay, audio_feed, history);
     ShinySoundDetector detector(console, [&](float error_coefficient) -> bool{
         return true;
     });
@@ -514,7 +523,7 @@ int test_pokemonLA_MMOSpriteMatcher(const std::string& filepath){
     const QString filename = fileinfo.fileName();
     const QDir parent_dir = fileinfo.dir();
 
-    std::string base_name = fileinfo.baseName().toStdString();
+    const std::string base_name = fileinfo.baseName().toStdString();
 
     const std::vector<std::string> filename_words = parse_words(base_name);
     MapRegion region = MapRegion::NONE;
@@ -548,7 +557,7 @@ int test_pokemonLA_MMOSpriteMatcher(const std::string& filepath){
     ImageRGB32 sprite_image(mmo_revealed_image_path.toStdString());
     
     if (!question_mark_image){
-        cerr << "Error: cannot load MMO quesiton mark image file " << filepath << endl;
+        cerr << "Error: cannot load MMO question mark image file " << filepath << endl;
         return 1;
     }
     if (!sprite_image){

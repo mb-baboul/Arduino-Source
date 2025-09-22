@@ -1,6 +1,6 @@
 /*  PokemonLA Tests
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *  
  *  
  */
@@ -37,6 +37,8 @@ int test_pokemonSwSh_BlackDialogBoxDetector(const ImageViewRGB32& image, bool ta
 int test_pokemonSwSh_BoxShinySymbolDetector(const ImageViewRGB32& image, bool target);
 
 int test_pokemonSwSh_BoxGenderDetector(const ImageViewRGB32& image, int target);
+
+int test_pokemonSwSh_SelectionArrowFinder(const ImageViewRGB32& image, int target);
 
 }
 

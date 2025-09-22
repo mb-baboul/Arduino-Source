@@ -1,6 +1,6 @@
 /*  Dialog Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *  
  *  Detect the battle menu, which has the option (A) battle, (B) run, 
  *  DPAD_UP for items and DPAD_DOWN to change pokemon.
@@ -10,7 +10,7 @@
 #define PokemonAutomation_PokemonLA_BattleMenuDetector_H
 
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_ButtonDetector.h"
 
 namespace PokemonAutomation{

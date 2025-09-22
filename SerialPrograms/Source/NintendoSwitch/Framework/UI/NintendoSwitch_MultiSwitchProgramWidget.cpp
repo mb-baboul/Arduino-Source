@@ -1,6 +1,6 @@
 /*  Multi-Switch Program Widget
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -12,10 +12,10 @@
 #include "Common/Qt/CollapsibleGroupBox.h"
 #include "Common/Qt/Options/ConfigWidget.h"
 //#include "Common/Qt/Options/BatchWidget.h"
-#include "CommonFramework/NewVersionCheck.h"
+#include "CommonFramework/Startup/NewVersionCheck.h"
 #include "CommonFramework/Panels/PanelTools.h"
 #include "CommonFramework/Panels/UI/PanelElements.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "NintendoSwitch/Framework/NintendoSwitch_MultiSwitchProgramOption.h"
 #include "NintendoSwitch/Framework/NintendoSwitch_MultiSwitchProgramSession.h"
 #include "NintendoSwitch_MultiSwitchProgramWidget.h"
@@ -60,10 +60,21 @@ MultiSwitchProgramWidget2::MultiSwitchProgramWidget2(
         descriptor.display_name(),
         descriptor.doc_link(),
         descriptor.description(),
-        descriptor.feedback(),
-        descriptor.min_pabotbase_level()
+        descriptor.color_class()
     );
     layout->addWidget(header);
+
+    if (descriptor.deprecated()){
+        QMessageBox box;
+        box.warning(
+            nullptr,
+            "Deprecation Notice",
+            QString::fromStdString(
+                "The program \"" + descriptor.display_name() + "\" is deprecated "
+                "and no longer maintained. Please consider using a newer alternative."
+            )
+        );
+    }
 
 
     {

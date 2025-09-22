@@ -1,23 +1,23 @@
 /*  AutoStory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/Exceptions/OperationFailedException.h"
+#include "CommonFramework/VideoPipeline/VideoOverlay.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "PokemonSV/Inference/PokemonSV_TutorialDetector.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-#include "PokemonSV/Inference/PokemonSV_TutorialDetector.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 #include "PokemonSV_AutoStory_Segment_09.h"
 
 //#include <iostream>
 //using std::cout;
 //using std::endl;
-//#include <unordered_map>
-//#include <algorithm>
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -31,29 +31,34 @@ std::string AutoStory_Segment_09::name() const{
 }
 
 std::string AutoStory_Segment_09::start_text() const{
-    return "Start: Battled Team Star, talked to Jacq, standing in classroom.";
+    return "Start: Battled Team Star. Talked to Jacq, introduced self to class, standing in middle of classroom.";
 }
 
 std::string AutoStory_Segment_09::end_text() const{
     return "End: Finished tutorial. Acquired all 3 questlines. Got on ride for first time.";
 }
 
-void AutoStory_Segment_09::run_segment(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AutoStoryOptions options) const{
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
+void AutoStory_Segment_09::run_segment(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    AutoStoryOptions options,
+    AutoStoryStats& stats
+) const{
+    
 
+    stats.m_segment++;
+    env.update_stats();
     context.wait_for_all_requests();
-    env.console.overlay().add_log("Start Segment 09: Complete tutorial", COLOR_ORANGE);
+    env.console.log("Start Segment 09: Complete tutorial", COLOR_ORANGE);
 
-    checkpoint_16(env, context, options.notif_status_update);
-    checkpoint_17(env, context, options.notif_status_update);
-    checkpoint_18(env, context, options.notif_status_update);
-    checkpoint_19(env, context, options.notif_status_update);
-    checkpoint_20(env, context, options.notif_status_update);
+    checkpoint_16(env, context, options.notif_status_update, stats);
+    checkpoint_17(env, context, options.notif_status_update, stats);
+    checkpoint_18(env, context, options.notif_status_update, stats);
+    checkpoint_19(env, context, options.notif_status_update, stats);
+    checkpoint_20(env, context, options.notif_status_update, stats);
 
     context.wait_for_all_requests();
     env.console.log("End Segment 09: Complete tutorial", COLOR_GREEN);
-    stats.m_segment++;
-    env.update_stats();
 
 }
 
@@ -62,17 +67,14 @@ void AutoStory_Segment_09::run_segment(SingleSwitchProgramEnvironment& env, BotB
 
 void checkpoint_16(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
+
         context.wait_for_all_requests();
 
         // walk left
@@ -101,31 +103,20 @@ void checkpoint_16(
         mash_button_till_overworld(env.console, context, BUTTON_A, 360);
         
        
-        break;
-    }catch(...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }             
-    }
+    });
 
 }
 
 void checkpoint_17(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
+
         context.wait_for_all_requests();
 
         // walk backwards until dialog
@@ -144,7 +135,8 @@ void checkpoint_17(
         // open school navigation screen
         press_button_until_gradient_arrow(env.program_info(), env.console, context, {0.031, 0.193, 0.047, 0.078});
         // go to staff room
-        basic_menu_navigation(env.program_info(), env.console, context, {0.031, 0.193, 0.047, 0.078}, {0.031, 0.193 + 0.074219, 0.047, 0.078}, DPAD_DOWN, 1);
+        navigate_school_layout_menu(env.program_info(), env.console, context, {0.031, 0.193, 0.047, 0.078},
+            {0.031, 0.193 + 0.074219, 0.047, 0.078}, DPAD_DOWN, 1);
         // enter staff room
         pbf_mash_button(context, BUTTON_A, 3 * TICKS_PER_SECOND);
         pbf_wait(context, 3 * TICKS_PER_SECOND);
@@ -155,31 +147,20 @@ void checkpoint_17(
 
         
        
-        break;
-    }catch(...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }             
-    }
+    });
 
 }
 
 void checkpoint_18(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
+
         context.wait_for_all_requests();
 
         // walk down
@@ -201,31 +182,20 @@ void checkpoint_18(
         clear_dialog(env.console, context, ClearDialogMode::STOP_OVERWORLD, 60, 
             {CallbackEnum::OVERWORLD, CallbackEnum::PROMPT_DIALOG});
        
-        break;
-    }catch(...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }             
-    }
+    });
 
 }
 
 void checkpoint_19(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
+
         context.wait_for_all_requests();
 
         // walk right 
@@ -245,32 +215,21 @@ void checkpoint_19(
         mash_button_till_overworld(env.console, context, BUTTON_A, 360);
 
        
-        break;
-    }catch(...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }             
-    }
+    });
 
 }
 
 
 void checkpoint_20(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
+
         context.wait_for_all_requests();
        
         //walk right towards door
@@ -298,15 +257,7 @@ void checkpoint_20(
 
         mash_button_till_overworld(env.console, context, BUTTON_A, 360);
 
-        break;
-    }catch(...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }             
-    }
+    });
 
 }
 

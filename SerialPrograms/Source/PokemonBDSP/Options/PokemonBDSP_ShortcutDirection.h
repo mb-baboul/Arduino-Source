@@ -1,11 +1,11 @@
 /*  Shortcut Direction
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "ClientSource/Connection/BotBase.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 
 #ifndef PokemonAutomation_PokemonBDSP_ShortcutDirection_H
 #define PokemonAutomation_PokemonBDSP_ShortcutDirection_H
@@ -23,8 +23,8 @@ enum class ShortcutDirection{
     DOWN,
     LEFT,
 };
-const EnumDatabase<ShortcutDirection>& ShortcutDirection_Nullable();
-const EnumDatabase<ShortcutDirection>& ShortcutDirection_Required();
+const EnumDropdownDatabase<ShortcutDirection>& ShortcutDirection_Nullable();
+const EnumDropdownDatabase<ShortcutDirection>& ShortcutDirection_Required();
 
 
 
@@ -32,7 +32,7 @@ class ShortcutDirectionOption : public EnumDropdownOption<ShortcutDirection>{
 public:
     ShortcutDirectionOption(std::string label);
 
-    void run(BotBaseContext& context, uint16_t delay);
+    void run(ProControllerContext& context, uint16_t delay);
 
 };
 

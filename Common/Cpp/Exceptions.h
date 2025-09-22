@@ -1,6 +1,6 @@
 /*  Exceptions
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -54,7 +54,11 @@ public:
 //    - Non-infra are allowed to catch and rethrow this exception.
 class InvalidConnectionStateException : public Exception{
 public:
+    InvalidConnectionStateException(std::string message) : m_message(std::move(message)) {}
     virtual const char* name() const override{ return "InvalidConnectionStateException"; }
+    virtual std::string message() const override{ return m_message; }
+protected:
+    std::string m_message;
 };
 
 

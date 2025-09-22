@@ -1,6 +1,6 @@
 /*  Clone Items
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -33,12 +33,12 @@ public:
 class CloneItems101 : public SingleSwitchProgramInstance{
 public:
     CloneItems101();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 
 private:
     //  Returns true on success.
-    bool clone_item(ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context);
+    bool clone_item(ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context);
 
 private:
     GoHomeWhenDoneOption GO_HOME_WHEN_DONE;

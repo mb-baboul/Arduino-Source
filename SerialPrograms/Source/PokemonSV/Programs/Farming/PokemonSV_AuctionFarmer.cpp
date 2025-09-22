@@ -1,25 +1,29 @@
 /*  Auction Farmer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
+//#include <iostream>
+#include <unordered_map>
 #include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/Exceptions/FatalProgramException.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
 #include "CommonFramework/ImageTypes/BinaryImage.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/OCR/OCR_NumberReader.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/VideoPipeline/VideoOverlay.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonTools/ImageMatch/ImageCropper.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
+#include "CommonTools/OCR/OCR_NumberReader.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
 #include "Pokemon/Pokemon_Strings.h"
-#include "PokemonSV/PokemonSV_Settings.h"
+#include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "NintendoSwitch/Programs/NintendoSwitch_GameEntry.h"
+//#include "PokemonSV/PokemonSV_Settings.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
 #include "PokemonSV/Inference/PokemonSV_AuctionItemNameReader.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_OverworldDetector.h"
@@ -27,12 +31,8 @@
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
 #include "PokemonSV/Resources/PokemonSV_AuctionItemNames.h"
 #include "PokemonSwSh/Commands/PokemonSwSh_Commands_DateSpam.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
-
 #include "PokemonSV_AuctionFarmer.h"
 
-#include <iostream>
-#include <unordered_map>
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -47,9 +47,9 @@ AuctionFarmer_Descriptor::AuctionFarmer_Descriptor()
         STRING_POKEMON + " SV", "Auction Farmer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/AuctionFarmer.md",
         "Check auctions and bid on items.",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -175,21 +175,21 @@ std::vector<ImagePixelBox> AuctionFarmer::detect_dialog_boxes(const ImageViewRGB
 }
 
 
-void AuctionFarmer::reset_auctions(SingleSwitchProgramEnvironment& env, BotBaseContext& context, bool do_full_reset, uint8_t& year){
+void AuctionFarmer::reset_auctions(SingleSwitchProgramEnvironment& env, ProControllerContext& context, bool do_full_reset, uint8_t& year){
     try{
         if (do_full_reset){
             if (year == MAX_YEAR){
-                pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
+                go_home(env.console, context);
                 PokemonSwSh::home_roll_date_enter_game_autorollback(env.console, context, year);
             }
             save_game_from_overworld(env.program_info(), env.console, context);
 
-            pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
+            go_home(env.console, context);
             PokemonSwSh::home_roll_date_enter_game_autorollback(env.console, context, year);
         }
         pbf_wait(context, 1 * TICKS_PER_SECOND);
 
-        pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
+        go_home(env.console, context);
         context.wait_for_all_requests();
         reset_game_from_home(env.program_info(), env.console, context, TICKS_PER_SECOND);
     }catch (OperationFailedException& e){
@@ -200,7 +200,7 @@ void AuctionFarmer::reset_auctions(SingleSwitchProgramEnvironment& env, BotBaseC
     }
 }
 
-std::vector<std::pair<AuctionOffer, ImageFloatBox>> AuctionFarmer::check_offers(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+std::vector<std::pair<AuctionOffer, ImageFloatBox>> AuctionFarmer::check_offers(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     AuctionFarmer_Descriptor::Stats& stats = env.current_stats<AuctionFarmer_Descriptor::Stats>();
 
     pbf_wait(context, 2 * TICKS_PER_SECOND);
@@ -209,7 +209,7 @@ std::vector<std::pair<AuctionOffer, ImageFloatBox>> AuctionFarmer::check_offers(
     VideoSnapshot screen = env.console.video().snapshot();
     std::vector<ImagePixelBox> dialog_boxes = detect_dialog_boxes(screen);
     std::deque<OverlayBoxScope> bubbles_boxes;
-    std::deque<OverlayBoxScope> offer_boxes;
+    std::deque<OverlayBoxScope> offer_overlay_boxes;
     std::vector<std::pair<AuctionOffer, ImageFloatBox>> offers;
 
     if (dialog_boxes.empty()){
@@ -218,57 +218,65 @@ std::vector<std::pair<AuctionOffer, ImageFloatBox>> AuctionFarmer::check_offers(
     }
 
     // read dialog bubble
+    ImageFloatBox top_offer_box(0.05, 0.02, 0.90, 0.49);
+    ImageFloatBox bottom_offer_box(0.05, 0.49, 0.90, 0.49);
+    std::vector<ImageFloatBox> offer_boxes = {top_offer_box};
+    if (LANGUAGE == Language::Spanish || LANGUAGE == Language::ChineseTraditional) {
+        offer_boxes.emplace_back(bottom_offer_box);
+    }
+
     for (ImagePixelBox dialog_box : dialog_boxes){
-//        std::cout << "dialog_box: ["
-//                << dialog_box.min_x << "," << dialog_box.min_y << "] - ["
-//                << dialog_box.max_x << "," << dialog_box.max_y << "]" << std::endl;
+        for (ImageFloatBox offer_box : offer_boxes) {
+            //        std::cout << "dialog_box: ["
+            //                << dialog_box.min_x << "," << dialog_box.min_y << "] - ["
+            //                << dialog_box.max_x << "," << dialog_box.max_y << "]" << std::endl;
 
-        ImageFloatBox dialog_float_box = pixelbox_to_floatbox(screen, dialog_box);
-        bubbles_boxes.emplace_back(env.console, dialog_float_box, COLOR_GREEN);
-
-
-//        OverlayBoxScope dialog_overlay(env.console, dialog_box, COLOR_DARK_BLUE);
-        ImageFloatBox offer_box(0.05, 0.02, 0.90, 0.49);
-        ImageFloatBox translated_offer_box = translate_to_parent(
-            screen,
-            dialog_float_box,
-            floatbox_to_pixelbox(dialog_box.width(), dialog_box.height(), offer_box)
-        );
-//        std::cout << "translated_offer_box: ["
-//                << translated_offer_box.x << "," << translated_offer_box.y << "] - ["
-//                << translated_offer_box.width << "," << translated_offer_box.height << "]" << std::endl;
-
-        offer_boxes.emplace_back(env.console, translated_offer_box, COLOR_BLUE);
-
-//        OverlayBoxScope offer_overlay(env.console, translated_offer_box, COLOR_BLUE);
-        
-        ImageViewRGB32 dialog = extract_box_reference(screen, dialog_box);
-        ImageViewRGB32 offer_image = extract_box_reference(dialog, offer_box);
-
-//        std::cout << offer_image.width() << " x " << offer_image.height() << std::endl;
+            ImageFloatBox dialog_float_box = pixelbox_to_floatbox(screen, dialog_box);
+            bubbles_boxes.emplace_back(env.console, dialog_float_box, COLOR_GREEN);
 
 
-        const double LOG10P_THRESHOLD = -1.5;
-        std::string best_item;
-        OCR::StringMatchResult result = AuctionItemNameReader::instance().read_substring(
-            env.console, LANGUAGE,
-            offer_image,
-            OCR::BLACK_TEXT_FILTERS()
-        );
+            //        OverlayBoxScope dialog_overlay(env.console, dialog_box, COLOR_DARK_BLUE);
+            ImageFloatBox translated_offer_box = translate_to_parent(
+                screen,
+                dialog_float_box,
+                floatbox_to_pixelbox(dialog_box.width(), dialog_box.height(), offer_box)
+            );
+            //        std::cout << "translated_offer_box: ["
+            //                << translated_offer_box.x << "," << translated_offer_box.y << "] - ["
+            //                << translated_offer_box.width << "," << translated_offer_box.height << "]" << std::endl;
 
-        result.clear_beyond_log10p(LOG10P_THRESHOLD);
-        if (best_item.empty() && !result.results.empty()){
-            auto iter = result.results.begin();
-            if (iter->first < LOG10P_THRESHOLD){
-                best_item = iter->second.token;
+            offer_overlay_boxes.emplace_back(env.console, translated_offer_box, COLOR_BLUE);
 
-                AuctionOffer offer{ best_item };
-                std::pair<AuctionOffer, ImageFloatBox> pair(offer, dialog_float_box);
-                offers.emplace_back(pair);
+            //        OverlayBoxScope offer_overlay(env.console, translated_offer_box, COLOR_BLUE);
+
+            ImageViewRGB32 dialog = extract_box_reference(screen, dialog_box);
+            ImageViewRGB32 offer_image = extract_box_reference(dialog, offer_box);
+
+            //        std::cout << offer_image.width() << " x " << offer_image.height() << std::endl;
+
+
+            const double LOG10P_THRESHOLD = -1.5;
+            std::string best_item;
+            OCR::StringMatchResult result = AuctionItemNameReader::instance().read_substring(
+                env.console, LANGUAGE,
+                offer_image,
+                OCR::BLACK_TEXT_FILTERS()
+            );
+
+            result.clear_beyond_log10p(LOG10P_THRESHOLD);
+            if (best_item.empty() && !result.results.empty()) {
+                auto iter = result.results.begin();
+                if (iter->first < LOG10P_THRESHOLD) {
+                    best_item = iter->second.token;
+
+                    AuctionOffer offer{ best_item };
+                    std::pair<AuctionOffer, ImageFloatBox> pair(offer, dialog_float_box);
+                    offers.emplace_back(pair);
+                }
             }
         }
     }
-    context.wait_for(std::chrono::seconds(100));
+//  context.wait_for(std::chrono::seconds(100));
     return offers;
 }
 
@@ -284,7 +292,7 @@ bool AuctionFarmer::is_good_offer(AuctionOffer offer){
 }
 
 // Move to auctioneer and interact
-void AuctionFarmer::move_to_auctioneer(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AuctionOffer offer){
+void AuctionFarmer::move_to_auctioneer(SingleSwitchProgramEnvironment& env, ProControllerContext& context, AuctionOffer offer){
     AdvanceDialogWatcher advance_detector(COLOR_YELLOW);
 
     size_t tries = 0;
@@ -303,14 +311,15 @@ void AuctionFarmer::move_to_auctioneer(SingleSwitchProgramEnvironment& env, BotB
         tries++;
     }
     OperationFailedException::fire(
-        env.console, ErrorReport::SEND_ERROR_REPORT,
-        "Too many attempts to talk to the NPC."
+        ErrorReport::SEND_ERROR_REPORT,
+        "Too many attempts to talk to the NPC.",
+        env.console
     );
 }
 
 // Dialog is the only piece of orientation we have, so the goal is to put it into the center of the screen so we know in which direction the character walks.
 // This is only used for multiple NPCs.
-void AuctionFarmer::move_dialog_to_center(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AuctionOffer wanted){
+void AuctionFarmer::move_dialog_to_center(SingleSwitchProgramEnvironment& env, ProControllerContext& context, AuctionOffer wanted){
     double center_x = 0.0f;
     double center_y = 0.0f;
     bool offer_visible = false;
@@ -329,7 +338,7 @@ void AuctionFarmer::move_dialog_to_center(SingleSwitchProgramEnvironment& env, B
             center_y = offer.second.y + (0.5 * offer.second.height);
 
 
-            // check whether the stop condition is fullfilled by now.
+            // check whether the stop condition is fulfilled by now.
             if (!(center_x < 0.43 || center_x > 0.57)){
                 break;
             }
@@ -346,14 +355,15 @@ void AuctionFarmer::move_dialog_to_center(SingleSwitchProgramEnvironment& env, B
 
         if (!offer_visible){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Lost offer dialog for wanted item."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Lost offer dialog for wanted item.",
+                env.console
             );
         }
     }
 }
 
-void AuctionFarmer::reset_position(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void AuctionFarmer::reset_position(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     if (ONE_NPC){
         // No movement, player character should always be directly in front of an auctioneer.
         return;
@@ -365,17 +375,81 @@ void AuctionFarmer::reset_position(SingleSwitchProgramEnvironment& env, BotBaseC
 }
 
 
-uint64_t read_next_bid(ConsoleHandle& console, BotBaseContext& context, bool high){
+uint64_t read_next_bid(VideoStream& stream, ProControllerContext& context, Language language, bool high){
+    // How much to cut off from the bid text in order to not read currencies and exclamation marks as numbers.
+    // Values are pixels for a 1920x1080 screen, negative values are padding
+    static const std::map<Language, std::pair<int, int>> cutoffs = {
+        { Language::English, {22, 6} },
+        { Language::Japanese, {-5, 54} },
+        { Language::Spanish, {6, 32} },
+        { Language::French, {-5, 45} },
+        { Language::German, {-5, 22} },
+        { Language::Italian, {-5, 35} },
+        { Language::Korean, {-5, 42} },
+        { Language::ChineseSimplified, {22, 7} },
+        { Language::ChineseTraditional, {22,7} }
+    };
+
+    static const std::map<Language, float> high_x = {
+        { Language::English, 0.75f },
+        { Language::Japanese, 0.75f },
+        { Language::Spanish, 0.73f },
+        { Language::French, 0.68f },
+        { Language::German, 0.73f },
+        { Language::Italian, 0.75f },
+        { Language::Korean, 0.75f },
+        { Language::ChineseSimplified, 0.75f },
+        { Language::ChineseTraditional, 0.75f }
+    };
+
+    static const std::map<Language, float> low_x = {
+        { Language::English, 0.75f },
+        { Language::Japanese, 0.75f },
+        { Language::Spanish, 0.75f },
+        { Language::French, 0.75f },
+        { Language::German, 0.73f },
+        { Language::Italian, 0.75f },
+        { Language::Korean, 0.75f },
+        { Language::ChineseSimplified, 0.75f },
+        { Language::ChineseTraditional, 0.75f }
+    };
+
     float box_y = high ? 0.42f : 0.493f;
-    OverlayBoxScope box(console, { 0.73, box_y, 0.17, 0.048 });
+    float box_x = high ? high_x.at(language) : low_x.at(language);
+    float width = 0.9f - box_x; // max_x is always the same for all languages
+    OverlayBoxScope box(stream.overlay(), { box_x, box_y, width, 0.048 });
+
     std::unordered_map<uint64_t, size_t> read_bids;
     size_t highest_read = 0;
     uint64_t read_value = 0;
 
     // read next bid multiple times since the selection arrow sometimes blocks the first digit
     for (size_t i = 0; i < 10; i++){
-        VideoSnapshot screen = console.video().snapshot();
-        uint64_t read_bid = OCR::read_number(console.logger(), extract_box_reference(screen, box));
+        VideoSnapshot screen = stream.video().snapshot();
+        double screen_scale = (double)screen->width() / 1920.0;
+        double vertical_padding = 5.0; // small amount of pixels so numbers do not touch the edge of the view when reading them
+
+        ImageViewRGB32 raw_bid_image = extract_box_reference(screen, box);
+        ImagePixelBox bid_bounding_box = ImageMatch::enclosing_rectangle_with_pixel_filter(
+            raw_bid_image,
+            [](Color pixel) {
+                return (uint32_t)pixel.red() + pixel.green() + pixel.blue() < 250;
+            });
+
+        int32_t max_width = static_cast<int32_t>(raw_bid_image.width() - 1);
+        int32_t max_height = static_cast<int32_t>(raw_bid_image.height() - 1);
+        int32_t scaled_vertical_padding = static_cast<int32_t>(vertical_padding * screen_scale);
+        int32_t left_cutoff = static_cast<int32_t>(cutoffs.at(language).first * screen_scale);
+        int32_t right_cutoff = static_cast<int32_t>(cutoffs.at(language).second * screen_scale);
+
+        ImagePixelBox cut_bid_bounding_box(
+            std::max(0, std::min(max_width, static_cast<int32_t>(bid_bounding_box.min_x) + left_cutoff)),
+            std::max(0, std::min(max_height, static_cast<int32_t>(bid_bounding_box.min_y) - scaled_vertical_padding)),
+            std::max(0, std::min(max_width, static_cast<int32_t>(bid_bounding_box.max_x) - right_cutoff)),
+            std::max(0, std::min(max_height, static_cast<int32_t>(bid_bounding_box.max_y) + scaled_vertical_padding))
+            );
+
+        uint64_t read_bid = OCR::read_number(stream.logger(), extract_box_reference(raw_bid_image, cut_bid_bounding_box));
 
         if (read_bids.find(read_bid) == read_bids.end()){
             read_bids[read_bid] = 0;
@@ -389,11 +463,11 @@ uint64_t read_next_bid(ConsoleHandle& console, BotBaseContext& context, bool hig
         context.wait_for(Milliseconds(20));
     }
 
-    console.log("Next bid: " + std::to_string(read_value));
+    stream.log("Next bid: " + std::to_string(read_value));
     return read_value;
 }
 
-void AuctionFarmer::bid_on_item(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AuctionOffer offer){
+void AuctionFarmer::bid_on_item(SingleSwitchProgramEnvironment& env, ProControllerContext& context, AuctionOffer offer){
     AuctionFarmer_Descriptor::Stats& stats = env.current_stats<AuctionFarmer_Descriptor::Stats>();
 
     VideoSnapshot offer_screen = env.console.video().snapshot();
@@ -417,11 +491,11 @@ void AuctionFarmer::bid_on_item(SingleSwitchProgramEnvironment& env, BotBaseCont
             pbf_press_button(context, BUTTON_A, 20, TICKS_PER_SECOND);
             break;
         case 1:
-            current_bid = read_next_bid(env.console, context, true);
+            current_bid = read_next_bid(env.console, context, LANGUAGE, true);
             pbf_press_button(context, BUTTON_A, 20, TICKS_PER_SECOND);
             break;
         case 2:
-            current_bid = read_next_bid(env.console, context, false);
+            current_bid = read_next_bid(env.console, context, LANGUAGE, false);
             pbf_press_button(context, BUTTON_A, 20, TICKS_PER_SECOND);
             break;
         case 3:
@@ -455,7 +529,7 @@ void AuctionFarmer::bid_on_item(SingleSwitchProgramEnvironment& env, BotBaseCont
     return;
 }
 
-void AuctionFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void AuctionFarmer::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
 #if 0
@@ -507,8 +581,9 @@ void AuctionFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
                             send_program_recoverable_error_notification(env, NOTIFICATION_ERROR_RECOVERABLE, e.message(), screen);
                         }else{
                             OperationFailedException::fire(
-                                env.console, ErrorReport::SEND_ERROR_REPORT,
-                                "Failed to talk to the NPC!"
+                                ErrorReport::SEND_ERROR_REPORT,
+                                "Failed to talk to the NPC!",
+                                env.console
                             );
                         }
                         break;

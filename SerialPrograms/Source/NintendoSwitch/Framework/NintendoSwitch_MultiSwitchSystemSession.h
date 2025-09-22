@@ -1,6 +1,6 @@
 /*  Multi-Switch System Session
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  This class holds the run-time state for multiple Switch systems.
  *
@@ -31,6 +31,9 @@ public:
         virtual void shutdown() = 0;
 
         //  Sent after new Switches are started up.
+        //  This is called immediately when attaching a listener to give the
+        //  current switch count. The listener must drop all references to the
+        //  switch sessions before detaching.
         virtual void startup(size_t switch_count) = 0;
     };
     void add_listener(Listener& listener);

@@ -1,13 +1,12 @@
 /*  Raid Catch Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Compiler.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/ImageTools/ColorClustering.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/Images/ColorClustering.h"
 #include "PokemonSwSh_RaidCatchDetector.h"
 
 namespace PokemonAutomation{

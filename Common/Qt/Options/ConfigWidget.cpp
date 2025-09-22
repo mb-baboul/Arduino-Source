@@ -1,6 +1,6 @@
 /*  Config Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -32,6 +32,7 @@ ConfigWidget::ConfigWidget(ConfigOption& m_value, QWidget& widget)
     m_value.add_listener(*this);
 }
 void ConfigWidget::update_visibility(){
+    auto scope = m_value.check_scope();
     m_value.check_usage();
     if (m_widget == nullptr){
         return;
@@ -45,6 +46,11 @@ void ConfigWidget::update_visibility(){
 //    cout << "ConfigWidget::update_visibility(): " << (int)m_value.visibility() << endl;
     switch (m_value.visibility()){
     case ConfigOptionState::ENABLED:
+        // setEnable(false) only happens when the lock mode is LOCK_WHILE_RUNNING and the program is running.
+        // Ideally we should handle lock mode READ_ONLY here too, but m_widget as a QWidget does not have such
+        // function. Only some of its derived classes, like QLineEdit, can call setReadOnly().
+        // So here we treat READ_ONLY as enabled and let derived classes of ConfigWidget that have the
+        // functionality to set read-only (e.g. StringOptionWidget) to handle READ_ONLY.
         m_widget->setEnabled(m_value.lock_mode() != LockMode::LOCK_WHILE_RUNNING || !m_program_is_running);
         m_widget->setVisible(true);
         break;
@@ -59,24 +65,24 @@ void ConfigWidget::update_visibility(){
     }
 }
 void ConfigWidget::update_visibility(bool program_is_running){
-    m_value.check_usage();
+    auto scope = m_value.check_scope();
     m_program_is_running = program_is_running;
     update_visibility();
 }
 void ConfigWidget::update_all(bool program_is_running){
-    m_value.check_usage();
+    auto scope = m_value.check_scope();
     update_value();
     update_visibility(program_is_running);
 }
 
-void ConfigWidget::visibility_changed(){
-    m_value.check_usage();
+void ConfigWidget::on_config_visibility_changed(){
+    auto scope = m_value.check_scope();
     QMetaObject::invokeMethod(m_widget, [this]{
         update_visibility();
     }, Qt::QueuedConnection);
 }
-void ConfigWidget::program_state_changed(bool program_is_running){
-    m_value.check_usage();
+void ConfigWidget::on_program_state_changed(bool program_is_running){
+    auto scope = m_value.check_scope();
     QMetaObject::invokeMethod(m_widget, [this, program_is_running]{
         update_visibility(program_is_running);
     }, Qt::QueuedConnection);

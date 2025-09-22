@@ -1,6 +1,6 @@
 /*  Normal Battle Menus
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,8 +8,10 @@
 #define PokemonAutomation_PokemonSV_NormalBattleMenus_H
 
 #include "CommonFramework/Language.h"
-#include "CommonFramework/Inference/VisualDetector.h"
-#include "CommonFramework/Inference/BlackScreenDetector.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "CommonTools/VisualDetector.h"
+#include "CommonTools/VisualDetectors/BlackScreenDetector.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "PokemonSV/Inference/PokemonSV_WhiteButtonDetector.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_GradientArrowDetector.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
@@ -17,8 +19,6 @@
 
 
 namespace PokemonAutomation{
-    class ConsoleHandle;
-    class BotBaseContext;
     struct ProgramInfo;
 namespace NintendoSwitch{
 namespace PokemonSV{
@@ -30,11 +30,11 @@ public:
     NormalBattleMenuDetector(Color color);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     //  Returns -1 if not found.
-    int8_t detect_slot(const ImageViewRGB32& screen) const;
-    bool move_to_slot(ConsoleHandle& console, BotBaseContext& context, uint8_t slot) const;
+    int8_t detect_slot(const ImageViewRGB32& screen);
+    bool move_to_slot(VideoStream& stream, ProControllerContext& context, uint8_t slot);
 
 private:
     WhiteButtonDetector m_status_button;
@@ -48,7 +48,7 @@ public:
 };
 
 std::set<std::string> read_singles_opponent(
-    const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context,
+    const ProgramInfo& info, VideoStream& stream, ProControllerContext& context,
     Language language
 );
 
@@ -59,11 +59,11 @@ public:
     MoveSelectDetector(Color color);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     //  Returns -1 if not found.
-    int8_t detect_slot(const ImageViewRGB32& screen) const;
-    bool move_to_slot(ConsoleHandle& console, BotBaseContext& context, uint8_t slot) const;
+    int8_t detect_slot(const ImageViewRGB32& screen);
+    bool move_to_slot(VideoStream& stream, ProControllerContext& context, uint8_t slot);
 
 private:
     WhiteButtonDetector m_info_button;
@@ -83,7 +83,7 @@ public:
     TerastallizingDetector(Color color);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;
@@ -97,11 +97,11 @@ public:
     SwapMenuDetector(Color color);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     //  Returns -1 if not found.
     int8_t detect_slot(const ImageViewRGB32& screen) const;
-    bool move_to_slot(ConsoleHandle& console, BotBaseContext& context, uint8_t slot) const;
+    bool move_to_slot(VideoStream& stream, ProControllerContext& context, uint8_t slot) const;
 
 private:
     GradientArrowDetector m_arrow;
@@ -120,7 +120,7 @@ public:
     virtual void make_overlays(VideoOverlaySet& items) const override;
 
     // return true if detects a black screen, black dialog box, and dialog arrow.
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     BlackScreenDetector m_blackscreen;

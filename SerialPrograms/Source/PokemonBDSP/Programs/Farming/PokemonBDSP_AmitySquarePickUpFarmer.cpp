@@ -1,14 +1,14 @@
 /*  Walking Pokemon Berry Farmer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/Tools/StatsTracking.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
-#include "PokemonBDSP/PokemonBDSP_Settings.h"
+//#include "PokemonBDSP/PokemonBDSP_Settings.h"
 #include "PokemonBDSP_AmitySquarePickUpFarmer.h"
 
 namespace PokemonAutomation{
@@ -23,9 +23,9 @@ AmitySquarePickUpFarmer_Descriptor::AmitySquarePickUpFarmer_Descriptor()
         STRING_POKEMON + " BDSP", "Amity Square Pick Up Farmer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/AmitySquarePickUpFarmer.md",
         "Automatically fetch berries and stickers from the walking pokemon in Amity Square.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct AmitySquarePickUpFarmer_Descriptor::Stats : public StatsTracker{
@@ -48,22 +48,20 @@ AmitySquarePickUpFarmer::AmitySquarePickUpFarmer()
         LockMode::LOCK_WHILE_RUNNING,
         100
     )
-    , ONE_WAY_MOVING_TIME(
+    , ONE_WAY_MOVING_TIME0(
         "<b>One Way walking Time:</b><br>Walk this amount of time in one direction before going back to finish one round of walking.",
         LockMode::LOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "5 * TICKS_PER_SECOND"
+        "5000 ms"
     )
     , ROUNDS_PER_FETCH(
         "<b>Rounds per fetch:</b><br>How many rounds of walking before doing a berry fetch attempt.",
         LockMode::LOCK_WHILE_RUNNING,
         3
     )
-    , WAIT_TIME_FOR_POKEMON(
+    , WAIT_TIME_FOR_POKEMON0(
         "<b>Wait Time for Pokemon:</b><br>Wait this time for pokemon to catch up to you before you ask for a berry.",
         LockMode::LOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "3 * TICKS_PER_SECOND"
+        "3000 ms"
     )
     , NOTIFICATION_STATUS_UPDATE("Status Update", true, false, std::chrono::seconds(3600))
     , NOTIFICATIONS({
@@ -74,16 +72,16 @@ AmitySquarePickUpFarmer::AmitySquarePickUpFarmer()
 {
     PA_ADD_OPTION(GO_HOME_WHEN_DONE);
     PA_ADD_OPTION(MAX_FETCH_ATTEMPTS);
-    PA_ADD_OPTION(ONE_WAY_MOVING_TIME);
+    PA_ADD_OPTION(ONE_WAY_MOVING_TIME0);
     PA_ADD_OPTION(ROUNDS_PER_FETCH);
-    PA_ADD_OPTION(WAIT_TIME_FOR_POKEMON);
+    PA_ADD_OPTION(WAIT_TIME_FOR_POKEMON0);
     PA_ADD_OPTION(NOTIFICATIONS);
 }
 
 
 
 
-void AmitySquarePickUpFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void AmitySquarePickUpFarmer::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     AmitySquarePickUpFarmer_Descriptor::Stats& stats = env.current_stats<AmitySquarePickUpFarmer_Descriptor::Stats>();
     env.update_stats();
 
@@ -96,13 +94,13 @@ void AmitySquarePickUpFarmer::program(SingleSwitchProgramEnvironment& env, BotBa
 
         for (uint16_t i = 0; i < ROUNDS_PER_FETCH; i++){
             //  Move right
-            pbf_move_left_joystick(context, 255, 128, ONE_WAY_MOVING_TIME, 0);
+            pbf_move_left_joystick(context, 255, 128, ONE_WAY_MOVING_TIME0, 0ms);
             // Move left
-            pbf_move_left_joystick(context, 0, 128, ONE_WAY_MOVING_TIME, 0);
+            pbf_move_left_joystick(context, 0, 128, ONE_WAY_MOVING_TIME0, 0ms);
         }
 
         // Wait for your pokemon to catch up to you
-        pbf_wait(context, WAIT_TIME_FOR_POKEMON);
+        pbf_wait(context, WAIT_TIME_FOR_POKEMON0);
 
         // Face toward your pokemon.
         pbf_press_dpad(context, DPAD_RIGHT, 1, 0);

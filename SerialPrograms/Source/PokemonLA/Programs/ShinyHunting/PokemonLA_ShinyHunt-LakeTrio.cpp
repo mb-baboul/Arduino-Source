@@ -1,6 +1,6 @@
 /*  Shiny Hunt - Legendary Reset
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,10 +9,11 @@
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "NintendoSwitch/Programs/NintendoSwitch_GameEntry.h"
 #include "Pokemon/Pokemon_Notification.h"
 #include "Pokemon/Inference/Pokemon_NameReader.h"
 #include "PokemonSwSh/ShinyHuntTracker.h"
@@ -34,9 +35,9 @@ ShinyHuntLakeTrio_Descriptor::ShinyHuntLakeTrio_Descriptor()
         STRING_POKEMON + " LA", "Shiny Hunt - Lake Trio",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/ShinyHunt-LakeTrio.md",
         "Shiny hunt the lake trio legendaries.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 std::unique_ptr<StatsTracker> ShinyHuntLakeTrio_Descriptor::make_stats() const{
@@ -112,7 +113,7 @@ std::set<std::string> read_name(
 
 
 
-void ShinyHuntLakeTrio::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void ShinyHuntLakeTrio::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     PokemonSwSh::ShinyHuntTracker& stats = env.current_stats<PokemonSwSh::ShinyHuntTracker>();
 
 
@@ -126,7 +127,7 @@ void ShinyHuntLakeTrio::program(SingleSwitchProgramEnvironment& env, BotBaseCont
         env.update_stats();
 
         if (reset){
-            pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
+            go_home(env.console, context);
             if (!reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST)){
                 stats.add_error();
                 continue;
@@ -151,9 +152,9 @@ void ShinyHuntLakeTrio::program(SingleSwitchProgramEnvironment& env, BotBaseCont
                 {0, 0, 1, 1},
                 {{arcs, true}}
             );
-            int ret = run_until(
+            int ret = run_until<ProControllerContext>(
                 env.console, context,
-                [](BotBaseContext& context){
+                [](ProControllerContext& context){
                     pbf_mash_button(context, BUTTON_B, 60 * TICKS_PER_SECOND);
                 },
                 {{watcher}}
@@ -174,8 +175,9 @@ void ShinyHuntLakeTrio::program(SingleSwitchProgramEnvironment& env, BotBaseCont
                 consecutive_errors++;
                 if (consecutive_errors >= 3){
                     OperationFailedException::fire(
-                        env.console, ErrorReport::SEND_ERROR_REPORT,
-                        "Failed to detect an encounter 3 times in the row."
+                        ErrorReport::SEND_ERROR_REPORT,
+                        "Failed to detect an encounter 3 times in the row.",
+                        env.console
                     );
                 }
                 continue;
@@ -191,9 +193,9 @@ void ShinyHuntLakeTrio::program(SingleSwitchProgramEnvironment& env, BotBaseCont
                 {{arcs, false}}
             );
             ShinySymbolWaiter shiny_symbol(env.console, SHINY_SYMBOL_BOX_BOTTOM);
-            int ret = run_until(
+            int ret = run_until<ProControllerContext>(
                 env.console, context,
-                [](BotBaseContext& context){
+                [](ProControllerContext& context){
                     pbf_press_button(context, BUTTON_ZL, 3 * TICKS_PER_SECOND, 0);
                 },
                 {
@@ -235,7 +237,7 @@ void ShinyHuntLakeTrio::program(SingleSwitchProgramEnvironment& env, BotBaseCont
     }
 
     env.update_stats();
-    pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
+    pbf_press_button(context, BUTTON_HOME, 80ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
 
 //    GO_HOME_WHEN_DONE.run_end_of_program(context);
 }

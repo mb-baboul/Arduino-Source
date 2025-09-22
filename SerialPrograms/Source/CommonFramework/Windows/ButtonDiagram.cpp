@@ -1,25 +1,28 @@
 /*  Button Diagram
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <QCoreApplication>
-//#include <QFile>
 #include <QMessageBox>
-//#include <QGraphicsScene>
-//#include <QGraphicsView>
-//#include <QGraphicsPixmapItem>
+#include <QMenuBar>
 #include "CommonFramework/Globals.h"
 #include "WindowTracker.h"
 #include "ButtonDiagram.h"
 
-//#include <iostream>
-//using std::cout;
-//using std::endl;
+// #include <iostream>
+// using std::cout;
+// using std::endl;
 
 
 namespace PokemonAutomation{
+
+const char* NS1_PRO_CONTROLLER_MAPPING_PATH = "/NintendoSwitch/Layout-ProController.png";
+const char* NS1_JOYCON_VERTICAL_MAPPING_PATH = "/NintendoSwitch/Layout-JoyconVertical.png";
+const char* NS1_JOYCON_HORIZONTAL_MAPPING_PATH = "/NintendoSwitch/Layout-JoyconHorizontal.png";
+
+const char* NS2_PRO_CONTROLLER_MAPPING_PATH = "/NintendoSwitch2/Layout-ProController.png";
 
 
 ButtonDiagram::ButtonDiagram(QWidget* parent)
@@ -27,7 +30,38 @@ ButtonDiagram::ButtonDiagram(QWidget* parent)
 {
     setWindowTitle("Controller Keyboard Mapping");
 
-    m_image = QPixmap(QString::fromStdString(RESOURCE_PATH() + "/NintendoSwitch/ButtonLayout.jpg"));
+    QMenuBar* menu = menuBar();
+    QMenu* ns1_pro_controller = menu->addMenu("NS1: Pro Controller");
+    QMenu* ns1_joycon_vertical = menu->addMenu("NS1: Joycon (Vertical)");
+    QMenu* ns1_joycon_horizontal = menu->addMenu("NS1: Joycon (Horizontal)");
+    QMenu* ns2_pro_controller = menu->addMenu("NS2: Pro Controller");
+
+//    pro_controller->addAction("asdfadf");
+
+    connect(
+        ns1_pro_controller, &QMenu::aboutToShow,
+        this, [this](){
+            set_image(NS1_PRO_CONTROLLER_MAPPING_PATH);
+        }
+    );
+    connect(
+        ns1_joycon_vertical, &QMenu::aboutToShow,
+        this, [this](){
+            set_image(NS1_JOYCON_VERTICAL_MAPPING_PATH);
+        }
+    );
+    connect(
+        ns1_joycon_horizontal, &QMenu::aboutToShow,
+        this, [this](){
+            set_image(NS1_JOYCON_HORIZONTAL_MAPPING_PATH);
+        }
+    );
+    connect(
+        ns2_pro_controller, &QMenu::aboutToShow,
+        this, [this](){
+            set_image(NS2_PRO_CONTROLLER_MAPPING_PATH);
+        }
+    );
 
     m_image_label = new QLabel(this);
     setCentralWidget(m_image_label);
@@ -40,13 +74,21 @@ ButtonDiagram::ButtonDiagram(QWidget* parent)
 //    image_label->resize(800, 600);
 //    image_label->setFixedSize(800, 600);
 
-    resize(800, 600);
+    resize(800, 600 + menu->sizeHint().height());
+
+    set_image(NS2_PRO_CONTROLLER_MAPPING_PATH);
+
     add_window(*this);
 }
 ButtonDiagram::~ButtonDiagram(){
     remove_window(*this);
 }
 
+void ButtonDiagram::set_image(const std::string& resource_name){
+    const std::string image_path = RESOURCE_PATH() + resource_name;
+    m_image = QPixmap(QString::fromStdString(image_path));
+    ButtonDiagram::resizeEvent(nullptr);
+}
 void ButtonDiagram::resizeEvent(QResizeEvent*){
     int iw = m_image.width();
     int ih = m_image.height();

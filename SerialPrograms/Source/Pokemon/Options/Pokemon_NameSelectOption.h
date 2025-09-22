@@ -1,13 +1,13 @@
 /*  Pokemon Name Select
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_Pokemon_PokemonNameSelect_H
 #define PokemonAutomation_Pokemon_PokemonNameSelect_H
 
-#include "CommonFramework/Options/StringSelectOption.h"
+#include "CommonTools/Options/StringSelectOption.h"
 
 namespace PokemonAutomation{
 namespace Pokemon{

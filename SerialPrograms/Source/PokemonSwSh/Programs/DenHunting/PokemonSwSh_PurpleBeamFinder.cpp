@@ -1,16 +1,14 @@
 /*  Purple Beam Finder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Cpp/PrettyPrint.h"
 #include "CommonFramework/GlobalSettingsPanel.h"
-#include "CommonFramework/VideoPipeline/VideoFeed.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Device.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonFramework/VideoPipeline/VideoFeed.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "Pokemon/Pokemon_Strings.h"
@@ -33,9 +31,9 @@ PurpleBeamFinder_Descriptor::PurpleBeamFinder_Descriptor()
         STRING_POKEMON + " SwSh", "Purple Beam Finder",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSwSh/PurpleBeamFinder.md",
         "Automatically reset for a purple beam.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct PurpleBeamFinder_Descriptor::Stats : public StatsTracker{
@@ -88,11 +86,10 @@ PurpleBeamFinder::PurpleBeamFinder()
         LockMode::LOCK_WHILE_RUNNING,
         false
     )
-    , TIMEOUT_DELAY(
+    , TIMEOUT_DELAY0(
         "<b>Timeout Delay:</b><br>Reset if no beam is detected after this long.",
         LockMode::LOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "2 * TICKS_PER_SECOND"
+        "2000 ms"
     )
 //    , MAX_STDDEV(
 //        "<b>Maximum Standard Deviation:</b><br>Range: 0 - 768",
@@ -123,7 +120,7 @@ PurpleBeamFinder::PurpleBeamFinder()
     PA_ADD_OPTION(NOTIFICATIONS);
     if (PreloadSettings::instance().DEVELOPER_MODE){
         PA_ADD_STATIC(m_advanced_options);
-        PA_ADD_OPTION(TIMEOUT_DELAY);
+        PA_ADD_OPTION(TIMEOUT_DELAY0);
         PA_ADD_OPTION(MIN_BRIGHTNESS);
         PA_ADD_OPTION(MIN_EUCLIDEAN);
         PA_ADD_OPTION(MIN_DELTA_STDDEV_RATIO);
@@ -134,13 +131,13 @@ PurpleBeamFinder::PurpleBeamFinder()
 
 
 
-bool PurpleBeamFinder::run(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool PurpleBeamFinder::run(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     PurpleBeamFinder_Descriptor::Stats& stats = env.current_stats<PurpleBeamFinder_Descriptor::Stats>();
 
     SelectionArrowFinder arrow_detector(env.console.overlay(), {0.5, 0.5, 0.3, 0.3});
-    int ret = run_until(
+    int ret = run_until<ProControllerContext>(
         env.console, context,
-        [](BotBaseContext& context){
+        [](ProControllerContext& context){
             pbf_mash_button(context, BUTTON_A, 1000);
         },
         { arrow_detector }
@@ -156,9 +153,9 @@ bool PurpleBeamFinder::run(SingleSwitchProgramEnvironment& env, BotBaseContext& 
     pbf_wait(context, 100);
     context.wait_for_all_requests();
 
-    ret = run_until(
+    ret = run_until<ProControllerContext>(
         env.console, context,
-        [](BotBaseContext& context){
+        [](ProControllerContext& context){
             pbf_press_button(context, BUTTON_A, 10, 300);
         },
         { arrow_detector }
@@ -175,7 +172,7 @@ bool PurpleBeamFinder::run(SingleSwitchProgramEnvironment& env, BotBaseContext& 
         BeamSetter setter(env, env.console, context);
         detection = setter.run(
             SAVE_SCREENSHOT,
-            TIMEOUT_DELAY,
+            TIMEOUT_DELAY0,
             MIN_BRIGHTNESS,
             MIN_EUCLIDEAN,
             MIN_DELTA_STDDEV_RATIO,
@@ -204,7 +201,7 @@ bool PurpleBeamFinder::run(SingleSwitchProgramEnvironment& env, BotBaseContext& 
     return false;
 }
 
-void PurpleBeamFinder::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void PurpleBeamFinder::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     if (START_LOCATION.start_in_grip_menu()){
         grip_menu_connect_go_home(context);
         resume_game_front_of_den_nowatts(context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
@@ -221,7 +218,7 @@ void PurpleBeamFinder::program(SingleSwitchProgramEnvironment& env, BotBaseConte
             break;
         }
 
-        pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY_SAFE);
+        pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY_SAFE0);
         reset_game_from_home_with_inference(
             env.console, context,
             ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST

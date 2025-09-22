@@ -1,19 +1,16 @@
 /*  Blueberry Quest Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-
+#include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/ImageTypes/ImageRGB32.h"
-#include "PokemonSV/Inference/PokemonSV_BlueberryQuestReader.h"
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
-#include "CommonFramework/Exceptions/OperationFailedException.h"
+#include "CommonTools/Images/ImageFilter.h"
+#include "PokemonSV/Inference/PokemonSV_BlueberryQuestReader.h"
 #include "PokemonSV_BlueberryQuestDetector.h"
-
-#include <iostream>
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -45,7 +42,7 @@ void BlueberryQuestDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_box);
 }
 
-bool BlueberryQuestDetector::detect(const ImageViewRGB32& screen) const{
+bool BlueberryQuestDetector::detect(const ImageViewRGB32& screen){
     return !detect_quest(screen).empty();
 }
 
@@ -54,7 +51,8 @@ std::string BlueberryQuestDetector::detect_quest(const ImageViewRGB32& screen) c
 
     ImageRGB32 quest_label = to_blackwhite_rgb32_range(
         extract_box_reference(screen, m_box),
-        combine_rgb(198, 198, 198), combine_rgb(255, 255, 255), true
+        true,
+        combine_rgb(198, 198, 198), combine_rgb(255, 255, 255)
     );
 
     //quest_label.save("quest_label.png");
@@ -79,7 +77,7 @@ std::string BlueberryQuestDetector::detect_quest(const ImageViewRGB32& screen) c
     if (results.size() > 1){
         throw_and_log<OperationFailedException>(
             m_logger, ErrorReport::SEND_ERROR_REPORT,
-            "BlueberryQuestDetector::detect_quest(): Unable to read selected item. Ambiguous or multiple results."
+            "BlueberryQuestDetector::detect_quest(): Unable to read selected item. Ambiguous or multiple results.\n" + language_warning(m_language)
         );
     }
 

@@ -1,6 +1,6 @@
 /*  Test Program (Computer)
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -29,15 +29,14 @@
 #include "CommonFramework/Exceptions/ProgramFinishedException.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
-#include "CommonFramework/OCR/OCR_RawOCR.h"
-#include "CommonFramework/OCR/OCR_Routines.h"
+#include "CommonTools/OCR/OCR_RawOCR.h"
+#include "CommonTools/OCR/OCR_Routines.h"
 #include "PokemonSV/Inference/Tera/PokemonSV_TeraCodeReader.h"
 #include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_BattleMenu.h"
 #include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_PathSelect.h"
 #include "PokemonSwSh/MaxLair/Framework/PokemonSwSh_MaxLair_State.h"
 #include "PokemonSwSh/MaxLair/AI/PokemonSwSh_MaxLair_AI.h"
-#include "CommonFramework/ImageMatch/ExactImageMatcher.h"
+#include "CommonTools/ImageMatch/ExactImageMatcher.h"
 #include "TestProgramComputer.h"
 #include "ClientSource/Libraries/Logging.h"
 #include "Common/Cpp/Containers/Pimpl.tpp"
@@ -48,14 +47,11 @@
 #include "Kernels/Waterfill/Kernels_Waterfill.h"
 #include "Kernels/BinaryImageFilters/Kernels_BinaryImage_BasicFilters.h"
 #include "PokemonSwSh/Inference/PokemonSwSh_MarkFinder.h"
-#include "CommonFramework/Inference/ImageMatchDetector.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "Pokemon/Inference/Pokemon_NameReader.h"
 #include "PokemonSwSh/Inference/PokemonSwSh_SelectionArrowFinder.h"
 #include "Common/Cpp/Containers/AlignedVector.tpp"
 #include "CommonFramework/Tools/FileDownloader.h"
-#include "CommonFramework/Inference/BlackScreenDetector.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
 #include "PokemonLA/Inference/PokemonLA_MountDetector.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_ArcPhoneDetector.h"
@@ -80,12 +76,10 @@
 #include "Common/Cpp/StringTools.h"
 #include "PokemonSwSh/Inference/Battles/PokemonSwSh_BattleMenuDetector.h"
 #include "PokemonSwSh/Inference/PokemonSwSh_SummaryShinySymbolDetector.h"
-#include "Common/Cpp/EnumDatabase.h"
+#include "Common/Cpp/Options/EnumDropdownDatabase.h"
 #include "PokemonSwSh/Options/EncounterFilter/PokemonSwSh_EncounterFilterEnums.h"
 #include "PokemonSwSh/MaxLair/Inference/PokemonSwSh_MaxLair_Detect_Lobby.h"
 
-#include "CommonFramework/ImageTools/ImageFilter.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "PokemonSV/Inference/PokemonSV_WhiteButtonDetector.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogArrowDetector.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_GradientArrowDetector.h"
@@ -95,27 +89,21 @@
 #include "PokemonSV/Inference/Overworld/PokemonSV_OverworldDetector.h"
 #include "Integrations/DiscordWebhook.h"
 #include "PokemonSV/Programs/TeraRaids/PokemonSV_JoinTracker.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "PokemonSV/Inference/Boxes/PokemonSV_BoxDetection.h"
 #include "CommonFramework/Environment/Environment.h"
 #include "Common/Cpp/PrettyPrint.h"
 #include "Common/Qt/TimeQt.h"
 #include "PokemonSV/Inference/Picnics/PokemonSV_SandwichHandDetector.h"
-#include "CommonFramework/Inference/StatAccumulator.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
-#include "ClientSource/Connection/BotBase.h"
 #include "CommonFramework/Environment/Environment.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_LetsGoKillDetector.h"
 #include "PokemonSV/Inference/PokemonSV_SweatBubbleDetector.h"
 #include "Pokemon/Resources/Pokemon_PokemonSlugs.h"
 #include "PokemonSV/Inference/Battles/PokemonSV_NormalBattleMenus.h"
 #include "Pokemon/Resources/Pokemon_PokemonNames.h"
-#include "CommonFramework/OCR/OCR_NumberReader.h"
-#include "CommonFramework/ImageTools/ImageManip.h"
+#include "CommonTools/OCR/OCR_NumberReader.h"
 #include "PokemonSV/Resources/PokemonSV_Ingredients.h"
 #include "Kernels/ImageStats/Kernels_ImagePixelSumSqr.h"
-#include "CommonFramework/ImageMatch/ImageDiff.h"
-#include "CommonFramework/Inference/BlackBorderDetector.h"
 #include "PokemonSV/Inference/Boxes/PokemonSV_BoxDetection.h"
 #include "Common/Cpp/Concurrency/Watchdog.h"
 #include "PokemonSV/Inference/Battles/PokemonSV_TeraBattleMenus.h"
@@ -130,6 +118,9 @@
 #include "PokemonBDSP/Inference/ShinyDetection/PokemonBDSP_ShinySparkleSet.h"
 #include "PokemonSV/Programs/ItemPrinter/PokemonSV_ItemPrinterSeedCalc.h"
 #include "PokemonSV/Inference/Battles/PokemonSV_BattleBallReader.h"
+#include "Common/Cpp/Containers/CircularBuffer.h"
+#include "Common/Cpp/Sockets/ClientSocket.h"
+#include "Common/Cpp/Containers/SparseArray.h"
 
 #ifdef PA_ARCH_x86
 //#include "Kernels/Kernels_x64_SSE41.h"
@@ -147,8 +138,14 @@
 //#include "Kernels/ImageScaling/Kernels_ImageScaling_Default.h"
 //#include "Kernels/ImageScaling/Kernels_ImageScaling_x64_SSE41.h"
 #endif
+#include "Common/SerialPABotBase/SerialPABotBase_Protocol.h"
+//#include "Common/SerialPABotBase/LightweightWallClock_StdChrono.h"
+#include "Common/Cpp/Options/MacAddressOption.h"
+#include "CommonTools/Images/ImageFilter.h"
+
 
 //#include <opencv2/core.hpp>
+#include <onnxruntime_cxx_api.h>
 #include <random>
 
 
@@ -174,9 +171,11 @@ TestProgramComputer_Descriptor::TestProgramComputer_Descriptor()
 TestProgramComputer::TestProgramComputer()
     : STATIC_TEXT("test text")
     , SCREEN_WATCHER("Capture Box", 0, 0, 1, 1)
+    , MAC_ADDRESS(LockMode::UNLOCK_WHILE_RUNNING, 6, nullptr)
 {
     PA_ADD_OPTION(STATIC_TEXT);
 //    PA_ADD_OPTION(SCREEN_WATCHER);
+    PA_ADD_OPTION(MAC_ADDRESS);
 }
 
 WallClock REFERENCE = current_time();
@@ -226,7 +225,57 @@ class WatchdogTest1 : public WatchdogCallback{
 
 
 
+template <typename Type>
+class CheckedObject{
+public:
+    template <class... Args>
+    CheckedObject(Args&&... args)
+        : m_object(std::forward<Args>(args)...)
+    {
+        m_instances++;
+    }
+    ~CheckedObject(){
+        m_instances--;
+    }
 
+    operator const Type&() const{
+        return m_object;
+    }
+    operator Type&(){
+        return m_object;
+    }
+
+    static size_t instances(){
+        return m_instances.load(std::memory_order_relaxed);
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const CheckedObject& x){
+        return stream << (const Type&)x;
+    }
+
+private:
+    static std::atomic<size_t> m_instances;
+    Type m_object;
+    LifetimeSanitizer m_lifetime_santizer;
+};
+
+template <typename Type>
+std::atomic<size_t> CheckedObject<Type>::m_instances(0);
+
+
+
+
+
+#if 0
+struct RequestManagerConfig{
+    using ClockType = LightweightWallClock_StdChrono;
+    using ClockDuration = LightweightDuration_StdChrono;
+    using SeqnumType = seqnum_t;
+    using MessageSizeType = uint8_t;
+    static constexpr size_t MAX_MESSAGE_SIZE = 64;
+    static constexpr size_t QUEUE_SIZE = 64;
+};
+#endif
 
 
 
@@ -242,6 +291,173 @@ void TestProgramComputer::program(ProgramEnvironment& env, CancellableScope& sco
     using namespace NintendoSwitch::PokemonSV;
     using namespace Pokemon;
     using namespace NintendoSwitch::PokemonSwSh::MaxLairInternal;
+
+    using namespace std::chrono_literals;
+
+
+
+
+
+
+#if 0
+    {
+        CommandQueue queue;
+
+        queue.enqueue_command(ControllerCommand{
+            .seqnum = 10,
+            .milliseconds = 1000,
+            .state = ControllerState{
+                .buttons = 123,
+            }
+        });
+        queue.enqueue_command(ControllerCommand{
+            .seqnum = 11,
+            .milliseconds = 2000,
+            .state = ControllerState{
+                .buttons = 456,
+            }
+        });
+
+        scope.wait_for(60s);
+    }
+#endif
+
+#if 0
+    HeapCircularBuffer<std::string> buffer(10);
+
+    buffer.try_push_back("asdf");
+    buffer.try_push_back("qwer");
+    buffer.try_push_back("zxcv");
+
+    cout << buffer[0] << endl;
+    cout << buffer[1] << endl;
+    cout << buffer[2] << endl;
+    cout << "--------------------" << endl;
+    buffer.pop_front();
+    cout << buffer[0] << endl;
+    cout << buffer[1] << endl;
+#endif
+
+#if 0
+    Command command{
+        123,
+        100,
+        512,
+        2000, 3000,
+        4000, 5000
+    };
+
+    char str[65] = {};
+    command.write_to_hex(str);
+    cout << str << endl;
+    memset(&command, 0, sizeof(Command));
+
+    command.parse_from_hex(str);
+
+    cout << command.milliseconds << endl;
+    cout << command.buttons << endl;
+    cout << command.left_joystick_x << endl;
+    cout << command.left_joystick_y << endl;
+    cout << command.right_joystick_x << endl;
+    cout << command.right_joystick_y << endl;
+#endif
+
+#if 0
+    ImageRGB32 image("20250503-121259857603.png");
+
+    image = filter_rgb32_euclidean(image, (uint32_t)COLOR_PURPLE, 100, COLOR_RED, true);
+    image.save("temp.png");
+#endif
+
+
+
+
+#if 0
+    uint8_t address[] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc};
+
+    std::string str = write_MAC_address(6, address);
+    cout << str << endl;
+
+    parse_MAC_address(6, address, str);
+    str = write_MAC_address(6, address);
+    cout << str << endl;
+#endif
+
+#if 0
+    SparseArray data{
+        {100, "0123456789"},
+        {120, {'a', 0x20, 'd'}},
+    };
+//    data.set_data(100, "0123456789", 10);
+//    data.set_data(120, "asdfzxcv", 8);
+
+    cout << data.dump() << endl;
+//    data.set_data(110, 12, "qwerqwerqwer");
+
+    std::string read(12, '?');
+    data.read(109, 12, read.data());
+
+    cout << "read = " << read << endl;
+
+//    data.print();
+
+
+#if 0
+    ClientSocket socket;
+    socket.connect("192.168.1.66", 6000);
+//    socket.connect("192.168.1.66", 6000);
+
+    scope.wait_for(std::chrono::seconds(60));
+#endif
+
+#endif
+
+
+#if 0
+    int* ptr = nullptr;
+    cout << ptr[0] << endl;
+#endif
+
+#if 0
+    {
+        CircularBuffer<CheckedObject<std::string>> buffer(4);
+
+        cout << "Dumping:" << endl;
+        for (size_t c = 0; c < buffer.size(); c++){
+            cout << "    " << buffer[c] << endl;
+        }
+
+        buffer.push_back("123");
+        buffer.push_back("456");
+        buffer.push_back("789");
+
+
+        cout << "Dumping:" << endl;
+        for (size_t c = 0; c < buffer.size(); c++){
+            cout << "    " << buffer[c] << endl;
+        }
+
+        buffer.pop_front();
+
+        cout << "Dumping:" << endl;
+        for (size_t c = 0; c < buffer.size(); c++){
+            cout << "    " << buffer[c] << endl;
+        }
+
+        buffer.push_back("asd");
+        buffer.push_back("sdf");
+
+        cout << "Dumping:" << endl;
+        for (size_t c = 0; c < buffer.size(); c++){
+            cout << "    " << buffer[c] << endl;
+        }
+
+        cout << "Instances = " << CheckedObject<std::string>::instances() << endl;
+    }
+    cout << "Instances = " << CheckedObject<std::string>::instances() << endl;
+#endif
+
+
 
 #if 0
     send_program_notification_with_file(
@@ -267,9 +483,6 @@ void TestProgramComputer::program(ProgramEnvironment& env, CancellableScope& sco
     );
 #endif
 
-
-    int* ptr = nullptr;
-    cout << ptr[0] << endl;
 
 #if 0
     std::random_device rndsource;
@@ -441,7 +654,7 @@ void TestProgramComputer::program(ProgramEnvironment& env, CancellableScope& sco
 
 //    ImageRGB32 image("20230427-200550386826-OperationFailedException.png");
 
-//    NintendoSwitch::HomeDetector detector;
+//    NintendoSwitch::HomeMenuDetector detector;
 //    cout << detector.detect(image) << endl;
 
 

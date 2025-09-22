@@ -1,6 +1,6 @@
 /*  Synchronized Spinning
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -19,9 +19,9 @@ SynchronizedSpinning_Descriptor::SynchronizedSpinning_Descriptor()
         "PokemonSwSh:SynchronizedSpinning",
         STRING_POKEMON + " SwSh", "Synchronized Spinning", "",
         "Don't ask... seriously, don't ask...",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::NONE,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB,
         1, 4, 1
     )
 {}
@@ -33,7 +33,7 @@ SynchronizedSpinning::SynchronizedSpinning(){}
 void SynchronizedSpinning::program(MultiSwitchProgramEnvironment& env, CancellableScope& scope){
     env.run_in_parallel(
         scope,
-        [&](ConsoleHandle& console, BotBaseContext& context){
+        [&](ConsoleHandle& console, ProControllerContext& context){
             pbf_move_left_joystick(context, 128, 255, 5, 20);
             while (true){
                 pbf_move_left_joystick(context, 128, 0, 5, 0);

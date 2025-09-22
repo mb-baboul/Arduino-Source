@@ -1,19 +1,12 @@
 /*  Autostory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_AutoStory_Segment_17_H
 #define PokemonAutomation_PokemonSV_AutoStory_Segment_17_H
 
-#include <functional>
-#include "Common/Cpp/Options/EnumDropdownOption.h"
-#include "CommonFramework/Notifications/EventNotificationsTable.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
-#include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
-#include "Common/NintendoSwitch/NintendoSwitch_ControllerDefs.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 
 namespace PokemonAutomation{
@@ -27,18 +20,30 @@ public:
     virtual std::string end_text() const override;
     virtual void run_segment(
         SingleSwitchProgramEnvironment& env, 
-        BotBaseContext& context,
-        AutoStoryOptions options) const override;
+        ProControllerContext& context,
+        AutoStoryOptions options,
+        AutoStoryStats& stats
+    ) const override;
 };
 
 
 // start: At Porto Marinada Pokecenter.
 // end: Won auction at Porto Marinada, passed Gym challenge.
-void checkpoint_37(SingleSwitchProgramEnvironment& env, BotBaseContext& context, EventNotificationOption& notif_status_update);  
+void checkpoint_37(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
 
 // start: Won auction at Porto Marinada, passed Gym challenge.
-// end: Defeat Cascarrafa Gym
-void checkpoint_38(SingleSwitchProgramEnvironment& env, BotBaseContext& context, EventNotificationOption& notif_status_update);  
+// end: Defeat Cascarrafa Gym. At Porto Marinada Pokecenter.
+void checkpoint_38(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
 
 
 

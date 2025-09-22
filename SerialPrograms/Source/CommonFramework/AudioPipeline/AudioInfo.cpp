@@ -1,6 +1,6 @@
 /*  Audio Input Device Info
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -28,6 +28,13 @@
 #else
 #error "Unsupported Qt version."
 #endif
+
+
+#if QT_VERSION_MAJOR != 5
+#define PA_AUDIO_USE_CHANNEL_CONFIG
+#endif
+
+
 namespace PokemonAutomation{
 
 
@@ -45,25 +52,43 @@ const char* AUDIO_FORMAT_LABELS[] = {
 void set_format(QAudioFormat& native_format, AudioChannelFormat format){
     switch (format){
     case AudioChannelFormat::MONO_48000:
+#ifdef PA_AUDIO_USE_CHANNEL_CONFIG
+        if (native_format.channelConfig() != QAudioFormat::ChannelConfigMono){
+            native_format.setChannelConfig(QAudioFormat::ChannelConfigMono);
+        }
+#else
         if (native_format.channelCount() != 1){
             native_format.setChannelCount(1);
         }
+#endif
         if (native_format.sampleRate() != 48000){
             native_format.setSampleRate(48000);
         }
         break;
     case AudioChannelFormat::DUAL_44100:
+#ifdef PA_AUDIO_USE_CHANNEL_CONFIG
+        if (native_format.channelConfig() != QAudioFormat::ChannelConfigStereo){
+            native_format.setChannelConfig(QAudioFormat::ChannelConfigStereo);
+        }
+#else
         if (native_format.channelCount() != 2){
             native_format.setChannelCount(2);
         }
+#endif
         if (native_format.sampleRate() != 44100){
             native_format.setSampleRate(44100);
         }
         break;
     case AudioChannelFormat::DUAL_48000:
+#ifdef PA_AUDIO_USE_CHANNEL_CONFIG
+        if (native_format.channelConfig() != QAudioFormat::ChannelConfigStereo){
+            native_format.setChannelConfig(QAudioFormat::ChannelConfigStereo);
+        }
+#else
         if (native_format.channelCount() != 2){
             native_format.setChannelCount(2);
         }
+#endif
         if (native_format.sampleRate() != 48000){
             native_format.setSampleRate(48000);
         }
@@ -71,9 +96,15 @@ void set_format(QAudioFormat& native_format, AudioChannelFormat format){
     case AudioChannelFormat::MONO_96000:
     case AudioChannelFormat::INTERLEAVE_LR_96000:
     case AudioChannelFormat::INTERLEAVE_RL_96000:
+#ifdef PA_AUDIO_USE_CHANNEL_CONFIG
+        if (native_format.channelConfig() != QAudioFormat::ChannelConfigMono){
+            native_format.setChannelConfig(QAudioFormat::ChannelConfigMono);
+        }
+#else
         if (native_format.channelCount() != 1){
             native_format.setChannelCount(1);
         }
+#endif
         if (native_format.sampleRate() != 96000){
             native_format.setSampleRate(96000);
         }
@@ -115,24 +146,49 @@ AudioSampleFormat get_sample_format(QAudioFormat& native_format){
 }
 
 
+std::string format_to_str(const QAudioFormat& format){
+    std::string str;
+    str += "Preferred Format:\n";
+    str += "    Channels: " + std::to_string(format.channelCount()) + "\n";
+    str += "    Sample Rate: " + std::to_string(format.sampleRate()) + "\n";
+#if QT_VERSION_MAJOR == 5
+    str += "    Sample Format: " + std::to_string(format.sampleType()) + "\n";
+#else
+    str += "    Sample Format: " + std::to_string(format.sampleFormat()) + "\n";
+#endif
+    return str;
+}
+
+
 //  Return a list of our formats that are supported by this device.
 //  "preferred_index" is set to the index of the list that is preferred by the device.
 //  If no preferred format matches our formats, -1 is returned.
 std::vector<AudioChannelFormat> supported_input_formats(int& preferred_index, const NativeAudioInfo& info, const std::string& display_name){
     QAudioFormat preferred_format = info.preferredFormat();
 
+    std::string str = display_name + "\n";
+    str += format_to_str(preferred_format);
+    global_logger_tagged().log(str);
+
 //    preferred_format.setSampleSize(16);
 //    preferred_format.setSampleType(QAudioFormat::SampleType::SignedInt);
 
     int preferred_channels = preferred_format.channelCount();
     int preferred_rate = preferred_format.sampleRate();
-//    cout << "display_name = " << display_name << endl;
-//    cout << "channelCount = " << preferred_format.channelCount() << endl;
-//    cout << "sample_rate = " << preferred_format.sample_rate() << endl;
-//    cout << "sampleSize = " << preferred_format.sampleSize() << endl;
-//    cout << "sampleFormat = " << preferred_format.sampleType() << endl;
-//    cout << "preferred_format = " << info.isFormatSupported(preferred_format) << endl;
 
+#if 0
+    cout << "display_name = " << display_name << endl;
+    cout << "channelCount = " << preferred_format.channelCount() << endl;
+    cout << "sampleRate = " << preferred_format.sampleRate() << endl;
+    cout << "sampleFormat = " << (int)preferred_format.sampleFormat() << endl;
+    cout << "preferred_format = " << info.isFormatSupported(preferred_format) << endl;
+
+    for (const QAudioFormat::SampleFormat& format : info.supportedSampleFormats()){
+        cout << "supported format: " << (int)format << endl;
+    }
+#endif
+
+#if 0
 #if QT_VERSION_MAJOR == 6 || (QT_VERSION_MAJOR == 5 && __GNUC__)
     //  On Qt6, "QAudioFormat::preferredFormat()" always returns stereo 44.1 kHz.
     //  Unlike Qt5, it does not return the native format of the device
@@ -141,6 +197,7 @@ std::vector<AudioChannelFormat> supported_input_formats(int& preferred_index, co
     //  mono 96000 which will be the case for standard capture cards.
     preferred_channels = 1;
     preferred_rate = 96000;
+#endif
 #endif
 
     std::vector<AudioChannelFormat> ret;
@@ -370,24 +427,41 @@ std::vector<AudioDeviceInfo> AudioDeviceInfo::all_output_devices(){
         Data& data = *list.back().m_body;
 
         std::string name = device.deviceName().toStdString();
+
+        std::string str = name + "\n";
+        str += format_to_str(device.preferredFormat());
+        global_logger_tagged().log(str);
+
         data.device_name = name;
         data.display_name = std::move(name);
         data.info = std::move(device);
 
         data.supported_formats = supported_output_formats(data.preferred_format_index, data.info);
+
     }
 #elif QT_VERSION_MAJOR == 6
     for (NativeAudioInfo& device : QMediaDevices::audioOutputs()){
         list.emplace_back();
         Data& data = *list.back().m_body;
 
+        std::string name = device.description().toStdString();
+
+        std::string str = name + "\n";
+        str += format_to_str(device.preferredFormat());
+        global_logger_tagged().log(str);
+
         data.device_name = device.id().toStdString();
-        data.display_name = device.description().toStdString();
+        data.display_name = std::move(name);
         data.info = std::move(device);
 
         data.supported_formats = supported_output_formats(data.preferred_format_index, data.info);
     }
 #endif
+
+    bool show_all_devices = GlobalSettings::instance().AUDIO_PIPELINE->SHOW_ALL_DEVICES;
+    if (show_all_devices){
+        return list;
+    }
 
     //  Get map of greatest format counts.
     std::map<std::string, size_t> most_formats;

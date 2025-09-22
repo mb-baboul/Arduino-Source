@@ -1,6 +1,6 @@
 /*  Pokemon Summary Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,7 +9,7 @@
 
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonTools/VisualDetector.h"
 #include "PokemonSV_WhiteButtonDetector.h"
 
 namespace PokemonAutomation{
@@ -21,13 +21,13 @@ namespace PokemonSV{
 bool is_summary_color(const ImageStats& stats);
 
 
-
+// Detect pokemon status summary page
 class PokemonSummaryDetector : public StaticScreenDetector{
 public:
     PokemonSummaryDetector(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     bool is_shiny(const ImageViewRGB32& screen) const;
 

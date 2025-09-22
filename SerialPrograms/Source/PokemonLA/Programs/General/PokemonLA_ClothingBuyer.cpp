@@ -1,6 +1,6 @@
 /*  Clothing Buyer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -20,9 +20,9 @@ ClothingBuyer_Descriptor::ClothingBuyer_Descriptor()
         STRING_POKEMON + " LA", "Clothing Buyer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/ClothingBuyer.md",
         "Buy out all the clothing in the store.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -38,7 +38,7 @@ ClothingBuyer::ClothingBuyer()
 }
 
 
-void ClothingBuyer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void ClothingBuyer::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     //  Connect the controller.
     pbf_press_button(context, BUTTON_LCLICK, 5, 5);
 

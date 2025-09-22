@@ -1,6 +1,6 @@
 /*  Shiny Hunt Autonomous - Regigigas2
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,12 +9,12 @@
 
 #include "Common/Cpp/Options/StaticTextOption.h"
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
 #include "NintendoSwitch/Options/NintendoSwitch_StartInGripMenuOption.h"
 #include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
-#include "Pokemon/Options/Pokemon_EncounterBotOptions.h"
+//#include "Pokemon/Options/Pokemon_EncounterBotOptions.h"
 #include "PokemonSwSh/Options/PokemonSwSh_DateToucher.h"
 #include "PokemonSwSh/Options/PokemonSwSh_EncounterBotCommon.h"
 
@@ -35,10 +35,10 @@ public:
 class ShinyHuntAutonomousRegigigas2 : public SingleSwitchProgramInstance{
 public:
     ShinyHuntAutonomousRegigigas2();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    bool kill_and_return(ConsoleHandle& console, BotBaseContext& context) const;
+    bool kill_and_return(VideoStream& stream, ProControllerContext& context) const;
 
 private:
     StartInGripOrGameOption START_LOCATION;
@@ -49,9 +49,6 @@ private:
     EncounterBotCommonOptions ENCOUNTER_BOT_OPTIONS;
 
     EventNotificationsOption NOTIFICATIONS;
-
-    SectionDividerOption m_advanced_options;
-    TimeExpressionOption<uint16_t> CATCH_TO_OVERWORLD_DELAY;
 };
 
 }

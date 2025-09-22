@@ -1,22 +1,20 @@
 /*  Autostory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_AutoStory_H
 #define PokemonAutomation_PokemonSV_AutoStory_H
 
-#include <functional>
 #include "Common/Cpp/Options/StaticTextOption.h"
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
 #include "Common/Cpp/Options/FloatingPointOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
-#include "CommonFramework/Options/StringSelectOption.h"
+#include "CommonTools/Options/StringSelectOption.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 
 namespace PokemonAutomation{
@@ -38,24 +36,27 @@ public:
     ~AutoStory();
     AutoStory();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
-    void test_code(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void test_code(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
     // test the checkpoints from start to end, inclusive
     // test each checkpoints "loop" number of times
     void test_checkpoints(
         SingleSwitchProgramEnvironment& env,
-        ConsoleHandle& console, 
-        BotBaseContext& context,
+        VideoStream& stream,
+        ProControllerContext& context,
         int start, int end, 
         int loop, int start_loop, int end_loop
     );
 
-    void run_autostory(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    size_t get_start_segment_index();
+    size_t get_end_segment_index();
+
+    void run_autostory(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
 private:
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
     std::string start_segment_description();
     std::string end_segment_description();
@@ -76,6 +77,7 @@ private:
     StringSelectOption STARTPOINT_MAINSTORY;
     StringSelectOption ENDPOINT_MAINSTORY;
 
+    StaticTextOption SETUP_NOTE;
     StaticTextOption MAINSTORY_NOTE;
 
     StaticTextOption START_DESCRIPTION;
@@ -126,7 +128,7 @@ private:
     FloatingPointOption DIR_RADIANS;
 };
 
-
+const std::vector<std::unique_ptr<AutoStory_Segment>>& ALL_AUTO_STORY_SEGMENT_LIST();
 
 
 

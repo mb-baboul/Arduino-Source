@@ -1,17 +1,17 @@
 /*  Battle Move Selection Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonLA/Inference/PokemonLA_CommonColorCheck.h"
 #include "PokemonLA_BattlePokemonSwitchDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -57,7 +57,7 @@ bool BattlePokemonSwitchDetector::process_frame(const ImageViewRGB32& frame, Wal
     }
 
     const ImageStats white_3 = image_stats(extract_box_reference(frame, m_white_bg_3));
-    if(is_white(white_3, 500, 10) == false){
+    if(is_white(white_3, 500, 15) == false){
         // std::cout << "no white_3" << std::endl;
         m_detected.store(false, std::memory_order_release);
         return false;

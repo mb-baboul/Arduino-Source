@@ -1,6 +1,6 @@
 /*  Self Box Trade
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -14,7 +14,8 @@
 namespace PokemonAutomation{
 namespace NintendoSwitch{
 namespace PokemonBDSP{
-    using namespace Pokemon;
+
+using namespace Pokemon;
 
 
 SelfBoxTrade_Descriptor::SelfBoxTrade_Descriptor()
@@ -23,9 +24,9 @@ SelfBoxTrade_Descriptor::SelfBoxTrade_Descriptor()
         STRING_POKEMON + " BDSP", "Self Box Trade",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/SelfBoxTrade.md",
         "Trade boxes of " + STRING_POKEMON + " between two local Switches.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB,
         2, 2, 2
     )
 {}
@@ -60,8 +61,8 @@ void SelfBoxTrade::program(MultiSwitchProgramEnvironment& env, CancellableScope&
 
     for (uint8_t box = 0; box < BOXES_TO_TRADE; box++){
         if (box != 0){
-            env.run_in_parallel(scope, [](ConsoleHandle& console, BotBaseContext& context){
-                pbf_press_button(context, BUTTON_R, 20, GameSettings::instance().BOX_CHANGE_DELAY_0);
+            env.run_in_parallel(scope, [](ConsoleHandle& console, ProControllerContext& context){
+                pbf_press_button(context, BUTTON_R, 160ms, GameSettings::instance().BOX_CHANGE_DELAY0);
             });
         }
         trade_current_box(env, scope, NOTIFICATION_STATUS_UPDATE, stats);

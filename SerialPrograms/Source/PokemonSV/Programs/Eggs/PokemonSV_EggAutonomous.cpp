@@ -1,6 +1,6 @@
 /*  Egg Autonomous
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,11 +9,12 @@
 #include "CommonFramework/Exceptions/ProgramFinishedException.h"
 #include "CommonFramework/Exceptions/FatalProgramException.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
+//#include "CommonFramework/Exceptions/UnexpectedBattleException.h"
 #include "CommonFramework/Options/Environment/ThemeSelectorOption.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "Pokemon/Pokemon_Notification.h"
@@ -23,10 +24,12 @@
 #include "PokemonSV/Programs/Boxes/PokemonSV_BoxRoutines.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV/Programs/Eggs/PokemonSV_EggRoutines.h"
 #include "PokemonSV/Programs/Boxes/PokemonSV_BoxRelease.h"
 #include "PokemonSV/Programs/Sandwiches/PokemonSV_SandwichRoutines.h"
+#include "PokemonSV/Programs/AutoStory/PokemonSV_MenuOption.h"
 #include "PokemonSV_EggAutonomous.h"
 
 namespace PokemonAutomation{
@@ -42,9 +45,9 @@ EggAutonomous_Descriptor::EggAutonomous_Descriptor()
         STRING_POKEMON + " SV", "Egg Autonomous",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/EggAutonomous.md",
         "Automatically get meal power, fetch eggs from a picnic and hatch them.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct EggAutonomous_Descriptor::Stats : public StatsTracker{
@@ -90,6 +93,15 @@ EggAutonomous::EggAutonomous()
         LockMode::LOCK_WHILE_RUNNING,
         true
     )
+    , LOCATION(
+        "<b>Location:</b><br>The location to hatch eggs.",
+        {
+            {EggAutoLocation::ZeroGate,         "zero-gate",        "Zero Gate"},
+            {EggAutoLocation::NorthLighthouse,  "north-lighthouse", "North Province (Area Three) Lighthouse"}
+        },
+        LockMode::LOCK_WHILE_RUNNING,
+        EggAutoLocation::ZeroGate
+    )
     , MAX_KEEPERS(
         "<b>Max Keepers:</b><br>Stop the program after keeping this many " + STRING_POKEMON + ". "
         "The program will put them into a box neighboring the current box.",
@@ -99,7 +111,7 @@ EggAutonomous::EggAutonomous()
     , AUTO_SAVING(
         "<b>Auto-Saving:</b><br>Automatically save the game to recover from crashes and allow eggs to be unhatched.<br>" +
         make_text_url(
-            ONLINE_DOC_URL + "ComputerControl/blob/master/Wiki/Programs/PokemonSV/EggAutonomous.md#auto-saving-mode",
+            ONLINE_DOC_URL_BASE + "ComputerControl/blob/master/Wiki/Programs/PokemonSV/EggAutonomous.md#auto-saving-mode",
             "See the wiki for the full explanations of each mode."
         ),
         {
@@ -170,6 +182,7 @@ EggAutonomous::EggAutonomous()
     PA_ADD_OPTION(GO_HOME_WHEN_DONE);
     PA_ADD_OPTION(LANGUAGE);
     PA_ADD_OPTION(EGG_SANDWICH);
+    PA_ADD_OPTION(LOCATION);
     PA_ADD_OPTION(MAX_KEEPERS);
     PA_ADD_OPTION(AUTO_SAVING);
     PA_ADD_OPTION(KEEP_BOX_LOCATION);
@@ -180,11 +193,11 @@ EggAutonomous::EggAutonomous()
 }
 
 
-void EggAutonomous::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void EggAutonomous::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
     //  Connect the controller.
-    pbf_press_button(context, BUTTON_L, 10, 0);
+    pbf_press_button(context, BUTTON_L, 10, 100);
 
     {
         // reset_position_to_flying_spot(env, context);
@@ -196,7 +209,7 @@ void EggAutonomous::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
         //     process_one_baby(env, context, i, 5);
         // }
 
-        // eat_egg_sandwich_at_picnic(env.program_info(), env.realtime_dispatcher(), env.console, context,
+        // eat_egg_sandwich_at_picnic(env.program_info(), env.normal_inference_dispatcher(), env.console, context,
         //     EGG_SANDWICH_TYPE, SWEET_HERB_INDEX_BACKWARDS.current_value());
         // return;
     }
@@ -209,7 +222,7 @@ void EggAutonomous::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
     m_num_sandwich_spent = 0;
     m_num_kept = 0;
     size_t consecutive_failures = 0;
-    while(true){
+    while (true){
         m_saved_after_fetched_eggs = false;
         m_in_critical_to_save_stage = false;
 
@@ -225,24 +238,42 @@ void EggAutonomous::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
 
         // Recoverable loop to fetch eggs:
         int num_party_eggs = -1;
-        while(true){
+        while (true){
             try{
                 num_party_eggs = fetch_eggs_full_routine(env, context);
                 break;
-            }catch (OperationFailedException& e){
-                handle_recoverable_error(env, context, NOTIFICATION_ERROR_RECOVERABLE, e, consecutive_failures);
+            }catch (ScreenshotException& e){
+                if (handle_recoverable_error(
+                    env, context,
+                    NOTIFICATION_ERROR_RECOVERABLE,
+                    e,
+                    consecutive_failures
+                )){
+                    throw;
+                }
             } // end try catch
         } // end recoverable loop to fetch eggs:
 
         // Recoverable loop to hatch eggs
         bool game_already_resetted = false;
-        while(true){
+        while (true){
             try{
                 hatch_eggs_full_routine(env, context, num_party_eggs);
                 consecutive_failures = 0;
                 break;
-            }catch (OperationFailedException& e){
-                handle_recoverable_error(env, context, NOTIFICATION_ERROR_RECOVERABLE, e, consecutive_failures);
+            }catch (ProgramFinishedException&){
+                env.update_stats();
+                GO_HOME_WHEN_DONE.run_end_of_program(context);
+                send_program_finished_notification(env, NOTIFICATION_PROGRAM_FINISH);
+                return;
+            }catch (ScreenshotException& e){
+                if (handle_recoverable_error(
+                    env, context,
+                    NOTIFICATION_ERROR_RECOVERABLE,
+                    e, consecutive_failures
+                )){
+                    throw;
+                }
                 // After resetting the game, we don't know how many eggs in party
                 num_party_eggs = -1;
 
@@ -253,11 +284,6 @@ void EggAutonomous::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
                     game_already_resetted = true;
                     break;
                 }
-            }catch (ProgramFinishedException&){
-                env.update_stats();
-                GO_HOME_WHEN_DONE.run_end_of_program(context);
-                send_program_finished_notification(env, NOTIFICATION_PROGRAM_FINISH);
-                return;
             } // end try catch
         } // end recoverable loop to hatch eggs
 
@@ -276,7 +302,7 @@ void EggAutonomous::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
             env.log("Resetting game since nothing found, saving sandwich ingredients.");
             reset_game(env.program_info(), env.console, context);
         }else{ // game_already_resetted == true
-            env.log("Game resetted back to egg fetching routine.");
+            env.log("Game reset back to egg fetching routine.");
         }
 
         if (m_num_sandwich_spent >= max_num_sandwiches){
@@ -293,10 +319,15 @@ void EggAutonomous::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
 }
 
 // start at Area Zero flying spot, start picnic, make sandwich, then fetch eggs at basket.
-int EggAutonomous::fetch_eggs_full_routine(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+int EggAutonomous::fetch_eggs_full_routine(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     auto& stats = env.current_stats<EggAutonomous_Descriptor::Stats>();
 
-    picnic_at_zero_gate(env.program_info(), env.console, context);
+    if (LOCATION == EggAutoLocation::ZeroGate) {
+        picnic_at_zero_gate(env.program_info(), env.console, context);
+    } else {
+        pbf_press_button(context, BUTTON_L, 50, 40);
+        picnic_from_overworld(env.program_info(), env.console, context);
+    }
     // Now we are at picnic. We are at one end of picnic table while the egg basket is at the other end
     bool can_make_sandwich = eat_egg_sandwich_at_picnic(env, env.console, context,
         EGG_SANDWICH.EGG_SANDWICH_TYPE, LANGUAGE);
@@ -322,7 +353,13 @@ int EggAutonomous::fetch_eggs_full_routine(SingleSwitchProgramEnvironment& env, 
     leave_picnic(env.program_info(), env.console, context);
 
     // Reset position to flying spot:
-    reset_position_to_flying_spot(env, context);
+    if (LOCATION == EggAutoLocation::ZeroGate) {
+        reset_position_to_flying_spot(env, context);
+    } else {
+        //Lighthouse: We haven't moved much so just fly.
+        open_map_from_overworld(env.program_info(), env.console, context);
+        fly_to_overworld_from_map(env.program_info(), env.console, context);
+    }
 
     return picnic_party_to_hatch_party(env, context);
 }
@@ -333,7 +370,7 @@ int EggAutonomous::fetch_eggs_full_routine(SingleSwitchProgramEnvironment& env, 
 // When immediately called after fetching routine finishes, assumes the party is already loaded with the first column of
 // eggs and the number of eggs is provided by `num_eggs_in_party`.
 // When called after an error recovery, assumes the party is loaded with some unknown number of eggs, and `num_eggs_in_party` is -1.
-void EggAutonomous::hatch_eggs_full_routine(SingleSwitchProgramEnvironment& env, BotBaseContext& context, int num_eggs_in_party){
+void EggAutonomous::hatch_eggs_full_routine(SingleSwitchProgramEnvironment& env, ProControllerContext& context, int num_eggs_in_party){
     auto& stats = env.current_stats<EggAutonomous_Descriptor::Stats>();
 
     // index of the egg column in box to be loaded next, 0-indexed
@@ -420,8 +457,16 @@ void EggAutonomous::hatch_eggs_full_routine(SingleSwitchProgramEnvironment& env,
             stats.m_hatched++;
             env.update_stats();
         };
-        hatch_eggs_at_zero_gate(env.program_info(), env.console, context, (uint8_t)num_eggs_in_party, hatched_callback);
-        reset_position_to_flying_spot(env, context);
+        if (LOCATION == EggAutoLocation::ZeroGate) {
+            hatch_eggs_at_zero_gate(env.program_info(), env.console, context, (uint8_t)num_eggs_in_party, hatched_callback);
+            reset_position_to_flying_spot(env, context);
+        } else {
+            hatch_eggs_at_area_three_lighthouse(env.program_info(), env.console, context, (uint8_t)num_eggs_in_party, hatched_callback);
+            reset_position_to_flying_spot(env, context);
+            //Clear spawns - over time floette/vivillon drift over past the fence (usually aroudn the 3rd batch)
+            picnic_from_overworld(env.program_info(), env.console, context);
+            leave_picnic(env.program_info(), env.console, context);
+        }
 
         enter_box_system_from_overworld(env.program_info(), env.console, context);
         
@@ -506,7 +551,7 @@ void EggAutonomous::hatch_eggs_full_routine(SingleSwitchProgramEnvironment& env,
 
 // While in box system and the current box is egg box, process one baby pokemon in party
 // Return true if the program finds a pokemon to keep
-void EggAutonomous::process_one_baby(SingleSwitchProgramEnvironment& env, BotBaseContext& context, uint8_t egg_index, uint8_t num_eggs_in_party){
+void EggAutonomous::process_one_baby(SingleSwitchProgramEnvironment& env, ProControllerContext& context, uint8_t egg_index, uint8_t num_eggs_in_party){
     auto& stats = env.current_stats<EggAutonomous_Descriptor::Stats>();
 
     // Check each pokemon from bottom to top. In this way we can reliably detect end of releasing the pokemon.
@@ -563,7 +608,7 @@ void EggAutonomous::process_one_baby(SingleSwitchProgramEnvironment& env, BotBas
             send_keep_notification();
 
             if (move_pokemon_to_keep(env, context, party_row) == false){
-                env.log("No empty slot availble to place new pokemon.");
+                env.log("No empty slot available to place new pokemon.");
                 env.console.overlay().add_log("No box space", COLOR_RED);
                 throw ProgramFinishedException();
             }
@@ -590,7 +635,7 @@ void EggAutonomous::process_one_baby(SingleSwitchProgramEnvironment& env, BotBas
 
 // From the egg box, move to the kept box, drop the pokemon to an empty spot in the box, move back to the egg box.
 // Return false if it does not find an empty spot.
-bool EggAutonomous::move_pokemon_to_keep(SingleSwitchProgramEnvironment& env, BotBaseContext& context, uint8_t pokemon_row_in_party){
+bool EggAutonomous::move_pokemon_to_keep(SingleSwitchProgramEnvironment& env, ProControllerContext& context, uint8_t pokemon_row_in_party){
     SomethingInBoxSlotDetector sth_in_box_detector(COLOR_RED);
     const size_t keep_box_location = KEEP_BOX_LOCATION.current_value();
     if (keep_box_location == 0){
@@ -628,17 +673,22 @@ bool EggAutonomous::move_pokemon_to_keep(SingleSwitchProgramEnvironment& env, Bo
     return false;
 }
 
-void EggAutonomous::reset_position_to_flying_spot(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void EggAutonomous::reset_position_to_flying_spot(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     // Use map to fly back to the flying spot
     open_map_from_overworld(env.program_info(), env.console, context);
-    pbf_move_left_joystick(context, 128, 160, 20, 50);
+    if (LOCATION == EggAutoLocation::ZeroGate) {
+        pbf_move_left_joystick(context, 128, 160, 20, 50);
+    } else { //lighthouse
+        pbf_move_left_joystick(context, 130, 0, 150ms, 50ms);
+        pbf_press_button(context, BUTTON_ZL, 40, 100);
+    }
     fly_to_overworld_from_map(env.program_info(), env.console, context);
 }
 
 // From overworld, change pokemon party from the one used for getting eggs, to the one used for hatching
 // The new party will be one flame body pokemon as lead, and some eggs.
 // Function returns how many eggs are in the party
-int EggAutonomous::picnic_party_to_hatch_party(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+int EggAutonomous::picnic_party_to_hatch_party(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     env.console.overlay().add_log("Change to hatching", COLOR_WHITE);
     // change pokemon party from used for fetching eggs in picnic, to hatching on your ride.
 
@@ -672,7 +722,7 @@ int EggAutonomous::picnic_party_to_hatch_party(SingleSwitchProgramEnvironment& e
 }
 
 
-void EggAutonomous::save_game(SingleSwitchProgramEnvironment& env, BotBaseContext& context, bool from_overworld){
+void EggAutonomous::save_game(SingleSwitchProgramEnvironment& env, ProControllerContext& context, bool from_overworld){
     try{
         if (from_overworld){
             save_game_from_overworld(env.program_info(), env.console, context);
@@ -686,17 +736,36 @@ void EggAutonomous::save_game(SingleSwitchProgramEnvironment& env, BotBaseContex
     }
 }
 
+void change_settings_egg_program(SingleSwitchProgramEnvironment& env, ProControllerContext& context,  Language language){
+    int8_t options_index = 4;
+    enter_menu_from_overworld(env.program_info(), env.console, context, options_index, MenuSide::RIGHT);
+    MenuOption session(env.console, context, language);
 
-void EggAutonomous::handle_recoverable_error(
-    SingleSwitchProgramEnvironment& env, BotBaseContext& context,
+    std::vector<std::pair<MenuOptionItemEnum, std::vector<MenuOptionToggleEnum>>> options = {
+        {MenuOptionItemEnum::TEXT_SPEED, {MenuOptionToggleEnum::FAST}},
+        {MenuOptionItemEnum::SKIP_MOVE_LEARNING, {MenuOptionToggleEnum::ON}},
+        {MenuOptionItemEnum::GIVE_NICKNAMES, {MenuOptionToggleEnum::OFF}},
+        {MenuOptionItemEnum::CAMERA_SUPPORT, {MenuOptionToggleEnum::ON}},
+        {MenuOptionItemEnum::AUTOSAVE, {MenuOptionToggleEnum::OFF}},
+
+    };
+    session.set_options(options); 
+
+    pbf_mash_button(context, BUTTON_A, 1 * TICKS_PER_SECOND);
+    clear_dialog(env.console, context, ClearDialogMode::STOP_TIMEOUT, 5, {CallbackEnum::PROMPT_DIALOG});
+    press_Bs_to_back_to_overworld(env.program_info(), env.console, context);    
+}
+
+
+bool EggAutonomous::handle_recoverable_error(
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
     EventNotificationOption& notification,
-    OperationFailedException& e,
+    const ScreenshotException& e,
     size_t& consecutive_failures
 ){
     auto& stats = env.current_stats<EggAutonomous_Descriptor::Stats>();
     stats.m_errors++;
     env.update_stats();
-    e.send_notification(env, notification);
 
     if (SAVE_DEBUG_VIDEO){
         // Take a video to give more context for debugging
@@ -705,7 +774,7 @@ void EggAutonomous::handle_recoverable_error(
     }
     // if there is no auto save, then we shouldn't reset game to lose previous progress.
     if (AUTO_SAVING == AutoSave::NoAutoSave){
-        throw std::move(e);
+        return true;
     }
 
     if (AUTO_SAVING == AutoSave::AfterStartAndKeep && m_in_critical_to_save_stage){
@@ -715,19 +784,27 @@ void EggAutonomous::handle_recoverable_error(
         // in this auto saving mode, every batch of eggs have been saved beforehand.
         env.log("Found an error before we can save the game to protect the newly kept pokemon.", COLOR_RED);
         env.log("Don't reset game to protect it.", COLOR_RED);
-        throw std::move(e);
+        return true;
     }
-
+    std::string fail_message = e.message();
     consecutive_failures++;
     if (consecutive_failures >= 3){
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Failed 3 times in the row."
+            ErrorReport::SEND_ERROR_REPORT,
+            "Failed 3 times in the row.\n" + fail_message,
+            env.console
         );
     }
+    e.send_recoverable_notification(env);
 
     env.log("Reset game to handle recoverable error");
     reset_game(env.program_info(), env.console, context);
+
+    if (e.message().find("collect_eggs_from_basket") != std::string::npos){
+        change_settings_egg_program(env, context, LANGUAGE);
+    }
+
+    return false;
 }
 
 

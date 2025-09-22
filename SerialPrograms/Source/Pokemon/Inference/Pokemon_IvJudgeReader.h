@@ -1,13 +1,13 @@
 /*  IV Judge Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_Pokemon_IvJudgeReader_H
 #define PokemonAutomation_Pokemon_IvJudgeReader_H
 
-#include "CommonFramework/OCR/OCR_SmallDictionaryMatcher.h"
+#include "CommonTools/OCR/OCR_SmallDictionaryMatcher.h"
 #include "Pokemon/Pokemon_IvJudge.h"
 
 namespace PokemonAutomation{

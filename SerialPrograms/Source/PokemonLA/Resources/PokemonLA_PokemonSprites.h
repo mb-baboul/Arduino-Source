@@ -1,13 +1,13 @@
 /*  Pokemon LA Sprites
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonLA_PokemonSprites_H
 #define PokemonAutomation_PokemonLA_PokemonSprites_H
 
-#include "CommonFramework/Resources/SpriteDatabase.h"
+#include "CommonTools/Resources/SpriteDatabase.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

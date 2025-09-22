@@ -1,6 +1,6 @@
 /*  Mass Purchase
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -30,11 +30,11 @@ class MassPurchase : public SingleSwitchProgramInstance{
 public:
     MassPurchase();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    bool mass_purchase(ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context);
-    bool extra_items(ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context);
+    bool mass_purchase(ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context);
+    bool extra_items(ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context);
     
 private:
     SimpleIntegerOption<uint16_t> ITEMS;

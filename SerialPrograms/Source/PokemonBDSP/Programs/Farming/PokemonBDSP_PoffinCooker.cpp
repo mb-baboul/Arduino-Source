@@ -1,17 +1,16 @@
 /*  Poffin Cooker
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/Tools/StatsTracking.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
-#include "PokemonBDSP/PokemonBDSP_Settings.h"
 #include "PokemonBDSP_PoffinCooker.h"
 
 namespace PokemonAutomation{
@@ -26,9 +25,9 @@ PoffinCooker_Descriptor::PoffinCooker_Descriptor()
         STRING_POKEMON + " BDSP", "Poffin Cooker",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/PoffinCooker.md",
         "Cook Poffins.",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct PoffinCooker_Descriptor::Stats : public StatsTracker{
@@ -63,7 +62,7 @@ bool turn = true; // True to turn clockwise, false to turn counter-clockwise
 
 ImageFloatBox box(0.56, 0.724, 0.012, 0.024); // Create a box that contains both green and blue arrows that need to be detected
 
-void TurnClockwiseSlow(BotBaseContext& context){ // One turn of stiring poffin at slow speed (clockwise)
+void TurnClockwiseSlow(ProControllerContext& context){ // One turn of stirring poffin at slow speed (clockwise)
     pbf_move_right_joystick(context, 128, 255, 5, 0);
     pbf_move_right_joystick(context, 53, 231, 5, 0);
     pbf_move_right_joystick(context, 6, 167, 5, 0);
@@ -76,7 +75,7 @@ void TurnClockwiseSlow(BotBaseContext& context){ // One turn of stiring poffin a
     pbf_move_right_joystick(context, 202, 231, 5, 0);  
 }
 
-void TurnClockwiseFast(BotBaseContext& context){ // Same as above, but faster for the end of the cooking session
+void TurnClockwiseFast(ProControllerContext& context){ // Same as above, but faster for the end of the cooking session
     pbf_move_right_joystick(context, 128, 255, 5, 0);
     pbf_move_right_joystick(context, 38, 218, 5, 0);
     pbf_move_right_joystick(context, 0, 128, 5, 0);
@@ -88,7 +87,7 @@ void TurnClockwiseFast(BotBaseContext& context){ // Same as above, but faster fo
 }
 
 
-void TurnCounterClockwiseSlow(BotBaseContext& context){ // One turn of stiring poffin (counter-clockwise)
+void TurnCounterClockwiseSlow(ProControllerContext& context){ // One turn of stirring poffin (counter-clockwise)
     pbf_move_right_joystick(context, 128, 255, 5, 0);
     pbf_move_right_joystick(context, 202, 231, 5, 0);
     pbf_move_right_joystick(context, 249, 167, 5, 0);
@@ -101,7 +100,7 @@ void TurnCounterClockwiseSlow(BotBaseContext& context){ // One turn of stiring p
     pbf_move_right_joystick(context, 53, 231, 5, 0);
 }
 
-void TurnCounterClockwiseFast(BotBaseContext& context){ // Same as above, but faster for the end of the cooking session
+void TurnCounterClockwiseFast(ProControllerContext& context){ // Same as above, but faster for the end of the cooking session
     pbf_move_right_joystick(context, 128, 255, 5, 0);
     pbf_move_right_joystick(context, 218, 218, 5, 0); 
     pbf_move_right_joystick(context, 255, 128, 5, 0);
@@ -113,7 +112,7 @@ void TurnCounterClockwiseFast(BotBaseContext& context){ // Same as above, but fa
 }
 
 
-void PoffinCooker::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void PoffinCooker::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     PoffinCooker_Descriptor::Stats& stats = env.current_stats<PoffinCooker_Descriptor::Stats>();
     env.update_stats();
 

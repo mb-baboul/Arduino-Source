@@ -1,6 +1,6 @@
 /*  Clothing Buyer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -25,7 +25,7 @@ class ClothingBuyer : public SingleSwitchProgramInstance{
 public:
     ClothingBuyer();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
 

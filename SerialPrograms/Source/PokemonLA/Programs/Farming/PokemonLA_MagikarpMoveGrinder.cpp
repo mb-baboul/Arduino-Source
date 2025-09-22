@@ -1,18 +1,16 @@
 /*  Ingo Battle Grinder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <chrono>
 #include <iostream>
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/ImageTypes/ImageViewRGB32.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/VideoPipeline/VideoFeed.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonLA/Inference/Battles/PokemonLA_BattleMenuDetector.h"
@@ -33,9 +31,9 @@ MagikarpMoveGrinder_Descriptor::MagikarpMoveGrinder_Descriptor()
         STRING_POKEMON + " LA", "Magikarp Move Grinder",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/MagikarpMoveGrinder.md",
         "grind status moves with any style against a Magikarp to finish " + STRING_POKEDEX + " research tasks.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 class MagikarpMoveGrinder_Descriptor::Stats : public StatsTracker{
@@ -82,7 +80,7 @@ MagikarpMoveGrinder::MagikarpMoveGrinder()
 
 
 
-void MagikarpMoveGrinder::grind_mimic(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void MagikarpMoveGrinder::grind_mimic(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     MagikarpMoveGrinder_Descriptor::Stats& stats = env.current_stats<MagikarpMoveGrinder_Descriptor::Stats>();
     env.log("Special case: grinding Mimic...");
 
@@ -109,8 +107,9 @@ void MagikarpMoveGrinder::grind_mimic(SingleSwitchProgramEnvironment& env, BotBa
 //            auto snapshot = env.console.video().snapshot();
 //            dump_image(env.logger(), env.program_info(), "BattleMenuNotFound", snapshot);
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Failed to find battle menu after 2 minutes."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Failed to find battle menu after 2 minutes.",
+                env.console
             );
         }
 
@@ -155,7 +154,7 @@ void MagikarpMoveGrinder::grind_mimic(SingleSwitchProgramEnvironment& env, BotBa
     }
 }
 
-void MagikarpMoveGrinder::battle_magikarp(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void MagikarpMoveGrinder::battle_magikarp(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     MagikarpMoveGrinder_Descriptor::Stats& stats = env.current_stats<MagikarpMoveGrinder_Descriptor::Stats>();
 
     // Which pokemon in the party is not fainted
@@ -179,8 +178,9 @@ void MagikarpMoveGrinder::battle_magikarp(SingleSwitchProgramEnvironment& env, B
 //            auto snapshot = env.console.video().snapshot();
 //            dump_image(env.logger(), env.program_info(), "BattleMenuNotFound", snapshot);
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Failed to find battle menu after 2 minutes."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Failed to find battle menu after 2 minutes.",
+                env.console
             );
         }
 
@@ -231,11 +231,11 @@ void MagikarpMoveGrinder::battle_magikarp(SingleSwitchProgramEnvironment& env, B
 
 
 
-void MagikarpMoveGrinder::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void MagikarpMoveGrinder::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     MagikarpMoveGrinder_Descriptor::Stats& stats = env.current_stats<MagikarpMoveGrinder_Descriptor::Stats>();
 
     if (POKEMON_ACTIONS.num_pokemon() == 0){
-        throw UserSetupError(env.console, "No Pokemon sepecified to grind.");
+        throw UserSetupError(env.console, "No Pokemon specified to grind.");
     }
 
     //  Connect the controller.

@@ -1,18 +1,16 @@
 /*  ESP Training
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/PrettyPrint.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-//#include "PokemonSV/Programs/PokemonSV_Navigation.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_OverworldDetector.h"
@@ -31,9 +29,9 @@ ESPTraining_Descriptor::ESPTraining_Descriptor()
         STRING_POKEMON + " SV", "ESP Training",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/ESPTraining.md",
         "Clear the ESP Training to farm EV berries.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct ESPTraining_Descriptor::Stats : public StatsTracker{
@@ -89,7 +87,7 @@ ESPTraining::ESPTraining()
     PA_ADD_OPTION(NOTIFICATIONS);
 }
 
-void ESPTraining::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void ESPTraining::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
     ESPTraining_Descriptor::Stats& stats = env.current_stats<ESPTraining_Descriptor::Stats>();
 
@@ -182,7 +180,7 @@ void ESPTraining::program(SingleSwitchProgramEnvironment& env, BotBaseContext& c
                     break;
                 case Detection::GREY:
                     //Press any button to start next round
-                    //Pressing A tends to make Dendra :D two extra times during the transistion so press B instead
+                    //Pressing A tends to make Dendra :D two extra times during the transition so press B instead
                     //Sometimes this is detected as blue, the B press there also works
                     env.log("ESPEmotionDetector: Grey - Mash though dialog", COLOR_BLACK);
                     emotion_button = BUTTON_B;
@@ -225,9 +223,9 @@ void ESPTraining::program(SingleSwitchProgramEnvironment& env, BotBaseContext& c
 
         //Program done, mash B until overworld detected
         OverworldWatcher overworld(env.console, COLOR_CYAN);
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [](BotBaseContext& context){
+            [](ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_B, 700);
             },
             {overworld}

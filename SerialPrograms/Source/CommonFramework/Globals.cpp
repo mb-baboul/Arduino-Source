@@ -1,10 +1,11 @@
 /*  Globals
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <QCoreApplication>
+#include <QStandardPaths>
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
@@ -24,8 +25,8 @@ namespace PokemonAutomation{
 
 const bool IS_BETA_VERSION = true;
 const int PROGRAM_VERSION_MAJOR = 0;
-const int PROGRAM_VERSION_MINOR = 50;
-const int PROGRAM_VERSION_PATCH = 15;
+const int PROGRAM_VERSION_MINOR = 57;
+const int PROGRAM_VERSION_PATCH = 3;
 
 const std::string PROGRAM_VERSION_BASE =
     "v" + std::to_string(PROGRAM_VERSION_MAJOR) +
@@ -42,15 +43,37 @@ const std::string PROGRAM_VERSION = PROGRAM_VERSION_BASE + "-user";
 
 
 
-
 const std::string PROGRAM_NAME = "Pok\u00e9mon Automation";
 
-const std::string DISCORD_LINK = "discord.gg/PokemonAutomation";
-const std::string DISCORD_LINK_URL = "https://discord.gg/cQ4gWxN";
-const std::string ONLINE_DOC_URL = "https://github.com/PokemonAutomation/";
-const std::string PROJECT_GITHUB = "github.com/PokemonAutomation";
-const std::string PROJECT_GITHUB_URL = "https://github.com/PokemonAutomation/";
+const std::string ONLINE_DOC_URL_BASE = "https://github.com/PokemonAutomation/";
 const std::string PROJECT_SOURCE_URL = "https://github.com/PokemonAutomation/Arduino-Source/";
+const std::string RESOURCES_URL_BASE = "https://github.com/PokemonAutomation/Packages/";
+
+
+
+//  This the URL that we display. We don't actually use this for linking.
+const std::string GITHUB_LINK_TEXT = "github.com/PokemonAutomation";
+
+//  This is the URL that we actually link to.
+const std::string GITHUB_LINK_URL = "https://github.com/PokemonAutomation/About/blob/master/README.md";
+
+
+
+//  URL to display. (the vanity link)
+//  We don't actually use this URL for linking since the vanity link will go
+//  away if we lose too many nitro boosts.
+const std::string DISCORD_LINK_TEXT = "discord.gg/PokemonAutomation";
+
+//  URL to use inside the program.
+const std::string DISCORD_LINK_URL_PROGRAM = "https://discord.gg/BSjDp27";
+
+//  URL to use in the Discord notifications/embeds.
+const std::string DISCORD_LINK_URL_EMBED = "https://discord.gg/xMJcveK";
+
+// URL to use in the DiscordSocialSDK integration.
+const std::string DISCORD_LINK_URL_SDK = "https://discord.gg/gn9YEyjjAV";
+
+
 
 #if 0
 #elif __INTEL_LLVM_COMPILER
@@ -112,9 +135,14 @@ std::string get_training_path(){
 }
 
 std::string get_runtime_base_path(){
+    //  On MacOS, find the writable application support directory
     if (QSysInfo::productType() == "macos" || QSysInfo::productType() == "osx"){
-        QString application_dir_path = get_application_base_dir_path();
-        return application_dir_path.toStdString() + "/";
+        QString appSupportPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+        QDir dir(appSupportPath);
+        if (!dir.exists()) {
+            dir.mkpath(".");
+        }
+        return appSupportPath.toStdString() + "/";
     }
     return "./";
 }
@@ -146,6 +174,10 @@ const std::string& SETTINGS_PATH(){
     static std::string path = get_setting_path();
     return path;
 }
+const std::string& PROGRAM_SETTING_JSON_PATH(){
+    static std::string path = SETTINGS_PATH() + QCoreApplication::applicationName().toStdString() + "-Settings.json";
+    return path;
+}
 const std::string& SCREENSHOTS_PATH(){
     static std::string path = get_screenshot_path();
     return path;
@@ -171,7 +203,15 @@ const std::string& TRAINING_PATH(){
     return path;
 }
 
+const std::string& ML_ANNOTATION_PATH(){
+    static const std::string path = RUNTIME_BASE_PATH() + "DataAnnotation/";
+    return path;
+}
 
+const std::string& ML_MODEL_CACHE_PATH(){
+    static const std::string path = RUNTIME_BASE_PATH() + "ModelCache/";
+    return path;
+}
 
 }
 

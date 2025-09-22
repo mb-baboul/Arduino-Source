@@ -1,16 +1,13 @@
 /*  Autonomous Ball Thrower
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/InterruptableCommands.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Device.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
-#include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonBDSP/Inference/Battles/PokemonBDSP_BattleMenuDetector.h"
 #include "PokemonBDSP/Programs/PokemonBDSP_BasicCatcher.h"
@@ -29,9 +26,9 @@ AutonomousBallThrower_Descriptor::AutonomousBallThrower_Descriptor()
         STRING_POKEMON + " BDSP", "Autonomous Ball Thrower",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/AutonomousBallThrower.md",
         "Repeatedly throw a ball and reset until you catch the pokemon.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct AutonomousBallThrower_Descriptor::Stats : public StatsTracker{
@@ -105,7 +102,7 @@ AutonomousBallThrower::AutonomousBallThrower()
 
 
 
-void AutonomousBallThrower::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void AutonomousBallThrower::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     AutonomousBallThrower_Descriptor::Stats& stats = env.current_stats<AutonomousBallThrower_Descriptor::Stats>();
     env.update_stats();
 
@@ -118,9 +115,9 @@ void AutonomousBallThrower::program(SingleSwitchProgramEnvironment& env, BotBase
         env.log("Wait for a pokemon to attack you.", COLOR_PURPLE);
         {
             BattleMenuWatcher fight_detector(BattleType::STANDARD);
-            int result = run_until(
+            int ret = run_until<ProControllerContext>(
                 env.console, context,
-                [](BotBaseContext& context){
+                [](ProControllerContext& context){
                     while (true){
                         //TODO edit here for what to do
                         //pbf_wait(context, 1 * TICKS_PER_SECOND);
@@ -130,7 +127,7 @@ void AutonomousBallThrower::program(SingleSwitchProgramEnvironment& env, BotBase
                 },
                 {{fight_detector}}
             );
-            if (result == 0){
+            if (ret == 0){
                 env.log("New fight detected.", COLOR_PURPLE);
                 pbf_mash_button(context, BUTTON_B, 1 * TICKS_PER_SECOND);
             }
@@ -173,7 +170,7 @@ void AutonomousBallThrower::program(SingleSwitchProgramEnvironment& env, BotBase
         }
 
         if (!pokemon_caught){
-            pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+            pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
             reset_game_from_home(env, env.console, context, true);
         }
     }

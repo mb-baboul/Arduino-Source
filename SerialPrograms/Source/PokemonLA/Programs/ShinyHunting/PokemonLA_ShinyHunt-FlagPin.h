@@ -1,6 +1,6 @@
 /*  Shiny Hunt - Fixed Point
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -34,22 +34,25 @@ public:
 class ShinyHuntFlagPin : public SingleSwitchProgramInstance{
 public:
     ShinyHuntFlagPin();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    void run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void run_iteration(
+        SingleSwitchProgramEnvironment& env, ProControllerContext& context,
+        bool& fresh_from_reset
+    );
 
 private:
     ShinyRequiresAudioText SHINY_REQUIRES_AUDIO;
 
-    TravelLocationOption TRAVEL_LOCATION;
+    WildTravelLocationOption TRAVEL_LOCATION;
 
     SimpleIntegerOption<uint16_t> ENROUTE_DISTANCE;
 
     ResetMethodOption RESET_METHOD;
 
-    ShinyDetectedActionOption SHINY_DETECTED_ENROUTE;
-    ShinyDetectedActionOption SHINY_DETECTED_DESTINATION;
+    OverworldShinyDetectedActionOption SHINY_DETECTED_ENROUTE;
+    OverworldShinyDetectedActionOption SHINY_DETECTED_DESTINATION;
 
     EventNotificationOption NOTIFICATION_STATUS;
     EventNotificationsOption NOTIFICATIONS;

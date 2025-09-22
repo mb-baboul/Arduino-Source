@@ -1,13 +1,14 @@
 /*  Max Lair Run Entrance
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSwSh_MaxLair_Run_Entrance_H
 #define PokemonAutomation_PokemonSwSh_MaxLair_Run_Entrance_H
 
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "PokemonSwSh/MaxLair/Framework/PokemonSwSh_MaxLair_StateTracker.h"
 #include "PokemonSwSh/MaxLair/Framework/PokemonSwSh_MaxLair_StateMachine.h"
 
@@ -19,7 +20,8 @@ namespace MaxLairInternal{
 
 void run_entrance(
     AdventureRuntime& runtime,
-    ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
+    ProgramEnvironment& env, size_t console_index,
+    VideoStream& stream, ProControllerContext& context,
     bool save_path,
     GlobalStateTracker& state_tracker
 );

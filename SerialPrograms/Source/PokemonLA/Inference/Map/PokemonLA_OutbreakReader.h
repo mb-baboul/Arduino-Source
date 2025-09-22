@@ -1,6 +1,6 @@
 /*  Outbreak Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *  
  *  Read Outbreak pokemon text on map when leaving village
  */
@@ -9,10 +9,9 @@
 #define PokemonAutomation_PokemonLA_OutbreakReader_H
 
 #include "CommonFramework/Language.h"
-#include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/OCR/OCR_StringMatchResult.h"
+#include "CommonTools/OCR/OCR_StringMatchResult.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

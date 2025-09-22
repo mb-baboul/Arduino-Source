@@ -1,6 +1,6 @@
 /*  Computer Program Session
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -81,7 +81,7 @@ void ComputerProgramSession::internal_stop_program(){
     }
 }
 void ComputerProgramSession::internal_run_program(){
-    GlobalSettings::instance().PERFORMANCE->REALTIME_THREAD_PRIORITY.set_on_this_thread();
+    GlobalSettings::instance().PERFORMANCE->REALTIME_THREAD_PRIORITY.set_on_this_thread(logger());
     m_option.options().reset_state();
 
     ProgramInfo program_info(

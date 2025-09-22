@@ -1,6 +1,6 @@
 /*  Tenacity Candy Farmer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  Battle Pearl Clan in Path of Tenacity to farm exp, Exp Candy XL and random evolution items.
  */
@@ -30,10 +30,10 @@ public:
 class TenacityCandyFarmer : public SingleSwitchProgramInstance{
 public:
     TenacityCandyFarmer();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    bool run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    bool run_iteration(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
 private:
     enum class FourthMoveOn{

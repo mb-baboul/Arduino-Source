@@ -1,6 +1,6 @@
 /*  Magikarp Move Grinder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  Battle a magikarp to grind move related research tasks.
  */
@@ -29,12 +29,12 @@ public:
 class MagikarpMoveGrinder : public SingleSwitchProgramInstance{
 public:
     MagikarpMoveGrinder();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    void battle_magikarp(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void battle_magikarp(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
-    void grind_mimic(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void grind_mimic(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
 private:
     OneMoveBattlePokemonActionTable POKEMON_ACTIONS;

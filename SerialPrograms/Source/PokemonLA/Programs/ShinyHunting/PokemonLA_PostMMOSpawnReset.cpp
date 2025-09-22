@@ -1,13 +1,13 @@
 /*  Post MMO Spawn Reset
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
@@ -29,9 +29,9 @@ PostMMOSpawnReset_Descriptor::PostMMOSpawnReset_Descriptor()
         STRING_POKEMON + " LA", "Post-MMO Spawn Reset",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/PostMMOSpawnReset.md",
         "Constantly reset the spawn after MMO finishes.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::VIDEO_AUDIO,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 class PostMMOSpawnReset_Descriptor::Stats : public StatsTracker, public ShinyStatIncrementer{
@@ -59,25 +59,22 @@ std::unique_ptr<StatsTracker> PostMMOSpawnReset_Descriptor::make_stats() const{
 
 
 PostMMOSpawnReset::PostMMOSpawnReset()
-    : TURN_DURATION(
+    : TURN_DURATION0(
         "<b>Camera Turn:</b><br>How many ticks to turn the camera. <br>Positive values for right turns. Negative values for left turns.",
         LockMode::LOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "0"
+        "0 ms"
     )
-    , FORWARD_DURATION(
+    , FORWARD_DURATION0(
         "<b>Move Forward:</b><br>After turning the camera, how many ticks to move forward.",
         LockMode::LOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "0"
+        "0 ms"
     )
-    , WAIT_DURATION(
+    , WAIT_DURATION0(
         "<b>Wait Time:</b><br> Wait time after movement.",
         LockMode::LOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "5 * TICKS_PER_SECOND"
+        "5000 ms"
     )
-    , SHINY_DETECTED("Shiny Detected Action", "", "0 * TICKS_PER_SECOND")
+    , SHINY_DETECTED("Shiny Detected Action", "", "0 ms")
     , NOTIFICATION_STATUS("Status Update", true, false, std::chrono::seconds(3600))
     , NOTIFICATIONS({
         &NOTIFICATION_STATUS,
@@ -88,20 +85,20 @@ PostMMOSpawnReset::PostMMOSpawnReset()
     })
 {
     PA_ADD_STATIC(SHINY_REQUIRES_AUDIO);
-    PA_ADD_OPTION(TURN_DURATION);
-    PA_ADD_OPTION(FORWARD_DURATION);
-    PA_ADD_OPTION(WAIT_DURATION);
+    PA_ADD_OPTION(TURN_DURATION0);
+    PA_ADD_OPTION(FORWARD_DURATION0);
+    PA_ADD_OPTION(WAIT_DURATION0);
     PA_ADD_OPTION(SHINY_DETECTED);
     PA_ADD_OPTION(NOTIFICATIONS);
 }
 
 
 
-void PostMMOSpawnReset::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void PostMMOSpawnReset::run_iteration(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     PostMMOSpawnReset_Descriptor::Stats& stats = env.current_stats<PostMMOSpawnReset_Descriptor::Stats>();
 
     // From game to Switch Home
-    pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+    pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
     {
         float shiny_coefficient = 1.0;
         ShinySoundDetector shiny_detector(env.console, [&](float error_coefficient) -> bool{
@@ -111,22 +108,22 @@ void PostMMOSpawnReset::run_iteration(SingleSwitchProgramEnvironment& env, BotBa
             return on_shiny_callback(env, env.console, SHINY_DETECTED, error_coefficient);
         });
 
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [this, &env](BotBaseContext& context){
+            [this, &env](ProControllerContext& context){
                 reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
                 env.console.log("Entered game! Checking shiny sound...");
 
                 // forward portion
-                if (TURN_DURATION > 0){
-                    pbf_move_right_joystick(context, 255, 128, uint16_t(TURN_DURATION), 0);
-                }else if (TURN_DURATION < 0){
-                    pbf_move_right_joystick(context, 0, 128, uint16_t(-TURN_DURATION), 0);
+                if (TURN_DURATION0.get() > 0ms){
+                    pbf_move_right_joystick(context, 255, 128, TURN_DURATION0, 0ms);
+                }else if (TURN_DURATION0.get() < 0ms){
+                    pbf_move_right_joystick(context, 0, 128, -TURN_DURATION0.get(), 0ms);
                 }
                 
-                pbf_controller_state(context, BUTTON_LCLICK, DPAD_NONE, 128, 0, 128, 128, FORWARD_DURATION);
+                pbf_controller_state(context, BUTTON_LCLICK, DPAD_NONE, 128, 0, 128, 128, FORWARD_DURATION0);
 
-                pbf_wait(context, WAIT_DURATION);
+                pbf_wait(context, WAIT_DURATION0);
 
                 context.wait_for_all_requests();
             },
@@ -143,7 +140,7 @@ void PostMMOSpawnReset::run_iteration(SingleSwitchProgramEnvironment& env, BotBa
 }
 
 
-void PostMMOSpawnReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void PostMMOSpawnReset::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     PostMMOSpawnReset_Descriptor::Stats& stats = env.current_stats<PostMMOSpawnReset_Descriptor::Stats>();
 
     //  Connect the controller.

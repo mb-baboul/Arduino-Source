@@ -1,6 +1,6 @@
 /*  Image (RGB 32)
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -27,6 +27,7 @@ private:
 
 public:
     ImageRGB32();
+    //  Create an ARGB32 image of shape width x height with uninitialized pixels.
     ImageRGB32(size_t width, size_t height);
     explicit ImageRGB32(const std::string& filename);
 

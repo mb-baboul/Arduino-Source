@@ -1,19 +1,19 @@
 /*  Den Sprite Identifier
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/ImageMatch/FilterToAlpha.h"
-#include "CommonFramework/ImageMatch/ImageCropper.h"
-#include "CommonFramework/ImageMatch/SilhouetteDictionaryMatcher.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/ImageMatch/ImageCropper.h"
+#include "CommonTools/ImageMatch/FilterToAlpha.h"
+#include "CommonTools/ImageMatch/SilhouetteDictionaryMatcher.h"
 #include "PokemonSwSh/Resources/PokemonSwSh_PokemonSprites.h"
 #include "PokemonSwSh_DenMonReader.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

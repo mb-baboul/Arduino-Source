@@ -1,6 +1,6 @@
 /*  Box Sorter Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,8 +11,8 @@ namespace NintendoSwitch{
 namespace PokemonHome{
 
 
-const EnumDatabase<BoxSortingSortType>& BallType_Database(){
-    static const EnumDatabase<BoxSortingSortType> database({
+const EnumDropdownDatabase<BoxSortingSortType>& BallType_Database(){
+    static const EnumDropdownDatabase<BoxSortingSortType> database({
         {BoxSortingSortType::NationalDexNo,     "dex",     "National Dex Number"},
         {BoxSortingSortType::Shiny,    "shiny",    "Shiny"},
         {BoxSortingSortType::Gigantamax,    "gigantamax",    "Gigantamax"},

@@ -1,6 +1,6 @@
 /*  Test Utils
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *  
  *  
  */
@@ -9,14 +9,14 @@
 #ifndef PokemonAutomation_Tests_TestUtils_H
 #define PokemonAutomation_Tests_TestUtils_H
 
-#include "Common/Microcontroller/MessageProtocol.h"
+#include "Common/SerialPABotBase/SerialPABotBase_Protocol.h"
 #include "ClientSource/Connection/BotBase.h"
 #include "ClientSource/Connection/BotBaseMessage.h"
 #include "CommonFramework/AudioPipeline/AudioFeed.h"
 #include "CommonFramework/Logging/Logger.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
 #include "CommonFramework/VideoPipeline/VideoOverlay.h"
+#include "NintendoSwitch/NintendoSwitch_ConsoleHandle.h"
 
 #include <iostream>
 #include <string>
@@ -53,21 +53,21 @@ bool load_slug_list(const std::string& filepath, std::vector<std::string>& sprit
 
 // Implement the dummy interface of BotBase so that we can run the test code
 // that relies on a BotBase.
-class DummyBotBase: public BotBase{
+class DummyBotBase : public BotBaseController{
 public:
     DummyBotBase(Logger& logger) : m_logger(logger) {}
+
+    virtual void stop(std::string error_message) override{}
     
     virtual Logger& logger() override { return m_logger; }
 
     virtual State state() const override { return State::RUNNING; }
-    virtual size_t queue_limit() const override { return PABB_DEVICE_QUEUE_SIZE; }
+    virtual size_t queue_limit() const override { return PABB_DEVICE_MINIMUM_QUEUE_SIZE; }
+
+    virtual void notify_all() override{}
 
     virtual void wait_for_all_requests(const Cancellable* cancelled = nullptr) override {}
-
-    virtual bool try_stop_all_commands() override { return true; }
     virtual void stop_all_commands() override {}
-
-    virtual bool try_next_command_interrupt() override { return true; }
     virtual void next_command_interrupt() override {};
 
     virtual bool try_issue_request(
@@ -98,10 +98,11 @@ public:
     //  Can call from anywhere.
     virtual void reset() override{}
 
-    virtual VideoSnapshot snapshot() override{ return VideoSnapshot(); }
+    virtual VideoSnapshot snapshot_latest_blocking() override{ return VideoSnapshot(); }
+    virtual VideoSnapshot snapshot_recent_nonblocking(WallClock min_time) override{ return VideoSnapshot(); }
 
-    virtual double fps_source() override{ return 0; }
-    virtual double fps_display() override{ return 0; }
+    virtual double fps_source() const override{ return 0; }
+    virtual double fps_display() const override{ return 0; }
 };
 
 // Implement the dummy interface of VideoOverlay so that we can test
@@ -115,6 +116,9 @@ public:
 
     virtual void add_text(const OverlayText& text) override{}
     virtual void remove_text(const OverlayText& text) override{}
+
+    virtual void add_image(const OverlayImage& image) override{}
+    virtual void remove_image(const OverlayImage& image) override{}
 
     virtual void add_log(std::string message, Color color) override{}
     virtual void clear_log() override{}

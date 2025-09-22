@@ -1,6 +1,6 @@
 /*  Encounter Filter Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,7 +10,7 @@
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
 #include "Common/Cpp/Options/EditableTableOption.h"
-#include "CommonFramework/Options/StringSelectOption.h"
+#include "CommonTools/Options/StringSelectOption.h"
 #include "PokemonSwSh/Options/PokemonSwSh_BallSelectOption.h"
 
 namespace PokemonAutomation{
@@ -52,7 +52,7 @@ public:
     EncounterActionsEntry snapshot() const;
 
 private:
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 private:
     StringSelectCell pokemon;

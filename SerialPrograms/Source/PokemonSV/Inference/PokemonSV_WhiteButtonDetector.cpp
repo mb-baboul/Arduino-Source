@@ -1,17 +1,15 @@
 /*  White Button Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Cpp/Containers/FixedLimitVector.tpp"
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
 //#include "CommonFramework/Globals.h"
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
 #include "CommonFramework/ImageTypes/BinaryImage.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-//#include "CommonFramework/ImageMatch/ExactImageMatcher.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
 #include "PokemonSV_WhiteButtonDetector.h"
 
 //#include <iostream>
@@ -144,7 +142,7 @@ WhiteButtonDetector::WhiteButtonDetector(
 void WhiteButtonDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_box);
 }
-bool WhiteButtonDetector::detect(const ImageViewRGB32& screen) const{
+bool WhiteButtonDetector::detect(const ImageViewRGB32& screen){
     std::vector<ImageFloatBox> hits = detect_all(screen);
     return !hits.empty();
 }

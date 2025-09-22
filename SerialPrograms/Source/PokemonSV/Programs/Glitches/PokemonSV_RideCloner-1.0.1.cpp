@@ -1,24 +1,25 @@
 /*  Egg Fetcher
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/FatalProgramException.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/StatsTracking.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/StartProgramChecks.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "NintendoSwitch/Programs/NintendoSwitch_GameEntry.h"
+#include "NintendoSwitch/Programs/DateSpam/NintendoSwitch_HomeToDateTime.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "Pokemon/Inference/Pokemon_NameReader.h"
-#include "PokemonSwSh/Commands/PokemonSwSh_Commands_DateSpam.h"
 #include "PokemonSV/PokemonSV_Settings.h"
 #include "PokemonSV/Inference/PokemonSV_MainMenuDetector.h"
 #include "PokemonSV/Inference/PokemonSV_PokemonSummaryReader.h"
@@ -27,7 +28,7 @@
 #include "PokemonSV/Inference/Tera/PokemonSV_TeraCardDetector.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_OverworldDetector.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
 #include "PokemonSV/Programs/Battles/PokemonSV_BasicCatcher.h"
 #include "PokemonSV/Programs/TeraRaids/PokemonSV_TeraRoutines.h"
 #include "PokemonSV/Programs/TeraRaids/PokemonSV_TeraBattler.h"
@@ -46,9 +47,9 @@ RideCloner101_Descriptor::RideCloner101_Descriptor()
         STRING_POKEMON + " SV", "Ride Cloner (1.0.1)",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/RideCloner-101.md",
         "Clone your ride legendary (and its item) using the add-to-party glitch.",
+        ProgramControllerClass::StandardController_RequiresPrecision,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct RideCloner101_Descriptor::Stats : public StatsTracker{
@@ -124,11 +125,10 @@ RideCloner101::RideCloner101()
         "<b>Fix Clock on Catch:</b><br>Fix the time when catching so the caught date will be correct.",
         LockMode::UNLOCK_WHILE_RUNNING, false
     )
-    , A_TO_B_DELAY(
+    , A_TO_B_DELAY0(
         "<b>A-to-B Delay:</b><br>The delay between the critical A-to-B press that activates the glitch.",
         LockMode::UNLOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "8"
+        "64ms"
     )
     , NOTIFICATION_STATUS_UPDATE("Status Update", true, false, std::chrono::seconds(3600))
     , NOTIFICATION_NONSHINY(
@@ -158,7 +158,7 @@ RideCloner101::RideCloner101()
     PA_ADD_OPTION(MAX_STARS);
     PA_ADD_OPTION(BALL_SELECT);
     PA_ADD_OPTION(FIX_TIME_ON_CATCH);
-    PA_ADD_OPTION(A_TO_B_DELAY);
+    PA_ADD_OPTION(A_TO_B_DELAY0);
     PA_ADD_OPTION(BATTLE_AI);
     PA_ADD_OPTION(NOTIFICATIONS);
 }
@@ -167,24 +167,24 @@ RideCloner101::RideCloner101()
 
 //  Start from the overworld with 5 (non-ride legendary) Pokemon in your
 //  party. Move your ride legendary into the 6th slot in your party.
-void RideCloner101::setup(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
-    console.log("Running setup...");
+void RideCloner101::setup(const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
+    stream.log("Running setup...");
 
     bool in_party = false;
     WallClock start = current_time();
     while (true){
         if (current_time() - start > std::chrono::minutes(5)){
-            dump_image_and_throw_recoverable_exception(info, console, "RideCloneSetupFailed", "Failed to setup after 5 minutes.");
+            dump_image_and_throw_recoverable_exception(info, stream, "RideCloneSetupFailed", "Failed to setup after 5 minutes.");
         }
 
-        OverworldWatcher overworld(console, COLOR_RED);
+        OverworldWatcher overworld(stream.logger(), COLOR_RED);
         MainMenuWatcher main_menu(COLOR_YELLOW);
         AdvanceDialogWatcher advance(COLOR_PURPLE);
         PromptDialogWatcher prompt(COLOR_GREEN, {0.500, 0.545, 0.400, 0.100});
 
         context.wait_for_all_requests();
         int ret = wait_until(
-            console, context,
+            stream, context,
             std::chrono::seconds(60),
             {
                 overworld,
@@ -194,11 +194,11 @@ void RideCloner101::setup(const ProgramInfo& info, ConsoleHandle& console, BotBa
             }
         );
         context.wait_for(std::chrono::milliseconds(100));
-        VideoSnapshot snapshot = console.video().snapshot();
+        VideoSnapshot snapshot = stream.video().snapshot();
 
         switch (ret){
         case 0:
-            console.log("Detected overworld.");
+            stream.log("Detected overworld.");
             if (in_party){
                 return;
             }
@@ -206,16 +206,16 @@ void RideCloner101::setup(const ProgramInfo& info, ConsoleHandle& console, BotBa
             pbf_press_button(context, BUTTON_X, 20, 105);
             continue;
         case 1:
-            console.log("Detected main menu.");
+            stream.log("Detected main menu.");
             if (advance.detect(snapshot)){
                 //  If we detect both the dialog and the main menu, it means we
                 //  are selecting who in the party to replace with the ride legendary.
-                main_menu.move_cursor(info, console, context, MenuSide::LEFT, 5, false);
+                main_menu.move_cursor(info, stream, context, MenuSide::LEFT, 5, false);
                 pbf_press_button(context, BUTTON_A, 20, 105);
                 in_party = true;
             }else{
                 //  Otherwise we try to move the ride legendary to the party.
-                if (main_menu.move_cursor(info, console, context, MenuSide::LEFT, 6, false)){
+                if (main_menu.move_cursor(info, stream, context, MenuSide::LEFT, 6, false)){
                     //  Success, continue.
                     pbf_press_button(context, BUTTON_A, 20, 105);
                 }else{
@@ -226,11 +226,11 @@ void RideCloner101::setup(const ProgramInfo& info, ConsoleHandle& console, BotBa
             }
             continue;
         case 2:
-            console.log("Detected dialog.");
+            stream.log("Detected dialog.");
             if (main_menu.detect(snapshot)){
                 //  If we detect both the dialog and the main menu, it means we
                 //  are selecting who in the party to replace with the ride legendary.
-                main_menu.move_cursor(info, console, context, MenuSide::LEFT, 5, false);
+                main_menu.move_cursor(info, stream, context, MenuSide::LEFT, 5, false);
                 pbf_press_button(context, BUTTON_A, 20, 105);
                 in_party = true;
             }else{
@@ -238,11 +238,11 @@ void RideCloner101::setup(const ProgramInfo& info, ConsoleHandle& console, BotBa
             }
             continue;
         case 3:
-            console.log("Detected prompt.");
+            stream.log("Detected prompt.");
             pbf_press_button(context, BUTTON_A, 20, 105);
             continue;
         default:
-            dump_image_and_throw_recoverable_exception(info, console, "RideCloneSetupFailed",
+            dump_image_and_throw_recoverable_exception(info, stream, "RideCloneSetupFailed",
                 "setup(): No recognized state after 60 seconds.");
         }
     }
@@ -250,18 +250,18 @@ void RideCloner101::setup(const ProgramInfo& info, ConsoleHandle& console, BotBa
 bool RideCloner101::run_post_win(
     ProgramEnvironment& env,
     ConsoleHandle& console,
-    BotBaseContext& context
+    ProControllerContext& context
 ){
     console.log("Running post-win...");
 
     RideCloner101_Descriptor::Stats& stats = env.current_stats<RideCloner101_Descriptor::Stats>();
 
     if (FIX_TIME_ON_CATCH){
-        pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
-        home_to_date_time(context, false, false);
+        go_home(console, context);
+        home_to_date_time(console, context, false);
         pbf_press_button(context, BUTTON_A, 20, 105);
         pbf_press_button(context, BUTTON_A, 20, 105);
-        pbf_press_button(context, BUTTON_HOME, 20, ConsoleSettings::instance().SETTINGS_TO_HOME_DELAY);
+        pbf_press_button(context, BUTTON_HOME, 160ms, ConsoleSettings::instance().SETTINGS_TO_HOME_DELAY0);
         resume_game_from_home(console, context);
     }
 
@@ -273,8 +273,12 @@ bool RideCloner101::run_post_win(
     while (true){
         context.wait_for_all_requests();
         if (current_time() - start > std::chrono::minutes(5)){
-            dump_image_and_throw_recoverable_exception(env.program_info(), console, "RideCloneReturnToOverworldFailed",
-                "Failed to return to overworld after 5 minutes.");
+            dump_image_and_throw_recoverable_exception(
+                env.program_info(),
+                console,
+                "RideCloneReturnToOverworldFailed",
+                "Failed to return to overworld after 5 minutes."
+            );
         }
 
         TeraCatchWatcher catch_menu(COLOR_BLUE);
@@ -290,7 +294,7 @@ bool RideCloner101::run_post_win(
         PromptDialogWatcher nickname(COLOR_GREEN, {0.500, 0.545, 0.400, 0.100});
         PokemonSummaryWatcher summary(COLOR_MAGENTA);
         MainMenuWatcher main_menu(COLOR_BLUE);
-        OverworldWatcher overworld(console, COLOR_RED);
+        OverworldWatcher overworld(console.logger(), COLOR_RED);
         context.wait_for_all_requests();
         int ret = wait_until(
             console, context,
@@ -319,7 +323,7 @@ bool RideCloner101::run_post_win(
             int quantity = move_to_ball(reader, console, context, BALL_SELECT.slug());
             if (quantity == 0){
                 throw_and_log<FatalProgramException>(
-                    console, ErrorReport::NO_ERROR_REPORT,
+                    console.logger(), ErrorReport::NO_ERROR_REPORT,
                     "Unable to find appropriate ball. Did you run out?",
                     console
                 );
@@ -379,7 +383,7 @@ bool RideCloner101::run_post_win(
 //            context.wait_for(std::chrono::milliseconds(150));
             try{
                 if (main_menu.move_cursor(env.program_info(), console, context, MenuSide::LEFT, 5, false)){
-                    ssf_press_button(context, BUTTON_A, A_TO_B_DELAY, 20);
+                    ssf_press_button(context, BUTTON_A, A_TO_B_DELAY0, 160ms);
                     pbf_press_button(context, BUTTON_B, 20, 230);
                 }
             }catch (OperationFailedException& e){
@@ -416,7 +420,8 @@ bool RideCloner101::run_post_win(
 
 
 
-void RideCloner101::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void RideCloner101::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    StartProgramChecks::check_performance_class_wired_or_wireless(context);
     assert_16_9_720p_min(env.logger(), env.console);
 
     RideCloner101_Descriptor::Stats& stats = env.current_stats<RideCloner101_Descriptor::Stats>();
@@ -435,7 +440,7 @@ void RideCloner101::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
             env.update_stats();
             if (!first){
                 day_skip_from_overworld(env.console, context);
-                pbf_wait(context, GameSettings::instance().RAID_SPAWN_DELAY);
+                pbf_wait(context, GameSettings::instance().RAID_SPAWN_DELAY0);
                 context.wait_for_all_requests();
                 stats.m_skips++;
             }

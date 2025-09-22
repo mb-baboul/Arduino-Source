@@ -1,6 +1,6 @@
 /*  Ingo Move Grinder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -30,17 +30,17 @@ public:
 class IngoMoveGrinder : public SingleSwitchProgramInstance{
 public:
     IngoMoveGrinder();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    bool run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    bool run_iteration(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
     //  Returns true if version 1.0.
-    bool start_dialog(ConsoleHandle& console, BotBaseContext& context);
+    bool start_dialog(VideoStream& stream, ProControllerContext& context);
 
 private:
-    void go_to_next_move(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    void go_to_next_pokemon(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void go_to_next_move(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    void go_to_next_pokemon(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
     size_t get_next_move_to_switch_to() const;
     size_t get_next_pokemon_to_switch_to() const;
     std::string debug_current_info() const;

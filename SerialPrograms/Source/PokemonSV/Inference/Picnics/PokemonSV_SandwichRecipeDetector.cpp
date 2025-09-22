@@ -1,24 +1,22 @@
 /*  Sandwich Recipe Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
+#include <opencv2/imgproc.hpp>
+#include "Common/Cpp/AbstractLogger.h"
 #include "Common/Cpp/Containers/FixedLimitVector.tpp"
-#include "CommonFramework/Globals.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
 #include "CommonFramework/ImageTypes/ImageRGB32.h"
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
-#include "CommonFramework/Logging/Logger.h"
-#include "CommonFramework/OCR/OCR_NumberReader.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/ImageFilter.h"
+#include "CommonTools/OCR/OCR_NumberReader.h"
 #include "PokemonSV_SandwichRecipeDetector.h"
 
-#include <opencv2/imgproc.hpp>
-
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 
@@ -48,8 +46,11 @@ void SandwichRecipeNumberDetector::detect_recipes(const ImageViewRGB32& screen, 
         auto cropped_image = extract_box_reference(screen, m_id_boxes[i]);
 
         const bool invert_blackwhite = true;
-        ImageRGB32 filterd_image = to_blackwhite_rgb32_range(cropped_image,
-            combine_rgb(180, 180, 180), combine_rgb(255, 255, 255), invert_blackwhite);
+        ImageRGB32 filterd_image = to_blackwhite_rgb32_range(
+            cropped_image,
+            invert_blackwhite,
+            combine_rgb(180, 180, 180), combine_rgb(255, 255, 255)
+        );
         
         // filterd_image.save("./tmp_fil_" + std::to_string(i) + ".png");
 

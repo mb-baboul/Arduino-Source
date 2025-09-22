@@ -1,13 +1,12 @@
 /*  Menu Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Compiler.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonBDSP_MenuDetector.h"
 
 namespace PokemonAutomation{
@@ -34,7 +33,7 @@ void MenuDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_line4);
     items.add(m_color, m_cross);
 }
-bool MenuDetector::detect(const ImageViewRGB32& screen) const{
+bool MenuDetector::detect(const ImageViewRGB32& screen){
     ImageStats stats0 = image_stats(extract_box_reference(screen, m_line0));
     if (!is_white(stats0)){
         return false;

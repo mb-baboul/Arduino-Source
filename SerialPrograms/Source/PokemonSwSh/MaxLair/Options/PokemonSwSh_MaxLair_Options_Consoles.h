@@ -1,6 +1,6 @@
 /*  Max Lair Consoles
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -12,9 +12,8 @@
 #include "Common/Cpp/Options/GroupOption.h"
 #include "Common/Cpp/Options/StaticTextOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
 #include "CommonFramework/Language.h"
-//#include "PokemonSwSh/Options/PokemonSwSh_BallSelectOption.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "PokemonSwSh_MaxLair_Options.h"
 
 namespace PokemonAutomation{
@@ -83,7 +82,7 @@ public:
         return *PLAYERS[index];
     }
 
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 private:
     LanguageSet m_languages;

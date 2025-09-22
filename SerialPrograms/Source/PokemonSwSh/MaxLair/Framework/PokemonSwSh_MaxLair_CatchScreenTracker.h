@@ -1,17 +1,17 @@
 /*  Catch Screen Tracker
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSwSh_MaxLair_CatchScreenTracker_H
 #define PokemonAutomation_PokemonSwSh_MaxLair_CatchScreenTracker_H
 
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "PokemonSwSh/Inference/PokemonSwSh_SummaryShinySymbolDetector.h"
 
 namespace PokemonAutomation{
-    class BotBaseContext;
     class ProgramEnvironment;
 namespace NintendoSwitch{
 namespace PokemonSwSh{
@@ -27,10 +27,11 @@ class CaughtPokemonScreen{
     using Detection = SummaryShinySymbolDetector::Detection;
 
 public:
-    CaughtPokemonScreen(ConsoleHandle& console, BotBaseContext& context);
+    CaughtPokemonScreen(VideoStream& stream, ProControllerContext& context);
 
     size_t total() const;
     const CaughtPokemon& operator[](size_t position) const;
+          CaughtPokemon& operator[](size_t position);
 
     bool current_position() const;
     bool is_summary() const;
@@ -44,8 +45,8 @@ private:
     void process_detection(Detection detection);
 
 private:
-    ConsoleHandle& m_console;
-    BotBaseContext& m_context;
+    VideoStream& m_stream;
+    ProControllerContext& m_context;
     size_t m_total;
     size_t m_current_position = 0;
     bool m_in_summary = false;

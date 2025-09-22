@@ -1,17 +1,15 @@
 /*  Auto-Hosting
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/Globals.h"
-#include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "CommonFramework/Tools/ProgramEnvironment.h"
-#include "CommonFramework/Inference/BlackScreenDetector.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Device.h"
+#include "CommonTools/VisualDetectors/BlackScreenDetector.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_DigitEntry.h"
+#include "NintendoSwitch/Programs/FastCodeEntry/NintendoSwitch_NumberCodeEntry.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSwSh/PokemonSwSh_Settings.h"
 #include "PokemonSwSh/Commands/PokemonSwSh_Commands_AutoHosts.h"
@@ -25,23 +23,25 @@
 namespace PokemonAutomation{
 namespace NintendoSwitch{
 namespace PokemonSwSh{
-    using namespace Pokemon;
+
+using namespace Pokemon;
 
 
 bool connect_to_internet(
-    ConsoleHandle& console, BotBaseContext& context,
+    const ProgramInfo& info,
+    VideoStream& stream, ProControllerContext& context,
     bool host_online,
-    uint16_t connect_to_internet_delay
+    Milliseconds connect_to_internet_delay
 ){
     if (!host_online){
         return true;
     }
-    if (!console.video().snapshot()){
-        connect_to_internet(context, GameSettings::instance().OPEN_YCOMM_DELAY, connect_to_internet_delay);
+    if (!stream.video().snapshot()){
+        connect_to_internet(context, GameSettings::instance().OPEN_YCOMM_DELAY0, connect_to_internet_delay);
         return true;
     }
     if (connect_to_internet_with_inference(
-        console, context,
+        info, stream, context,
         std::chrono::seconds(5), connect_to_internet_delay
     )){
         return true;
@@ -51,9 +51,9 @@ bool connect_to_internet(
 
 void send_raid_notification(
     ProgramEnvironment& env,
-    ConsoleHandle& console,
+    VideoStream& stream,
     AutoHostNotificationOption& settings,
-    bool has_code, uint8_t code[8],
+    const std::string& code,
     const ImageViewRGB32& screenshot,
     const DenMonReadResults& results,
     const StatsTracker& stats_tracker
@@ -98,22 +98,7 @@ void send_raid_notification(
     }
     embeds.emplace_back("Current " + STRING_POKEMON + ":", slugs);
 
-    {
-        std::string code_str;
-        if (has_code){
-            size_t c = 0;
-            for (; c < 4; c++){
-                code_str += code[c] + '0';
-            }
-            code_str += " ";
-            for (; c < 8; c++){
-                code_str += code[c] + '0';
-            }
-        }else{
-            code_str += "None";
-        }
-        embeds.emplace_back("Raid Code:", code_str);
-    }
+    embeds.emplace_back("Raid Code:", code.empty() ? "None" : code);
 
     send_program_notification(
         env, settings.NOTIFICATION,
@@ -127,17 +112,18 @@ void send_raid_notification(
 
 
 void run_autohost(
-    ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
+    ProgramEnvironment& env,
+    ConsoleHandle& console, ProControllerContext& context,
     Catchability catchability, uint8_t skips,
-    const RandomCodeOption* raid_code, uint16_t lobby_wait_delay,
+    const RandomCodeOption* raid_code, Milliseconds lobby_wait_delay,
     bool host_online, uint8_t accept_FR_slot,
     uint8_t move_slot, bool dynamax, uint8_t troll_hosting,
     AutoHostNotificationOption& notifications,
-    uint16_t connect_to_internet_delay,
-    uint16_t enter_online_den_delay,
-    uint16_t open_online_den_lobby_delay,
-    uint16_t raid_start_to_exit_delay,
-    uint16_t delay_to_select_move
+    Milliseconds connect_to_internet_delay,
+    Milliseconds enter_online_den_delay,
+    Milliseconds open_online_den_lobby_delay,
+    Milliseconds raid_start_to_exit_delay,
+    Milliseconds delay_to_select_move
 ){
     AutoHostStats& stats = env.current_stats<AutoHostStats>();
 
@@ -151,7 +137,7 @@ void run_autohost(
     context.wait_for_all_requests();
 
     if (!connect_to_internet(
-        console, context,
+        env.program_info(), console, context,
         host_online,
         connect_to_internet_delay
     )){
@@ -161,7 +147,7 @@ void run_autohost(
     }
 
     {
-        DenMonReader reader(console, console);
+        DenMonReader reader(console.logger(), console.overlay());
         enter_den(context, enter_online_den_delay, skips != 0, host_online);
         context.wait_for_all_requests();
 
@@ -180,16 +166,14 @@ void run_autohost(
             }
         }
 
-        uint8_t code[8];
-        bool has_code = raid_code && raid_code->get_code(code);
-        if (has_code){
-            char str[8];
-            for (size_t c = 0; c < 8; c++){
-                str[c] = code[c] + '0';
-            }
-            env.log("Next Raid Code: " + std::string(str, sizeof(str)));
+        std::string code;
+        if (raid_code){
+            code = raid_code->get_code();
+        }
+        if (!code.empty()){
+            env.log("Next Raid Code: " + code);
             pbf_press_button(context, BUTTON_PLUS, 5, 145);
-            enter_digits(context, 8, code);
+            FastCodeEntry::numberpad_enter_code(console, context, code, true);
             pbf_wait(context, 180);
             pbf_press_button(context, BUTTON_A, 5, 95);
         }
@@ -200,7 +184,7 @@ void run_autohost(
             env,
             console,
             notifications,
-            has_code, code,
+            code,
             screen, results, stats
         );
     }
@@ -219,28 +203,24 @@ void run_autohost(
     pbf_press_dpad(context, DPAD_UP, 5, 45);
 
     //  Mash A until it's time to close the game.
-    {
-        context.wait_for_all_requests();
-        uint32_t start = system_clock(context);
-        pbf_mash_button(context, BUTTON_A, 3 * TICKS_PER_SECOND);
-        context.wait_for_all_requests();
-
+    if (console.video().snapshot()){
         BlackScreenOverWatcher black_screen;
-        uint32_t now = start;
-        while (true){
-            if (black_screen.black_is_over(console.video().snapshot())){
-                env.log("Raid has Started!", COLOR_BLUE);
-                stats.add_raid(raid_state.raiders());
-                break;
-            }
-            if (now - start >= raid_start_to_exit_delay){
-                stats.add_timeout();
-                break;
-            }
-            pbf_mash_button(context, BUTTON_A, TICKS_PER_SECOND);
-            context.wait_for_all_requests();
-            now = system_clock(context);
+        int ret = run_until<ProControllerContext>(
+            console, context,
+            [&](ProControllerContext& context){
+                pbf_mash_button(context, BUTTON_A, raid_start_to_exit_delay);
+            },
+            {black_screen}
+        );
+        if (ret == 0){
+            env.log("Raid has Started!", COLOR_BLUE);
+            stats.add_raid(raid_state.raiders());
+        }else{
+            env.log("Timed out waiting for raid to start.", COLOR_RED);
+            stats.add_timeout();
         }
+    }else{
+        pbf_mash_button(context, BUTTON_A, raid_start_to_exit_delay);
     }
 
     //  Select a move.

@@ -1,17 +1,16 @@
 /*  Autonomous Ball Thrower
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_AutonomousBallThrower_H
 #define PokemonAutomation_PokemonBDSP_AutonomousBallThrower_H
 
-#include "CommonFramework/Options/LanguageOCROption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
 #include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
-#include "NintendoSwitch/Options/NintendoSwitch_StartInGripMenuOption.h"
 #include "PokemonSwSh/Options/PokemonSwSh_BallSelectOption.h"
 
 namespace PokemonAutomation{
@@ -32,7 +31,7 @@ public:
 class AutonomousBallThrower : public SingleSwitchProgramInstance{
 public:
     AutonomousBallThrower();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
 

@@ -1,16 +1,13 @@
 /*  Map Zoom Level Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include <cmath>
 #include "CommonFramework/ImageTools/ImageStats.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonLA_MapMissionTabReader.h"
-
-#include <iostream>
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

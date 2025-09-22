@@ -1,12 +1,12 @@
 /*  Max Lair (Normal Mode)
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/Exceptions.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
@@ -32,9 +32,9 @@ MaxLairStandard_Descriptor::MaxLairStandard_Descriptor()
         STRING_POKEMON + " SwSh", "Max Lair - Standard",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSwSh/MaxLair-Standard.md",
         "Auto Max Lair 2.0 - Run Dynamax Adventures until a shiny legendary is found.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB,
         1, 4, 1
     )
 {}
@@ -184,7 +184,7 @@ void MaxLairStandard::program(MultiSwitchProgramEnvironment& env, CancellableSco
         throw UserSetupError(env.logger(), "Invalid Host Switch");
     }
 
-    env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
+    env.run_in_parallel(scope, [&](ConsoleHandle& console, ProControllerContext& context){
         assert_16_9_720p_min(console, console);
         if (START_LOCATION.start_in_grip_menu()){
             grip_menu_connect_go_home(context);

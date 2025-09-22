@@ -1,15 +1,15 @@
 /*  Stats Reset
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Options/LanguageOCROption.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSV/PokemonSV_Settings.h"
@@ -20,7 +20,7 @@
 #include "PokemonSV/Inference/Boxes/PokemonSV_IvJudgeReader.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_OverworldDetector.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
 #include "PokemonSV/Programs/Battles/PokemonSV_BasicCatcher.h"
 #include "PokemonSV/Programs/Boxes/PokemonSV_BoxRoutines.h"
 #include "PokemonSV_StatsReset.h"
@@ -37,9 +37,9 @@ StatsReset_Descriptor::StatsReset_Descriptor()
         STRING_POKEMON + " SV", "Stats Reset",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/StatsReset.md",
         "Repeatedly catch static encounters until you get the stats you want.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct StatsReset_Descriptor::Stats : public StatsTracker{
@@ -139,7 +139,7 @@ StatsReset::StatsReset()
     PA_ADD_OPTION(NOTIFICATIONS);
 }
 
-bool StatsReset::enter_battle(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool StatsReset::enter_battle(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     StatsReset_Descriptor::Stats& stats = env.current_stats<StatsReset_Descriptor::Stats>();
 
     //Press A to talk to target
@@ -198,7 +198,7 @@ bool StatsReset::enter_battle(SingleSwitchProgramEnvironment& env, BotBaseContex
     return true;
 }
 
-void StatsReset::open_ball_menu(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void StatsReset::open_ball_menu(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     StatsReset_Descriptor::Stats& stats = env.current_stats<StatsReset_Descriptor::Stats>();
 
     BattleBallReader reader(env.console, LANGUAGE);
@@ -213,8 +213,9 @@ void StatsReset::open_ball_menu(SingleSwitchProgramEnvironment& env, BotBaseCont
             env.update_stats();
             send_program_status_notification(env, NOTIFICATION_STATUS_UPDATE);
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Timed out trying to read ball after 2 minutes."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Timed out trying to read ball after 2 minutes.",
+                env.console
             );
         }
 
@@ -233,7 +234,7 @@ void StatsReset::open_ball_menu(SingleSwitchProgramEnvironment& env, BotBaseCont
 
 //Returns target_fainted. If overworld is detected then the target fainted.
 //Otherwise if AdvanceDialog is detected the Pokemon was caught or the player lost.
-bool StatsReset::run_battle(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool StatsReset::run_battle(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     StatsReset_Descriptor::Stats& stats = env.current_stats<StatsReset_Descriptor::Stats>();
 
     AdvanceDialogWatcher advance_dialog(COLOR_MAGENTA);
@@ -248,9 +249,9 @@ bool StatsReset::run_battle(SingleSwitchProgramEnvironment& env, BotBaseContext&
     bool out_of_balls = false;
     bool quickball_thrown = false;
 
-    int ret = run_until(
+    int ret = run_until<ProControllerContext>(
         env.console, context,
-        [&](BotBaseContext& context){
+        [&](ProControllerContext& context){
             while (true){
                 //Check that battle menu appears - this is in case of swapping pokemon
                 NormalBattleMenuWatcher menu_before_throw(COLOR_YELLOW);
@@ -264,8 +265,9 @@ bool StatsReset::run_battle(SingleSwitchProgramEnvironment& env, BotBaseContext&
                     stats.errors++;
                     env.update_stats();
                     OperationFailedException::fire(
-                        env.console, ErrorReport::SEND_ERROR_REPORT,
-                        "Unable to find menu_before_throw."
+                        ErrorReport::SEND_ERROR_REPORT,
+                        "Unable to find menu_before_throw.",
+                        env.console
                     );
                 }
 
@@ -284,8 +286,9 @@ bool StatsReset::run_battle(SingleSwitchProgramEnvironment& env, BotBaseContext&
                         stats.errors++;
                         env.update_stats();
                         OperationFailedException::fire(
-                            env.console, ErrorReport::SEND_ERROR_REPORT,
-                            "Unable to find Quick Ball on turn 1."
+                            ErrorReport::SEND_ERROR_REPORT,
+                            "Unable to find Quick Ball on turn 1.",
+                            env.console
                         );
                     }
                     if (quantity < 0){
@@ -332,9 +335,9 @@ bool StatsReset::run_battle(SingleSwitchProgramEnvironment& env, BotBaseContext&
                     }
 
                     //Select and use move
-                    int ret_move_select = run_until(
+                    int ret_move_select = run_until<ProControllerContext>(
                     env.console, context,
-                    [&](BotBaseContext& context){
+                    [&](ProControllerContext& context){
                         pbf_press_button(context, BUTTON_A, 10, 50);
                         pbf_wait(context, 100);
                         context.wait_for_all_requests();
@@ -368,8 +371,9 @@ bool StatsReset::run_battle(SingleSwitchProgramEnvironment& env, BotBaseContext&
                         stats.errors++;
                         env.update_stats();
                         OperationFailedException::fire(
-                            env.console, ErrorReport::SEND_ERROR_REPORT,
-                            "Battle menu detected early. Out of PP, please check your setup."
+                            ErrorReport::SEND_ERROR_REPORT,
+                            "Battle menu detected early. Out of PP, please check your setup.",
+                            env.console
                         );
                     }else{
                         env.log("Move successfully used.");
@@ -450,8 +454,9 @@ bool StatsReset::run_battle(SingleSwitchProgramEnvironment& env, BotBaseContext&
                     stats.errors++;
                     env.update_stats();
                     OperationFailedException::fire(
-                        env.console, ErrorReport::SEND_ERROR_REPORT,
-                        "Invalid state ret2 run_battle."
+                        ErrorReport::SEND_ERROR_REPORT,
+                        "Invalid state ret2 run_battle.",
+                        env.console
                     );
                 }
 
@@ -491,23 +496,24 @@ bool StatsReset::run_battle(SingleSwitchProgramEnvironment& env, BotBaseContext&
         stats.errors++;
         env.update_stats();
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Invalid state in run_battle()."
+            ErrorReport::SEND_ERROR_REPORT,
+            "Invalid state in run_battle().",
+            env.console
         );
     }
 
     return target_fainted;
 }
 
-bool StatsReset::check_stats(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool StatsReset::check_stats(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     StatsReset_Descriptor::Stats& stats = env.current_stats<StatsReset_Descriptor::Stats>();
     bool match = false;
 
-    //Open box
+    //  Open box
     enter_box_system_from_overworld(env.program_info(), env.console, context);
     context.wait_for(std::chrono::milliseconds(400));
 
-    //Check that the target pokemon was caught
+    //  Check that the target pokemon was caught
     if (check_empty_slots_in_party(env.program_info(), env.console, context) != 0){
         env.console.log("One or more empty slots in party. Target was not caught or user setup error.");
         send_program_status_notification(
@@ -518,10 +524,10 @@ bool StatsReset::check_stats(SingleSwitchProgramEnvironment& env, BotBaseContext
         stats.catches++;
         env.update_stats();
 
-        //Navigate to last party slot
+        //  Navigate to last party slot
         move_box_cursor(env.program_info(), env.console, context, BoxCursorLocation::PARTY, 5, 0);
 
-        //Check the IVs of the newly caught Pokemon - *must be on IV panel*
+        //  Check the IVs of the newly caught Pokemon - *must be on IV panel*
         StatsHuntAction action = StatsHuntAction::Keep;
         check_stats_reset_info(env.console, context, LANGUAGE, FILTERS, action);
 
@@ -548,8 +554,9 @@ bool StatsReset::check_stats(SingleSwitchProgramEnvironment& env, BotBaseContext
             stats.errors++;
             env.update_stats();
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Invalid state."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Invalid state.",
+                env.console
             );
         }
     }
@@ -557,12 +564,12 @@ bool StatsReset::check_stats(SingleSwitchProgramEnvironment& env, BotBaseContext
     return match;
 }
 
-void StatsReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
-    //This will only work for Pokemon that you press A to talk to.
-    //Regular static spawns will have the same stats, resetting won't work.
-    //Won't apply to the former titan pokemon or the box legends + ogrepon either, as their IVs are locked.
-    //So this really only applies to the ruinous quartet and loyal three
-    //Use first attack if target pokemon is invulnerable (Chi-Yu used Bounce)
+void StatsReset::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    //  This will only work for Pokemon that you press A to talk to.
+    //  Regular static spawns will have the same stats, resetting won't work.
+    //  Won't apply to the former titan pokemon or the box legends + ogrepon either, as their IVs are locked.
+    //  So this really only applies to the ruinous quartet and loyal three
+    //  Use first attack if target pokemon is invulnerable (Chi-Yu used Bounce)
 
     assert_16_9_720p_min(env.logger(), env.console);
     StatsReset_Descriptor::Stats& stats = env.current_stats<StatsReset_Descriptor::Stats>();
@@ -570,7 +577,7 @@ void StatsReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
     //  Connect the controller.
     pbf_press_button(context, BUTTON_L, 10, 10);
 
-    //Autosave must be off, settings like Tera farmer.
+    //  Autosave must be off, settings like Tera farmer.
     bool stats_matched = false;
     while (!stats_matched){
         bool battle_started = false;
@@ -581,15 +588,16 @@ void StatsReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
                 env.log("Did not detect battle. Resetting.");
                 stats.resets++;
                 env.update_stats();
-                pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+                pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY1);
                 reset_game_from_home(env.program_info(), env.console, context, 5 * TICKS_PER_SECOND);
             }
 
-            //Try to start battle 3 times.
+            //  Try to start battle 3 times.
             if (c > 2){
                 OperationFailedException::fire(
-                    env.console, ErrorReport::SEND_ERROR_REPORT,
-                    "Failed to enter battle after 3 attempts."
+                    ErrorReport::SEND_ERROR_REPORT,
+                    "Failed to enter battle after 3 attempts.",
+                    env.console
                 );
                 break;
             }
@@ -598,12 +606,12 @@ void StatsReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
         bool target_fainted = run_battle(env, context);
 
         if (!target_fainted){
-            //Close all the dex entry and caught menus
-            //If the player lost, this closes all dialog from Joy
+            //  Close all the dex entry and caught menus
+            //  If the player lost, this closes all dialog from Joy
             OverworldWatcher overworld(env.console);
-            int retOver = run_until(
+            int retOver = run_until<ProControllerContext>(
                 env.console, context,
-                [](BotBaseContext& context){
+                [](ProControllerContext& context){
                     pbf_mash_button(context, BUTTON_B, 10000);
                 },
                 { overworld }
@@ -619,14 +627,14 @@ void StatsReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
         }
 
         if (target_fainted || !stats_matched){
-            //Reset game
+            //  Reset game
             send_program_status_notification(
                 env, NOTIFICATION_STATUS_UPDATE,
                 "Resetting game."
             );
             stats.resets++;
             env.update_stats();
-            pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+            pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY1);
             reset_game_from_home(env.program_info(), env.console, context, 5 * TICKS_PER_SECOND);
         }
     }

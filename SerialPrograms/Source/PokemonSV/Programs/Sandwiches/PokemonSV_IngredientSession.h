@@ -1,6 +1,6 @@
 /*  Ingredient Session
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,16 +8,15 @@
 #define PokemonAutomation_PokemonSV_IngredientSession_H
 
 #include <map>
-#include "Common/Cpp/Containers/FixedLimitVector.h"
+#include <memory>
 #include "CommonFramework/Language.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_GradientArrowDetector.h"
 #include "PokemonSV/Inference/Picnics/PokemonSV_SandwichIngredientDetector.h"
 
 namespace PokemonAutomation{
-    class AsyncDispatcher;
-    class ConsoleHandle;
-    class BotBaseContext;
 namespace NintendoSwitch{
 namespace PokemonSV{
 
@@ -37,8 +36,7 @@ class IngredientSession{
 public:
     ~IngredientSession();
     IngredientSession(
-        AsyncDispatcher& dispatcher,
-        ConsoleHandle& console, BotBaseContext& context,
+        VideoStream& stream, ProControllerContext& context,
         Language language, SandwichIngredientType type
     );
 
@@ -47,7 +45,7 @@ public:
     std::string move_to_ingredient(const std::set<std::string>& ingredients) const;
 
     void add_ingredients(
-        ConsoleHandle& console, BotBaseContext& context,
+        VideoStream& stream, ProControllerContext& context,
         std::map<std::string, uint8_t>&& ingredients
     );
 
@@ -62,9 +60,8 @@ public:
 
 
 private:
-    AsyncDispatcher& m_dispatcher;
-    ConsoleHandle& m_console;
-    BotBaseContext& m_context;
+    VideoStream& m_stream;
+    ProControllerContext& m_context;
     Language m_language;
     VideoOverlaySet m_overlays;
     SandwichIngredientType m_type;
@@ -79,8 +76,7 @@ private:
 //  user must stack the fillings.
 //  If any ingredient is not found or insuffient, it will OperationFailedException::fire.
 void add_sandwich_ingredients(
-    AsyncDispatcher& dispatcher,
-    ConsoleHandle& console, BotBaseContext& context,
+    VideoStream& stream, ProControllerContext& context,
     Language language,
     std::map<std::string, uint8_t>&& fillings,  //  {slug, quantity}
     std::map<std::string, uint8_t>&& condiments

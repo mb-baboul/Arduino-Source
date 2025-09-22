@@ -1,24 +1,20 @@
 /*  Y-Comm Menu Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Compiler.h"
-#include "CommonFramework/ImageMatch/WaterfillTemplateMatcher.h"
-#include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/ImageTools/WaterfillUtilities.h"
-#include "CommonFramework/Logging/Logger.h"
-#include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Types.h"
+#include "CommonFramework/ImageTools/ImageStats.h"
+#include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/Images/WaterfillUtilities.h"
+#include "CommonTools/ImageMatch/WaterfillTemplateMatcher.h"
 #include "PokemonSwSh_YCommDetector.h"
 
-#include <utility>
-#include <vector>
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -101,11 +97,12 @@ void YCommIconDetector::make_overlays(VideoOverlaySet& items) const{
 bool YCommIconDetector::process_frame(const ImageViewRGB32& frame, WallClock timestamp){
 
     const std::vector<std::pair<uint32_t, uint32_t>> filters = {
-        {combine_rgb(0, 0, 150), combine_rgb(100, 100, 255)}
+        {combine_rgb(0, 0, 150), combine_rgb(100, 100, 255)},
+        {combine_rgb(0, 0, 150), combine_rgb(127, 127, 255)},
+        {combine_rgb(0, 0, 150), combine_rgb(191, 191, 255)},
     };
 
-    const double screen_rel_size = (frame.height() / 1080.0);
-    const size_t min_size = size_t(screen_rel_size * screen_rel_size * 350.0);
+    const size_t min_size = (size_t)(350. * frame.total_pixels() / (1920 * 1080.));
     
     const bool detected = match_template_by_waterfill(
         extract_box_reference(frame, YCOMM_ICON_BOX), 

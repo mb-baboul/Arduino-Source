@@ -1,18 +1,18 @@
 /*  Berry Farmer 2
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-//#include "Common/Cpp/Exceptions.h"
 #include "Common/Cpp/PrettyPrint.h"
 #include "Common/Cpp/Time.h"
 #include "CommonFramework/Exceptions/ProgramFinishedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "CommonFramework/Options/Environment/ThemeSelectorOption.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSwSh/PokemonSwSh_Settings.h"
 #include "PokemonSwSh/Commands/PokemonSwSh_Commands_DateSpam.h"
@@ -34,9 +34,9 @@ BerryFarmer2_Descriptor::BerryFarmer2_Descriptor()
         STRING_POKEMON + " SwSh", "Date Spam - Berry Farmer 2",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSwSh/DateSpam-BerryFarmer2.md",
         "Farm berries using Feedback.",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -73,10 +73,10 @@ BerryFarmer2::BerryFarmer2()
         LockMode::UNLOCK_WHILE_RUNNING,
         100000
     )
-    , SAVE_ITERATIONS(
+    , SAVE_ITERATIONS0(
         "<b>Save Every this Many Fetches:</b><br>(zero disables saving): ",
         LockMode::UNLOCK_WHILE_RUNNING,
-        0
+        100
     )
     , ENCOUNTER_BOT_OPTIONS(false, true)
     , NOTIFICATIONS({
@@ -90,11 +90,10 @@ BerryFarmer2::BerryFarmer2()
     , m_advanced_options(
         "<font size=4><b>Advanced Options:</b> You should not need to touch anything below here.</font>"
     )
-    , EXIT_BATTLE_TIMEOUT(
+    , EXIT_BATTLE_TIMEOUT0(
         "<b>Exit Battle Timeout:</b><br>After running, wait this long to return to overworld.",
         LockMode::UNLOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "10 * TICKS_PER_SECOND"
+        "10 s"
     )
 //    , START_BATTLE_TIMEOUT(
 //        "<b>Start Battle Timeout:</b><br>After a battle is detected, wait this long to flee in seconds.",
@@ -106,17 +105,15 @@ BerryFarmer2::BerryFarmer2()
         LockMode::UNLOCK_WHILE_RUNNING,
         1350
     )
-    , RUSTLING_TIMEOUT(
+    , RUSTLING_TIMEOUT0(
         "<b>Rustling Timeout:</b><br>Wait this many ticks to detect rustling.",
         LockMode::UNLOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "400"
+        "3200 ms"
     )
-    , SECONDARY_ATTEMPT_MASH_TIME(
+    , SECONDARY_ATTEMPT_MASH_TIME0(
         "<b>Secondary attempt mash time:</b><br>Mash ZL this many ticks for secondary fetch attempts.",
         LockMode::UNLOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "240"
+        "1920 ms"
     )
     , SOUND_THRESHOLD(
         "<b>Maximum Sound Error Coefficient",
@@ -127,23 +124,23 @@ BerryFarmer2::BerryFarmer2()
     PA_ADD_OPTION(REQUIRES_AUDIO);
     PA_ADD_OPTION(START_LOCATION);
     PA_ADD_OPTION(FETCH_ATTEMPTS);
-    PA_ADD_OPTION(SAVE_ITERATIONS);
+    PA_ADD_OPTION(SAVE_ITERATIONS0);
 
     PA_ADD_OPTION(LANGUAGE);
     PA_ADD_OPTION(ENCOUNTER_BOT_OPTIONS);
     PA_ADD_OPTION(NOTIFICATIONS);
 
     PA_ADD_STATIC(m_advanced_options);
-    PA_ADD_OPTION(EXIT_BATTLE_TIMEOUT);
+    PA_ADD_OPTION(EXIT_BATTLE_TIMEOUT0);
 //    PA_ADD_OPTION(START_BATTLE_TIMEOUT);
     PA_ADD_OPTION(RUSTLING_INTERVAL);
-    PA_ADD_OPTION(RUSTLING_TIMEOUT);
-    PA_ADD_OPTION(SECONDARY_ATTEMPT_MASH_TIME);
+    PA_ADD_OPTION(RUSTLING_TIMEOUT0);
+    PA_ADD_OPTION(SECONDARY_ATTEMPT_MASH_TIME0);
     PA_ADD_OPTION(SOUND_THRESHOLD);
 }
 
 
-BerryFarmer2::Rustling BerryFarmer2::check_rustling(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+BerryFarmer2::Rustling BerryFarmer2::check_rustling(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     BerryFarmer2_Descriptor::Stats& stats = env.current_stats<BerryFarmer2_Descriptor::Stats>();
 
     // wait some time in order to not detect rustling from previous fetch attempt
@@ -170,10 +167,10 @@ BerryFarmer2::Rustling BerryFarmer2::check_rustling(SingleSwitchProgramEnvironme
     StartBattleWatcher start_battle_detector;
 
     Rustling result = Rustling::No;
-    int ret = run_until(
+    int ret = run_until<ProControllerContext>(
         env.console, context,
-        [&](BotBaseContext& context){
-            pbf_wait(context, RUSTLING_TIMEOUT);
+        [&](ProControllerContext& context){
+            pbf_wait(context, RUSTLING_TIMEOUT0);
             context.wait_for_all_requests();
         },
         { {initial_rustling_detector}, {battle_menu_detector}, {start_battle_detector} }
@@ -184,10 +181,10 @@ BerryFarmer2::Rustling BerryFarmer2::check_rustling(SingleSwitchProgramEnvironme
         WallClock initial_rustling_time = current_time();
         result = Rustling::Slow;
 
-        int ret1 = run_until(
+        int ret1 = run_until<ProControllerContext>(
             env.console, context,
-            [&](BotBaseContext& context){
-                pbf_wait(context, RUSTLING_TIMEOUT);
+            [&](ProControllerContext& context){
+                pbf_wait(context, RUSTLING_TIMEOUT0);
                 context.wait_for_all_requests();
             },
             { {secondary_rustling_detector} }
@@ -207,7 +204,7 @@ BerryFarmer2::Rustling BerryFarmer2::check_rustling(SingleSwitchProgramEnvironme
         stats.add_error();
         env.update_stats();
         pbf_mash_button(context, BUTTON_B, TICKS_PER_SECOND);
-        run_away(env.console, context, EXIT_BATTLE_TIMEOUT);
+        run_away(env.console, context, EXIT_BATTLE_TIMEOUT0);
         result = Rustling::Battle;
         break;
     case 2:{
@@ -228,7 +225,7 @@ BerryFarmer2::Rustling BerryFarmer2::check_rustling(SingleSwitchProgramEnvironme
             stats
         );
 
-        bool stop = handler.handle_standard_encounter_end_battle(encounter_result, EXIT_BATTLE_TIMEOUT);
+        bool stop = handler.handle_standard_encounter_end_battle(encounter_result, EXIT_BATTLE_TIMEOUT0);
         if (stop){
             throw ProgramFinishedException();
         }
@@ -244,7 +241,7 @@ BerryFarmer2::Rustling BerryFarmer2::check_rustling(SingleSwitchProgramEnvironme
     return result;
 }
 
-uint16_t BerryFarmer2::do_secondary_attempts(SingleSwitchProgramEnvironment& env, BotBaseContext& context, Rustling rustling){
+uint16_t BerryFarmer2::do_secondary_attempts(SingleSwitchProgramEnvironment& env, ProControllerContext& context, Rustling rustling){
     BerryFarmer2_Descriptor::Stats& stats = env.current_stats<BerryFarmer2_Descriptor::Stats>();
 
     uint8_t no_rustling = (rustling == Rustling::No) ? 1 : 0;
@@ -270,7 +267,7 @@ uint16_t BerryFarmer2::do_secondary_attempts(SingleSwitchProgramEnvironment& env
     }
     if (current_rustling == Rustling::Fast){
         // this is the last tree interaction for this time skip
-        pbf_mash_button(context, BUTTON_ZL, SECONDARY_ATTEMPT_MASH_TIME);
+        pbf_mash_button(context, BUTTON_ZL, SECONDARY_ATTEMPT_MASH_TIME0);
         pbf_mash_button(context, BUTTON_B, 10);
         attempts++;
         stats.shakes++;
@@ -285,12 +282,12 @@ uint16_t BerryFarmer2::do_secondary_attempts(SingleSwitchProgramEnvironment& env
     return attempts;
 }
 
-void BerryFarmer2::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void BerryFarmer2::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     if (START_LOCATION.start_in_grip_menu()){
         grip_menu_connect_go_home(context);
     }else{
         pbf_press_button(context, BUTTON_B, 5, 5);
-        pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY_FAST);
+        ssf_press_button(context, BUTTON_HOME, GameSettings::instance().GAME_TO_HOME_DELAY_FAST0, 160ms);
     }
 
     BerryFarmer2_Descriptor::Stats& stats = env.current_stats<BerryFarmer2_Descriptor::Stats>();
@@ -316,7 +313,7 @@ void BerryFarmer2::program(SingleSwitchProgramEnvironment& env, BotBaseContext& 
         switch (current_rustling){
         case Rustling::Battle:
             pbf_mash_button(context, BUTTON_B, 1 * TICKS_PER_SECOND);
-            run_away(env.console, context, EXIT_BATTLE_TIMEOUT);
+            run_away(env.console, context, EXIT_BATTLE_TIMEOUT0);
             break;
         case Rustling::Fast:
             // Do nothing -> stop current tree session
@@ -332,13 +329,13 @@ void BerryFarmer2::program(SingleSwitchProgramEnvironment& env, BotBaseContext& 
 
         c += iteration_attempts;
 
-        uint16_t save_iterations = SAVE_ITERATIONS;
+        uint16_t save_iterations = SAVE_ITERATIONS0;
         if (save_iterations != 0){
             save_count += iteration_attempts;
             if (save_count >= save_iterations){
                 save_count = 0;
                 pbf_mash_button(context, BUTTON_B, 2 * TICKS_PER_SECOND);
-                pbf_press_button(context, BUTTON_X, 20, GameSettings::instance().OVERWORLD_TO_MENU_DELAY);
+                pbf_press_button(context, BUTTON_X, 160ms, GameSettings::instance().OVERWORLD_TO_MENU_DELAY0);
                 pbf_press_button(context, BUTTON_R, 20, 2 * TICKS_PER_SECOND);
                 pbf_press_button(context, BUTTON_ZL, 20, 3 * TICKS_PER_SECOND);
             }
@@ -346,8 +343,8 @@ void BerryFarmer2::program(SingleSwitchProgramEnvironment& env, BotBaseContext& 
 
         // Tap HOME and quickly spam B. The B spamming ensures that we don't
         // accidentally update the system if the system update window pops up.
-        pbf_press_button(context, BUTTON_HOME, 10, 5);
-        pbf_mash_button(context, BUTTON_B, GameSettings::instance().GAME_TO_HOME_DELAY_FAST - 15);
+        ssf_press_button(context, BUTTON_HOME, 120ms, 160ms);
+        pbf_mash_button(context, BUTTON_B, GameSettings::instance().GAME_TO_HOME_DELAY_FAST0.get() - 120ms);
     }
     VideoSnapshot screen = env.console.video().snapshot();
     send_program_finished_notification(env, NOTIFICATION_PROGRAM_FINISH, "", screen);

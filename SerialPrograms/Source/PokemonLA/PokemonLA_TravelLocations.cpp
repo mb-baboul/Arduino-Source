@@ -1,6 +1,6 @@
 /*  Travel Locations
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -20,7 +20,7 @@ TravelLocation::TravelLocation(
     const char* p_slug, const char* p_display,
     MapRegion p_region,
     uint8_t p_warp_slot, uint8_t p_warp_sub_slot,
-    std::function<void(ConsoleHandle& console, BotBaseContext& context)>&& p_post_arrival_maneuver,
+    std::function<void(VideoStream& stream, ProControllerContext& context)>&& p_post_arrival_maneuver,
     bool p_reverse_sub_menu_direction
 )
     : slug(p_slug)
@@ -37,12 +37,9 @@ const TravelLocations& TravelLocations::instance(){
     static const TravelLocations locations;
     return locations;
 }
-const IntegerEnumDatabase& TravelLocations::database() const{
-    return m_database;
-}
 
 
-void TravelLocations::add_location(const TravelLocation& location){
+void TravelLocations::add_location(const TravelLocation& location, bool inside_village){
     if (!m_map.emplace(location.display, &location).second){
         throw InternalProgramError(
             nullptr, PA_CURRENT_FUNCTION,
@@ -50,7 +47,12 @@ void TravelLocations::add_location(const TravelLocation& location){
         );
     }
     m_list.emplace_back(&location);
-    m_database.add(m_list.size() - 1, location.slug, location.display, true);
+    m_database_include_village.add(m_list.size() - 1, location.slug, location.display, true);
+    
+    if (!inside_village){
+        m_database_outside_village.add(m_list.size() - 1, location.slug, location.display, true);    
+    }
+    
 }
 TravelLocations::TravelLocations()
     : Fieldlands_Fieldlands(
@@ -108,8 +110,8 @@ TravelLocations::TravelLocations()
     , Coastlands_Arena_NW(
         "coastlands-arena-nw",
         "Cobalt Coastlands - Molten Arena (NW of Volcano)",
-        MapRegion::COASTLANDS, 0, 2, [](ConsoleHandle& console, BotBaseContext& context){
-            change_mount(console, context, MountState::BRAVIARY_ON);
+        MapRegion::COASTLANDS, 0, 2, [](VideoStream& stream, ProControllerContext& context){
+            change_mount(stream, context, MountState::BRAVIARY_ON);
             pbf_move_left_joystick(context, 160, 0, 160, 0);
             pbf_mash_button(context, BUTTON_B, 4 * TICKS_PER_SECOND);
         }
@@ -151,10 +153,49 @@ TravelLocations::TravelLocations()
         "Alabaster Icelands - Pearl Settlement",
         MapRegion::ICELANDS, 0, 2, nullptr
     )
+    , Icelands_PearlSettlement_SW(
+        "icelands-settlement-sw",
+        "Alabaster Icelands - Pearl Settlement (SW of landing spot)",
+        MapRegion::ICELANDS, 0, 2, [](VideoStream& stream, ProControllerContext& context){
+            change_mount(stream, context, MountState::BRAVIARY_ON);
+            pbf_move_left_joystick(context, 192, 255, 160, 0);
+            pbf_mash_button(context, BUTTON_B, 2 * TICKS_PER_SECOND);
+        }
+    )
     , Icelands_Arena(
         "icelands-arena",
         "Alabaster Icelands - Icepeak Arena",
         MapRegion::ICELANDS, 0, 2, nullptr, true
+    )
+    , Retreat(
+        "retreat",
+        "Ancient Retreat",
+        MapRegion::RETREAT, 0, 0, nullptr, false
+    )
+    , Village_GalaxyHall(
+        "village-galaxyhall",
+        "Jubilife Village - Galaxy Hall",
+        MapRegion::JUBILIFE, 0, 0, nullptr, false
+    )
+    , Village_FrontGate(
+        "village-frontgate",
+        "Jubilife Village - Front Gate",
+        MapRegion::JUBILIFE, 0, 1, nullptr, false
+    )
+    , Village_PracticeField(
+        "village-practicefield",
+        "Jubilife Village - Practice Field",
+        MapRegion::JUBILIFE, 0, 2, nullptr, false
+    )
+    , Village_Farm(
+        "village-farm",
+        "Jubilife Village - Farm",
+        MapRegion::JUBILIFE, 0, 3, nullptr, false
+    )
+    , Village_TrainingGrounds(
+        "village-traininggrounds",
+        "Jubilife Village - Training Grounds",
+        MapRegion::JUBILIFE, 0, 2, nullptr, true
     )
 {
     add_location(Fieldlands_Fieldlands);
@@ -179,7 +220,16 @@ TravelLocations::TravelLocations()
     add_location(Icelands_Snowfields);
     add_location(Icelands_Icepeak);
     add_location(Icelands_PearlSettlement);
+    add_location(Icelands_PearlSettlement_SW);
     add_location(Icelands_Arena);
+    add_location(Retreat);
+
+    const bool inside_village = true;
+    add_location(Village_GalaxyHall, inside_village);
+    add_location(Village_FrontGate, inside_village);
+    add_location(Village_PracticeField, inside_village);
+    add_location(Village_Farm, inside_village);
+    add_location(Village_TrainingGrounds, inside_village);
 }
 
 

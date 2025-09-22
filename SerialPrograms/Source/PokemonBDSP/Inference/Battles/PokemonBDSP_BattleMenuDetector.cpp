@@ -1,13 +1,11 @@
 /*  Battle Menu Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Compiler.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/ImageTools/ColorClustering.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonBDSP_BattleMenuDetector.h"
 
 //#include <iostream>
@@ -63,7 +61,7 @@ bool BattleMenuDetector::is_battle_button(const ImageViewRGB32& screen) const{
     }
     return true;
 }
-bool BattleMenuDetector::detect(const ImageViewRGB32& screen) const{
+bool BattleMenuDetector::detect(const ImageViewRGB32& screen){
     {
         bool left = is_white(extract_box_reference(screen, m_opponent_left));
         bool right = is_white(extract_box_reference(screen, m_opponent_right));

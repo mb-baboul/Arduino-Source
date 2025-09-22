@@ -1,18 +1,18 @@
 /*  Mass Release
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSV/PokemonSV_Settings.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
 #include "PokemonSV/Programs/TeraRaids/PokemonSV_TeraRoutines.h"
 #include "PokemonSV_LPFarmer.h"
 
@@ -29,9 +29,9 @@ LPFarmer_Descriptor::LPFarmer_Descriptor()
         STRING_POKEMON + " SV", "LP Farmer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/LPFarmer.md",
         "Farm LP by day skipping Tera raids.",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct LPFarmer_Descriptor::Stats : public StatsTracker{
@@ -85,7 +85,7 @@ LPFarmer::LPFarmer()
 
 
 
-void LPFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void LPFarmer::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
     LPFarmer_Descriptor::Stats& stats = env.current_stats<LPFarmer_Descriptor::Stats>();
@@ -102,7 +102,7 @@ void LPFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& cont
 
         if (!first){
             day_skip_from_overworld(env.console, context);
-            pbf_wait(context, GameSettings::instance().RAID_SPAWN_DELAY);
+            pbf_wait(context, GameSettings::instance().RAID_SPAWN_DELAY0);
             context.wait_for_all_requests();
             stats.m_skips++;
             skip_counter++;

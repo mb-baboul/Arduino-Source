@@ -1,6 +1,6 @@
 /*  Mount Detection Test
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -26,7 +26,7 @@ class MountDetectionTest : public SingleSwitchProgramInstance{
 public:
     MountDetectionTest();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     MountDetectorLoggingOption FAILED_ACTION;

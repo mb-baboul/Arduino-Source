@@ -1,15 +1,14 @@
 /*  Train Pokemon Name OCR
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
+#include <thread>
 #include "Common/Cpp/Json/JsonArray.h"
 #include "Common/Cpp/Json/JsonObject.h"
-#include "Common/Cpp/Concurrency/ParallelTaskRunner.h"
-#include "CommonFramework/Globals.h"
-#include "CommonFramework/OCR/OCR_TrainingTools.h"
 #include "CommonFramework/Tools/ProgramEnvironment.h"
+#include "CommonTools/OCR/OCR_TrainingTools.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "Pokemon/Resources/Pokemon_PokemonNames.h"
 #include "Pokemon/Resources/Pokemon_PokemonSlugs.h"

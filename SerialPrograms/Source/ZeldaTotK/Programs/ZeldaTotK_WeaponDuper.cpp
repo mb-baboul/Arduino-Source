@@ -1,14 +1,14 @@
 /*  TotK Weapon Duper
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/PrettyPrint.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/StartupChecks/StartProgramChecks.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "ZeldaTotK_WeaponDuper.h"
 
 namespace PokemonAutomation{
@@ -21,9 +21,10 @@ WeaponDuper_Descriptor::WeaponDuper_Descriptor()
         "Zelda: TotK", "Weapon Duper",
         "ComputerControl/blob/master/Wiki/Programs/ZeldaTotK/WeaponDuper.md",
         "Use a glitch to duplicate your weapons (Bows, Shields and Swords)",
+        ProgramControllerClass::StandardController_RequiresPrecision,
         FeedbackType::NONE,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        {}
     )
 {}
 
@@ -76,7 +77,9 @@ WeaponDuper::WeaponDuper()
     PA_ADD_OPTION(NOTIFICATIONS);
 }
 
-void WeaponDuper::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void WeaponDuper::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    StartProgramChecks::check_performance_class_wired_or_wireless(context);
+
     WeaponDuper_Descriptor::Stats& stats = env.current_stats<WeaponDuper_Descriptor::Stats>();
 
     uint32_t c = 0;

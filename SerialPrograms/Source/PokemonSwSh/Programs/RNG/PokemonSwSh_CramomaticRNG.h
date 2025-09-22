@@ -1,17 +1,18 @@
 /*  Cram-o-matic RNG Manipulation
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSwSh_CramomaticRNG_H
 #define PokemonAutomation_PokemonSwSh_CramomaticRNG_H
 
+#include "Common/Cpp/Options/StaticTextOption.h"
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
-#include "Common/Cpp/Options/StaticTextOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "NintendoSwitch/Options/NintendoSwitch_StartInGripMenuOption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
 #include "Pokemon/Pokemon_Xoroshiro128Plus.h"
@@ -41,7 +42,7 @@ class CramomaticRNG : public SingleSwitchProgramInstance{
 public:
     CramomaticRNG();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     StartInGripOrGameOption START_LOCATION;
@@ -59,17 +60,17 @@ private:
     SectionDividerOption m_advanced_options;
     SimpleIntegerOption<uint16_t> MAX_PRIORITY_ADVANCES;
     SimpleIntegerOption<uint16_t> MAX_UNKNOWN_ADVANCES;
-    SimpleIntegerOption<uint16_t> ADVANCE_PRESS_DURATION;
-    SimpleIntegerOption<uint16_t> ADVANCE_RELEASE_DURATION;
+    MillisecondsOption ADVANCE_PRESS_DURATION;
+    MillisecondsOption ADVANCE_RELEASE_DURATION;
     BooleanCheckBoxOption SAVE_SCREENSHOTS;
     BooleanCheckBoxOption LOG_VALUES;
 
-    void navigate_to_party(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void navigate_to_party(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
     CramomaticTarget calculate_target(SingleSwitchProgramEnvironment& env, Xoroshiro128PlusState state, std::vector<CramomaticSelection> wanted_balls);
-    void leave_to_overworld_and_interact(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    void choose_apricorn(SingleSwitchProgramEnvironment& env, BotBaseContext& context, bool sport);
-    std::pair<bool, std::string> receive_ball(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    void recover_from_wrong_state(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void leave_to_overworld_and_interact(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    void choose_apricorn(SingleSwitchProgramEnvironment& env, ProControllerContext& context, bool sport);
+    std::pair<bool, std::string> receive_ball(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    void recover_from_wrong_state(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 };
 
 

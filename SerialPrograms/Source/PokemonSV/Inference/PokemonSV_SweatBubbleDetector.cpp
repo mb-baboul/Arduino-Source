@@ -1,16 +1,15 @@
 /*  Sweat Bubble Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
 #include "CommonFramework/Globals.h"
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
-#include "CommonFramework/ImageTypes/BinaryImage.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/ImageMatch/ExactImageMatcher.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
+#include "CommonTools/ImageMatch/ExactImageMatcher.h"
 #include "PokemonSV_SweatBubbleDetector.h"
 
 //#include <iostream>
@@ -36,7 +35,7 @@ SweatBubbleDetector::SweatBubbleDetector(Color color, const ImageFloatBox& box)
 void SweatBubbleDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_box);
 }
-bool SweatBubbleDetector::detect(const ImageViewRGB32& screen) const{
+bool SweatBubbleDetector::detect(const ImageViewRGB32& screen){
     using namespace Kernels::Waterfill;
 
     ImageViewRGB32 region = extract_box_reference(screen, m_box);

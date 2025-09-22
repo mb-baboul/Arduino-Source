@@ -1,12 +1,13 @@
 /*  TotK Surf Item Duper
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/PrettyPrint.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/StartupChecks/StartProgramChecks.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "ZeldaTotK_SurfItemDuper.h"
@@ -21,9 +22,10 @@ SurfItemDuper_Descriptor::SurfItemDuper_Descriptor()
         "Zelda: TotK", "Shield Surf Item Duper",
         "ComputerControl/blob/master/Wiki/Programs/ZeldaTotK/SurfItemDuper.md",
         "Use the Shield Surfing Menu Sort glitch to duplicate items.",
+        ProgramControllerClass::StandardController_RequiresPrecision,
         FeedbackType::NONE,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        {}
     )
 {}
 
@@ -58,7 +60,9 @@ SurfItemDuper::SurfItemDuper()
     PA_ADD_OPTION(NOTIFICATIONS);
 }
 
-void SurfItemDuper::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void SurfItemDuper::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    StartProgramChecks::check_performance_class_wired_or_wireless(context);
+
     SurfItemDuper_Descriptor::Stats& stats = env.current_stats<SurfItemDuper_Descriptor::Stats>();
 
     /*
@@ -89,9 +93,9 @@ void SurfItemDuper::program(SingleSwitchProgramEnvironment& env, BotBaseContext&
         env.log("Current Attempts: " + tostr_u_commas(c));
 
         //Initiate Shield Surf
-        ssf_press_button(context, BUTTON_ZL, 0, 80);
-        ssf_press_button(context, BUTTON_X, 5, 30);
-        ssf_press_button(context, BUTTON_A, 10, 80);
+        ssf_press_button(context, BUTTON_ZL, 0ms, 640ms);
+        ssf_press_button(context, BUTTON_X, 40ms, 240ms);
+        ssf_press_button(context, BUTTON_A, 80ms, 640ms);
 
         //Open menu
         pbf_press_button(context, BUTTON_PLUS, 20, 100);

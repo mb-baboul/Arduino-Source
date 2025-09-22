@@ -1,21 +1,21 @@
 /*  Tera Code Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <map>
 #include "Common/Cpp/AbstractLogger.h"
-#include "Common/Cpp/Concurrency/AsyncDispatcher.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
 #include "CommonFramework/Globals.h"
 #include "CommonFramework/ImageTypes/ImageRGB32.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
-#include "CommonFramework/ImageTools/ImageManip.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
-#include "CommonFramework/ImageMatch/ExactImageMatcher.h"
-#include "CommonFramework/OCR/OCR_RawOCR.h"
+#include "CommonFramework/Tools/GlobalThreadPools.h"
+#include "CommonTools/Images/ImageManip.h"
+#include "CommonTools/Images/ImageFilter.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
+#include "CommonTools/ImageMatch/ExactImageMatcher.h"
+#include "CommonTools/OCR/OCR_RawOCR.h"
 #include "PokemonSV_TeraCodeReader.h"
 
 //#define PA_ENABLE_CODE_DEBUG
@@ -146,7 +146,6 @@ struct WaterfillOCRResult{
 
 
 std::vector<WaterfillOCRResult> waterfill_OCR(
-    AsyncDispatcher& dispatcher,
     const ImageViewRGB32& image,
     uint32_t threshold
 ){
@@ -155,7 +154,7 @@ std::vector<WaterfillOCRResult> waterfill_OCR(
     //  Direct OCR is unreliable. Instead, we will waterfill each character
     //  to isolate them, then OCR them individually.
 
-    ImageRGB32 filtered = to_blackwhite_rgb32_range(image, 0xff000000, threshold, true);
+    ImageRGB32 filtered = to_blackwhite_rgb32_range(image, true, 0xff000000, threshold);
     PackedBinaryMatrix matrix = compress_rgb32_to_binary_range(image, 0xff000000, threshold);
 
     std::map<size_t, WaterfillObject> map;
@@ -173,8 +172,7 @@ std::vector<WaterfillOCRResult> waterfill_OCR(
         ret.emplace_back(WaterfillOCRResult{std::move(item.second), ""});
     }
 
-    dispatcher.run_in_parallel(
-        0, ret.size(),
+    GlobalThreadPools::realtime_inference().run_in_parallel(
         [&](size_t index){
             WaterfillObject& object = ret[index].object;
             ImageRGB32 cropped = extract_box_reference(filtered, object).copy();
@@ -182,7 +180,8 @@ std::vector<WaterfillOCRResult> waterfill_OCR(
             filter_by_mask(tmp, cropped, Color(0xffffffff), true);
             ImageRGB32 padded = pad_image(cropped, cropped.width(), 0xffffffff);
             ret[index].ocr = OCR::ocr_read(Language::English, padded);
-        }
+        },
+        0, ret.size()
     );
 
 #ifdef PA_ENABLE_CODE_DEBUG
@@ -201,8 +200,8 @@ std::vector<WaterfillOCRResult> waterfill_OCR(
 }
 
 
-int16_t read_raid_timer(Logger& logger, AsyncDispatcher& dispatcher, const ImageViewRGB32& image){
-    std::vector<WaterfillOCRResult> characters = waterfill_OCR(dispatcher, image, 0xff7f7f7f);
+int16_t read_raid_timer(Logger& logger, const ImageViewRGB32& image){
+    std::vector<WaterfillOCRResult> characters = waterfill_OCR(image, 0xff7f7f7f);
 
 //    cout << "map.size() = " << map.size() << endl;
 //    for (auto& item : map){
@@ -262,14 +261,14 @@ int16_t read_raid_timer(Logger& logger, AsyncDispatcher& dispatcher, const Image
 }
 
 
-std::string read_raid_code(Logger& logger, AsyncDispatcher& dispatcher, const ImageViewRGB32& image){
+std::string read_raid_code(Logger& logger, const ImageViewRGB32& image){
     std::vector<uint32_t> filters{
         0xff5f5f5f,
         0xff7f7f7f,
     };
 
     for (uint32_t filter : filters){
-        std::vector<WaterfillOCRResult> characters = waterfill_OCR(dispatcher, image, filter);
+        std::vector<WaterfillOCRResult> characters = waterfill_OCR(image, filter);
 
         static const std::map<char, char> SUBSTITUTIONS{
             {'I', '1'},

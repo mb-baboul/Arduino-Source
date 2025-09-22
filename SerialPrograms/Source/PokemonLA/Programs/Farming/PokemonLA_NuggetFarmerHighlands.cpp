@@ -1,14 +1,13 @@
 /*  Money Farmer (Highlands)
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Cpp/Exceptions.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
@@ -23,9 +22,9 @@
 #include "PokemonLA/Programs/PokemonLA_RegionNavigation.h"
 #include "PokemonLA_NuggetFarmerHighlands.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -39,9 +38,9 @@ NuggetFarmerHighlands_Descriptor::NuggetFarmerHighlands_Descriptor()
         STRING_POKEMON + " LA", "Nugget Farmer (Highlands)",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/NuggetFarmerHighlands.md",
         "Farm nuggets off the Miss Fortune sisters in the Coronet Highlands.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::VIDEO_AUDIO,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 class NuggetFarmerHighlands_Descriptor::Stats : public StatsTracker, public ShinyStatIncrementer{
@@ -75,7 +74,7 @@ std::unique_ptr<StatsTracker> NuggetFarmerHighlands_Descriptor::make_stats() con
 
 
 NuggetFarmerHighlands::NuggetFarmerHighlands()
-    : SHINY_DETECTED("Shiny Detected Action", "", "2 * TICKS_PER_SECOND")
+    : SHINY_DETECTED("Shiny Detected Action", "", "2000 ms")
     , NOTIFICATION_STATUS("Status Update", true, false, std::chrono::seconds(3600))
     , NOTIFICATIONS({
         &NOTIFICATION_STATUS,
@@ -92,11 +91,18 @@ NuggetFarmerHighlands::NuggetFarmerHighlands()
 
 
 
-bool NuggetFarmerHighlands::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool NuggetFarmerHighlands::run_iteration(
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
+    bool fresh_from_reset
+){
     NuggetFarmerHighlands_Descriptor::Stats& stats = env.current_stats<NuggetFarmerHighlands_Descriptor::Stats>();
 
     //  Go to Coronet Highlands Mountain camp.
-    goto_camp_from_jubilife(env, env.console, context, TravelLocations::instance().Highlands_Mountain);
+    goto_camp_from_jubilife(
+        env, env.console, context,
+        TravelLocations::instance().Highlands_Mountain,
+        fresh_from_reset
+    );
 
     stats.attempts++;
 
@@ -118,11 +124,11 @@ bool NuggetFarmerHighlands::run_iteration(SingleSwitchProgramEnvironment& env, B
             return on_shiny_callback(env, env.console, SHINY_DETECTED, error_coefficient);
         });
 
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [](BotBaseContext& context){
+            [](ProControllerContext& context){
                 pbf_move_left_joystick(context, 0, 212, 50, 0);
-                pbf_press_button(context, BUTTON_B, 495, 80);
+                pbf_press_button(context, BUTTON_B, 492, 80);
 
                 pbf_move_left_joystick(context, 224, 0, 50, 0);
 //                pbf_press_button(context, BUTTON_B, 350, 80);
@@ -186,8 +192,8 @@ bool NuggetFarmerHighlands::run_iteration(SingleSwitchProgramEnvironment& env, B
             return on_shiny_callback(env, env.console, SHINY_DETECTED, error_coefficient);
         });
 
-        int ret = run_until(env.console, context,
-            [&env](BotBaseContext& context){
+        int ret = run_until<ProControllerContext>(env.console, context,
+            [&env](ProControllerContext& context){
                 goto_camp_from_overworld(env, env.console, context);
                 goto_professor(env.console, context, Camp::HIGHLANDS_HIGHLANDS);
             },
@@ -211,7 +217,7 @@ bool NuggetFarmerHighlands::run_iteration(SingleSwitchProgramEnvironment& env, B
 
 
 
-void NuggetFarmerHighlands::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void NuggetFarmerHighlands::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     NuggetFarmerHighlands_Descriptor::Stats& stats = env.current_stats<NuggetFarmerHighlands_Descriptor::Stats>();
 
     //  Connect the controller.
@@ -220,19 +226,23 @@ void NuggetFarmerHighlands::program(SingleSwitchProgramEnvironment& env, BotBase
     // Put a save here so that when the program reloads from error it won't break.
     save_game_from_overworld(env, env.console, context);
 
+    bool fresh_from_reset = false;
     while (true){
         env.update_stats();
         send_program_status_notification(env, NOTIFICATION_STATUS);
         try{
-            if (run_iteration(env, context)){
+            if (run_iteration(env, context, fresh_from_reset)){
                 break;
             }
         }catch (OperationFailedException& e){
             stats.errors++;
             e.send_notification(env, NOTIFICATION_ERROR_RECOVERABLE);
 
-            pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
-            reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
+            pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
+            fresh_from_reset = reset_game_from_home(
+                env, env.console, context,
+                ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST
+            );
         }
     }
 

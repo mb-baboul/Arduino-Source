@@ -1,13 +1,14 @@
 /*  Operation Failed Exception
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_OperationFailedException_H
 #define PokemonAutomation_OperationFailedException_H
 
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include <memory>
+#include "CommonFramework/Tools/VideoStream.h"
 #include "ScreenshotException.h"
 
 namespace PokemonAutomation{
@@ -22,19 +23,19 @@ public:
     //  This is the most common use case. Throw and log exception.
     //  Include console information for screenshot and stream history.
     [[noreturn]] static void fire(
-        ConsoleHandle& console,
-        ErrorReport error_report,
-        std::string message
-    ){
-        throw_and_log<OperationFailedException>(console, error_report, std::move(message), console);
-    }
-    [[noreturn]] static void fire(
-        ConsoleHandle& console,
         ErrorReport error_report,
         std::string message,
+        VideoStream& stream
+    ){
+        throw_and_log<OperationFailedException>(stream.logger(), error_report, std::move(message), stream);
+    }
+    [[noreturn]] static void fire(
+        ErrorReport error_report,
+        std::string message,
+        VideoStream& stream,
         std::shared_ptr<const ImageRGB32> screenshot
     ){
-        throw_and_log<OperationFailedException>(console, error_report, std::move(message), &console, std::move(screenshot));
+        throw_and_log<OperationFailedException>(stream.logger(), error_report, std::move(message), &stream, std::move(screenshot));
     }
 
     virtual const char* name() const override{ return "OperationFailedException"; }

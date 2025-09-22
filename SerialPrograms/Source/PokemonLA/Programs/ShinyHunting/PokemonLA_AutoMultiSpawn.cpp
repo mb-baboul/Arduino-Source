@@ -1,17 +1,24 @@
 /*  Auto Multi-Spawn
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
+#include <set>
+//#include <atomic>
+#include <chrono>
+//#include <thread>
+#include <iterator>
+#include <sstream>
 #include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/ImageTypes/ImageRGB32.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
 #include "CommonFramework/Tools/DebugDumper.h"
-#include "CommonFramework/Tools/InterruptableCommands.h"
+#include "CommonTools/Async/InterruptableCommands.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/StartProgramChecks.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Inference/Pokemon_NameReader.h"
 #include "Pokemon/Pokemon_Strings.h"
@@ -30,12 +37,6 @@
 #include "PokemonLA_AutoMultiSpawn.h"
 
 #include <iostream>
-#include <sstream>
-#include <set>
-#include <atomic>
-#include <chrono>
-#include <thread>
-#include <iterator>
 using std::cout;
 using std::endl;
 
@@ -73,16 +74,21 @@ const std::set<std::string> WILD_NEARBY_POKEMON[] = {
 // Otherwise, it returns the details of the pokemon thrown at.
 std::pair<bool, PokemonDetails> control_focus_to_throw(
     SingleSwitchProgramEnvironment& env,
-    BotBaseContext& context, 
+    ProControllerContext& context,
     const std::set<std::string>& target_pokemon,
     const std::set<std::string>& nearby_pokemon,
     Language language
 ){
     // A session that creates a new thread to send button commands to controller
-    AsyncCommandSession session(context, env.console.logger(), env.realtime_dispatcher(), env.console.botbase());
+    AsyncCommandSession<ProController> session(
+        context,
+        env.console.logger(),
+        env.realtime_dispatcher(),
+        env.console.controller<ProController>()
+    );
 
     // First, let controller press ZL non-stop to start focusing on a pokemon
-    session.dispatch([](BotBaseContext& context){
+    session.dispatch([](ProControllerContext& context){
         pbf_press_button(context, BUTTON_ZL, 10000, 0);
     });
 
@@ -141,7 +147,7 @@ std::pair<bool, PokemonDetails> control_focus_to_throw(
             // We are focusing on a target pokemon
             // Press ZR to throw sth.
             // Dispatch a new series of commands that overwrites the last ones
-            session.dispatch([](BotBaseContext& context){
+            session.dispatch([](ProControllerContext& context){
                 pbf_press_button(context, BUTTON_ZL | BUTTON_ZR, 30, 0);
                 pbf_press_button(context, BUTTON_ZL, 50, 0);
             });
@@ -176,7 +182,7 @@ std::pair<bool, PokemonDetails> control_focus_to_throw(
         if (focus_index < max_focus_change_attempt){
             // We focused onto a pokemon that is not the target pokemon, but there are other pokemon that can be focused.
             // Press A to change focus.
-            session.dispatch([](BotBaseContext& context){
+            session.dispatch([](ProControllerContext& context){
                 pbf_press_button(context, BUTTON_ZL | BUTTON_A, 30, 0);
                 pbf_press_button(context, BUTTON_ZL, 10000, 0);
             });
@@ -200,9 +206,10 @@ AutoMultiSpawn_Descriptor::AutoMultiSpawn_Descriptor()
         STRING_POKEMON + " LA", "Auto Multi-Spawn",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/AutoMultiSpawn.md",
         "Advance a path in MultiSpawn shiny hunting method.",
+        ProgramControllerClass::StandardController_RequiresPrecision,
         FeedbackType::REQUIRED,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        {}
     )
 {}
 
@@ -243,7 +250,7 @@ std::vector<int> parse_multispawn_path(SingleSwitchProgramEnvironment& env, cons
     std::vector<int> path_despawns;
     std::string raw_path = path + "|";
     for(size_t pos = 0, next_pos = 0; (next_pos = raw_path.find('|', pos)) != std::string::npos; pos = next_pos + 1){
-        if (pos == next_pos){ // In the case it's jsut one "|"
+        if (pos == next_pos){ // In the case it's just one "|"
             continue;
         }
 
@@ -255,7 +262,7 @@ std::vector<int> parse_multispawn_path(SingleSwitchProgramEnvironment& env, cons
             );
         }
         raw_path[next_pos] = '\0';
-        int despawn_count = strtol(raw_path.data() + pos+1, nullptr, 10);
+        int despawn_count = static_cast<int>(strtol(raw_path.data() + pos+1, nullptr, 10));
         if (despawn_count <= 0 || despawn_count > max_num_despawn){
             throw InternalProgramError(
                 &env.console.logger(),
@@ -270,7 +277,9 @@ std::vector<int> parse_multispawn_path(SingleSwitchProgramEnvironment& env, cons
 }
 
 
-void AutoMultiSpawn::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void AutoMultiSpawn::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    StartProgramChecks::check_performance_class_wired_or_wireless(context);
+
     //  Connect the controller.
     pbf_press_button(context, BUTTON_LCLICK, 5, 5);
 
@@ -323,7 +332,7 @@ void AutoMultiSpawn::program(SingleSwitchProgramEnvironment& env, BotBaseContext
 
 void AutoMultiSpawn::advance_one_path_step(
     SingleSwitchProgramEnvironment& env,
-    BotBaseContext& context,
+    ProControllerContext& context,
     size_t num_spawned_pokemon,
     size_t num_to_despawn,
     TimeOfDay cur_time,
@@ -339,8 +348,9 @@ void AutoMultiSpawn::advance_one_path_step(
         }
         if (c >= 5){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
+                ErrorReport::SEND_ERROR_REPORT,
                 "Failed to switch to Pokemon selection after 5 attempts.",
+                env.console,
                 std::move(snapshot)
             );
         }
@@ -364,9 +374,10 @@ void AutoMultiSpawn::advance_one_path_step(
          );
         if (already_removed_pokemon > num_to_despawn){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
+                ErrorReport::SEND_ERROR_REPORT,
                 "Removed more pokemon than required. Removed "
-                + std::to_string(already_removed_pokemon) + " while target is " + std::to_string(num_to_despawn)
+                + std::to_string(already_removed_pokemon) + " while target is " + std::to_string(num_to_despawn),
+                env.console
             );
         }
 
@@ -383,8 +394,9 @@ void AutoMultiSpawn::advance_one_path_step(
     }
     if (remained_to_remove > 0){
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "After trying to start three battles, cannot remove enough pokemon."
+            ErrorReport::SEND_ERROR_REPORT,
+            "After trying to start three battles, cannot remove enough pokemon.",
+            env.console
         );
     }
 
@@ -395,7 +407,7 @@ void AutoMultiSpawn::advance_one_path_step(
 // From camp, go to spawn, do one battle to remove pokemon. If no error, return camp
 size_t AutoMultiSpawn::try_one_battle_to_remove_pokemon(
     SingleSwitchProgramEnvironment& env,
-    BotBaseContext& context,
+    ProControllerContext& context,
     size_t num_left,
     size_t num_to_despawn
 ){
@@ -421,8 +433,9 @@ size_t AutoMultiSpawn::try_one_battle_to_remove_pokemon(
 
     if (focused_pokemon.name_candidates.size() == 0){
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Cannot focus on a pokemon after going to the spawn point  " + std::to_string(num_tries) + " times"
+            ErrorReport::SEND_ERROR_REPORT,
+            "Cannot focus on a pokemon after going to the spawn point  " + std::to_string(num_tries) + " times",
+            env.console
         );
     }
     
@@ -462,8 +475,9 @@ size_t AutoMultiSpawn::try_one_battle_to_remove_pokemon(
 
         if (ret < 0){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Cannot detect a battle after 30 seconds."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Cannot detect a battle after 30 seconds.",
+                env.console
             );
         }
 
@@ -516,8 +530,9 @@ size_t AutoMultiSpawn::try_one_battle_to_remove_pokemon(
             // XXX can try to reset the game to fix this. But for now let user handles this.
             env.log("Removed more than needed!");
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Removed more pokemon than needed!"
+                ErrorReport::SEND_ERROR_REPORT,
+                "Removed more pokemon than needed!",
+                env.console
             );
         }else if (num_removed_pokemon < num_to_despawn){
 
@@ -541,8 +556,9 @@ size_t AutoMultiSpawn::try_one_battle_to_remove_pokemon(
         );
         if (ret < 0){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Cannot detect end of battle when escaping."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Cannot detect end of battle when escaping.",
+                env.console
             );
         }
     }
@@ -553,7 +569,7 @@ size_t AutoMultiSpawn::try_one_battle_to_remove_pokemon(
 
 PokemonDetails AutoMultiSpawn::go_to_spawn_point_and_try_focusing_pokemon(
     SingleSwitchProgramEnvironment& env,
-    BotBaseContext& context,
+    ProControllerContext& context,
     size_t nun_pokemon_left
 ){
     // From camp fly to the spawn point, focus on a target pokemon and start a battle

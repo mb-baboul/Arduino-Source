@@ -1,6 +1,6 @@
 /*  Day Skipper (EU)
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -29,7 +29,11 @@ public:
 class DaySkipperEU : public SingleSwitchProgramInstance{
 public:
     DaySkipperEU();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
+
+private:
+    void run_switch1(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    void run_switch2(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
 private:
     SimpleIntegerOption<uint32_t> SKIPS;

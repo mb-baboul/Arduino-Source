@@ -1,25 +1,22 @@
 /*  Sandwich Ingredient Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_SandwichIngredientDetector_H
 #define PokemonAutomation_PokemonSV_SandwichIngredientDetector_H
 
+#include <array>
 #include "Common/Cpp/Color.h"
-#include "CommonFramework/ImageMatch/CroppedImageDictionaryMatcher.h"
-#include "CommonFramework/ImageMatch/ImageMatchResult.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/Inference/VisualDetector.h"
-#include "CommonFramework/OCR/OCR_SmallDictionaryMatcher.h"
+#include "CommonTools/ImageMatch/ImageMatchResult.h"
+#include "CommonTools/ImageMatch/CroppedImageDictionaryMatcher.h"
+#include "CommonTools/OCR/OCR_SmallDictionaryMatcher.h"
+#include "CommonTools/VisualDetector.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_GradientArrowDetector.h"
 
-#include <array>
-
 namespace PokemonAutomation{
-    class ConsoleHandle;
-    class BotBaseContext;
     struct ProgramInfo;
 namespace NintendoSwitch{
 namespace PokemonSV{
@@ -32,7 +29,7 @@ public:
     SandwichIngredientArrowDetector(size_t menu_index, Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     GradientArrowDetector m_arrow;
@@ -62,7 +59,7 @@ public:
     DeterminedSandwichIngredientDetector(SandwichIngredientType ingredient_type, size_t index, Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;
@@ -82,7 +79,7 @@ public:
     SandwichCondimentsPageDetector(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;
@@ -101,7 +98,7 @@ public:
     SandwichPicksPageDetector(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;
@@ -155,7 +152,7 @@ private:
 };
 class SandwichCondimentOCR : public OCR::SmallDictionaryMatcher{
 public:
-    static constexpr double MAX_LOG10P = -2.0;
+    static constexpr double MAX_LOG10P = -1.5;
     static constexpr double MAX_LOG10P_SPREAD = 0.5;
 
 public:

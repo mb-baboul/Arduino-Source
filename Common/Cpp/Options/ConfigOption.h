@@ -1,6 +1,6 @@
 /*  Config Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -27,24 +27,39 @@ enum class LockMode{
 };
 enum class ConfigOptionState{
     ENABLED,
-    DISABLED,
+    DISABLED, // aka locked
     HIDDEN,
 };
 
 
-// An option of a program, like the number of boxes of eggs to hatch,
-// the number of frames to skip, or what type of pokeballs to throw.
-// It is responsible for setting the UI (by calling make_ui()) of this option.
+// Abstract base class for An option of a program, like the number of boxes of
+// eggs to hatch, the number of frames to skip, or what type of pokeballs to throw.
+// It is responsible for setting the UI (by calling make_QtWidget()) of this option.
 // It also uses load_json() and to_json() to load and save the option to
 // a json file, so that the program can remember what user has selected.
 class ConfigOption{
 public:
+    // the objects that listen to changes on the ConfigOption should inherit
+    // this Listener struct and call ConfigOption::add_listener() to add themselves
+    // to the listener set.
+    // Afterwards, whenever the config state is changed, all added listeners'
+    // corresponding member functions (e.g. value_changed()) will get called by
+    // the config option.
     struct Listener{
-        //  Pass the object that initiated the change. This is mainly used to
-        //  identify yourself as the initiater to avoid infinite loops.
-        virtual void value_changed(void* object){}
-        virtual void visibility_changed(){}
-        virtual void program_state_changed(bool program_is_running){}
+        //  When the config option value is changed, all added listeners' 
+        //  value_changed() will get called. 
+        //  object: the object that initiated the change. e.g. If the user changes
+        //  a UI content, object would be the UI option that is changed. This is
+        //  mainly used to avoid infinite loops. So if the initial change triggers
+        //  the original UI option's value_changed() get called, it will know that
+        //  object == this and therefore a loop is formed.
+        virtual void on_config_value_changed(void* object){}
+        //  When the config UI visibility is changed, all added listeners'
+        //  visibility_changed() will get called.
+        virtual void on_config_visibility_changed(){}
+        //  When the program state is changed, all added listeners'
+        //  program_state_changed() will get called.
+        virtual void on_program_state_changed(bool program_is_running){}
     };
     void add_listener(Listener& listener);
     void remove_listener(Listener& listener);
@@ -73,8 +88,17 @@ public:
     void check_usage() const{
         m_lifetime_sanitizer.check_usage();
     }
+    LifetimeSanitizer::CheckScope check_scope() const{
+        return m_lifetime_sanitizer.check_scope();
+    }
 
 public:
+    //  Return the lock mode: how locking works on this option. It can be:
+    //  - UNLOCK_WHILE_RUNNING,
+    //  - LOCK_WHILE_RUNNING,
+    //  - READ_ONLY, (aka always locked)
+    //  This value is const throughout the ConfigOption lifetime. It is set
+    //  when constructing the ConfigOption.
     LockMode lock_mode() const;
 
     //  Returns error message if invalid. Otherwise returns empty string.
@@ -86,7 +110,17 @@ public:
     //  transient state that the option object may have.
     virtual void reset_state(){};
 
+    //  Thread-safe: return the current visibility state. It can be:
+    //  - ENABLED
+    //  - DISABLED
+    //  - HIDDEN
     ConfigOptionState visibility() const;
+    //  Thread-safe: set the option's visibility state. It can be:
+    //  - ENABLED
+    //  - DISABLED
+    //  - HIDDEN
+    //  If visibility changed, all attached listeners' on_config_visibility_changed()
+    //  will be called.
     virtual void set_visibility(ConfigOptionState visibility);
 
 

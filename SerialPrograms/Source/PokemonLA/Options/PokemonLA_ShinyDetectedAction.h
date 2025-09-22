@@ -1,27 +1,25 @@
 /*  Shiny Detected Action
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonLA_ShinyDetectedAction_H
 #define PokemonAutomation_PokemonLA_ShinyDetectedAction_H
 
-#include "Common/Cpp/Exceptions.h"
 #include "Common/Cpp/Options/StaticTextOption.h"
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "Common/Cpp/Options/GroupOption.h"
 #include "CommonFramework/Notifications/EventNotificationOption.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 
 namespace PokemonAutomation{
-    class BotBaseContext;
     class EventNotificationOption;
     class StatsTracker;
     class ProgramEnvironment;
-    class ConsoleHandle;
-    class AsyncCommandSession;
 namespace NintendoSwitch{
 namespace PokemonLA{
 
@@ -44,28 +42,41 @@ public:
 
 
 
-enum class ShinyDetectedAction{
+enum class OverworldShinyDetectedAction{
     IGNORE,
     STOP_PROGRAM,
     TAKE_VIDEO_STOP_PROGRAM,
 };
 
 
-class ShinyDetectedActionOption : public GroupOption{
+class OverworldShinyDetectedActionOption : public GroupOption{
 public:
-    ShinyDetectedActionOption(
+    OverworldShinyDetectedActionOption(
         std::string label, std::string description,
-        std::string default_delay_ticks,
-        ShinyDetectedAction default_action = ShinyDetectedAction::TAKE_VIDEO_STOP_PROGRAM
+        std::string default_delay,
+        OverworldShinyDetectedAction default_action = OverworldShinyDetectedAction::TAKE_VIDEO_STOP_PROGRAM
     );
 
     bool stop_on_shiny() const;
 
     StaticTextOption DESCRIPTION;
-    EnumDropdownOption<ShinyDetectedAction> ACTION;
+    EnumDropdownOption<OverworldShinyDetectedAction> ACTION;
 //    BooleanCheckBoxOption STOP_PROGRAM;
 //    BooleanCheckBoxOption TAKE_VIDEO;
-    TimeExpressionOption<uint16_t> SCREENSHOT_DELAY;
+    MillisecondsOption SCREENSHOT_DELAY0;
+    EventNotificationOption NOTIFICATIONS;
+};
+class BattleMatchActionOption : public GroupOption{
+public:
+    BattleMatchActionOption(
+        std::string label, std::string description,
+        std::string default_delay
+    );
+
+    bool stop_on_shiny() const;
+
+    StaticTextOption DESCRIPTION;
+    BooleanCheckBoxOption TAKE_VIDEO;
     EventNotificationOption NOTIFICATIONS;
 };
 
@@ -74,22 +85,23 @@ public:
 //  Call this inside the ShinySoundDetector callback.
 //  Returns true if session should stop.
 bool on_shiny_callback(
-    ProgramEnvironment& env, ConsoleHandle& console,
-    ShinyDetectedActionOption& options,
+    ProgramEnvironment& env, VideoStream& stream,
+    OverworldShinyDetectedActionOption& options,
     float error_coefficient
 );
 
 //  Call this after the session ends. Only if the session stopped on the shiny.
 void on_shiny_sound(
-    ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
-    ShinyDetectedActionOption& options,
+    ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context,
+    OverworldShinyDetectedActionOption& options,
     float error_coefficient
 );
 
 // Alternative for matches (shiny/alphas) not found by sound.
-void on_match_found(
-    ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
-    ShinyDetectedActionOption& options, bool is_match
+void on_battle_match_found(
+    ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context,
+    BattleMatchActionOption& options,
+    bool allow_notification
 );
 
 

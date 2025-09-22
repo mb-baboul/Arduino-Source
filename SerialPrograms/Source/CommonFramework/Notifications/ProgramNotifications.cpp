@@ -1,12 +1,10 @@
 /*  Program Notifications
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <QFile>
-#include <dpp/DPP_SilenceWarnings.h>
-#include <Integrations/DppIntegration/DppClient.h>
 #include "Common/Cpp/PrettyPrint.h"
 #include "Common/Cpp/Json/JsonValue.h"
 #include "Common/Cpp/Json/JsonArray.h"
@@ -14,9 +12,10 @@
 #include "CommonFramework/Globals.h"
 #include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/Tools/ProgramEnvironment.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "Integrations/DiscordSettingsOption.h"
 #include "Integrations/DiscordWebhook.h"
-#include "Integrations/SleepyDiscordRunner.h"
+#include "Integrations/DppIntegration/DppClient.h"
 #include "ProgramNotifications.h"
 
 //#include <iostream>
@@ -43,9 +42,9 @@ JsonObject make_credits_field(const ProgramInfo& info){
         ? PROGRAM_NAME + " CC " + PROGRAM_VERSION + "-dev"
         : PROGRAM_NAME + " CC " + PROGRAM_VERSION + "";
     if (GlobalSettings::instance().HIDE_NOTIF_DISCORD_LINK){
-        text += " ([GitHub](" + PROJECT_GITHUB_URL + "About/))";
+        text += " ([GitHub](" + GITHUB_LINK_URL + "))";
     }else{
-        text += " ([GitHub](" + PROJECT_GITHUB_URL + "About/)/[Discord](" + DISCORD_LINK_URL + "))";
+        text += " ([GitHub](" + GITHUB_LINK_URL + ")/[Discord](" + DISCORD_LINK_URL_EMBED + "))";
     }
     field["value"] = std::move(text);
     return field;
@@ -89,7 +88,7 @@ void send_raw_notification(
     const std::vector<std::pair<std::string, std::string>>& messages,
     const ImageAttachment& image
 ){
-    std::shared_ptr<PendingFileSend> file(new PendingFileSend(logger, image));
+    std::shared_ptr<PendingFileSend> file = std::make_shared<PendingFileSend>(logger, image);
     bool hasFile = !file->filepath().empty();
 
     JsonObject embed;
@@ -121,22 +120,11 @@ void send_raw_notification(
         hasFile ? file : nullptr
     );
 
-#ifdef PA_SLEEPY
-    if (GlobalSettings::instance().DISCORD->integration.library0 == Integration::DiscordIntegrationSettingsOption::Library::SleepyDiscord){
-        Integration::SleepyDiscordRunner::send_embed_sleepy(
-            should_ping, tags, std::move(embed),
-            hasFile ? file : nullptr
-        );
-    }
-#endif
-
 #ifdef PA_DPP
-    if (GlobalSettings::instance().DISCORD->integration.library0 == Integration::DiscordIntegrationSettingsOption::Library::DPP){
-        Integration::DppClient::Client::instance().send_embed_dpp(
-            should_ping, color, tags, std::move(embed),
-            hasFile ? file : nullptr
-        );
-    }
+    Integration::DppClient::Client::instance().send_embed_dpp(
+        should_ping, color, tags, std::move(embed),
+        hasFile ? file : nullptr
+    );
 #endif
 }
 void send_raw_notification(
@@ -147,7 +135,7 @@ void send_raw_notification(
     const std::vector<std::pair<std::string, std::string>>& messages,
     const std::string& filepath
 ){
-    std::shared_ptr<PendingFileSend> file(new PendingFileSend(filepath, true));
+    std::shared_ptr<PendingFileSend> file = std::make_shared<PendingFileSend>(filepath, true);
     bool hasFile = !file->filepath().empty();
 
     JsonObject embed;
@@ -174,22 +162,11 @@ void send_raw_notification(
         hasFile ? file : nullptr
     );
 
-#ifdef PA_SLEEPY
-    if (GlobalSettings::instance().DISCORD->integration.library0 == Integration::DiscordIntegrationSettingsOption::Library::SleepyDiscord){
-        Integration::SleepyDiscordRunner::send_embed_sleepy(
-            should_ping, tags, std::move(embed),
-            hasFile ? file : nullptr
-        );
-    }
-#endif
-
 #ifdef PA_DPP
-    if (GlobalSettings::instance().DISCORD->integration.library0 == Integration::DiscordIntegrationSettingsOption::Library::DPP){
-        Integration::DppClient::Client::instance().send_embed_dpp(
-            should_ping, color, tags, std::move(embed),
-            hasFile ? file : nullptr
-        );
-    }
+    Integration::DppClient::Client::instance().send_embed_dpp(
+        should_ping, color, tags, std::move(embed),
+        hasFile ? file : nullptr
+    );
 #endif
 }
 
@@ -285,7 +262,7 @@ void send_program_notification_with_file(
         filepath
     );
 }
-void send_program_notification(
+bool send_program_notification(
     ProgramEnvironment& env, EventNotificationOption& settings,
     Color color,
     const std::string& title,
@@ -294,7 +271,7 @@ void send_program_notification(
     const ImageViewRGB32& image, bool keep_file
 ){
     if (!settings.ok_to_send_now(env.logger())){
-        return;
+        return false;
     }
 #if 1
     messages.emplace_back(
@@ -331,6 +308,8 @@ void send_program_notification(
         messages,
         ImageAttachment(image, settings.screenshot(), keep_file)
     );
+
+    return true;
 }
 
 

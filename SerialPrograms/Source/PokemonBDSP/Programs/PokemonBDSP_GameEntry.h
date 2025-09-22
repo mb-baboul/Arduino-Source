@@ -1,35 +1,39 @@
 /*  Game Entry
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_GameEntry_H
 #define PokemonAutomation_PokemonBDSP_GameEntry_H
 
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
+#include "NintendoSwitch/NintendoSwitch_ConsoleHandle.h"
 
 namespace PokemonAutomation{
-    class BotBaseContext;
     class ProgramEnvironment;
 namespace NintendoSwitch{
 namespace PokemonBDSP{
 
+using namespace std::chrono_literals;
+
 
 bool gamemenu_to_ingame(
-    ConsoleHandle& console, BotBaseContext& context,
-    uint16_t mash_duration, uint16_t enter_game_timeout
+    VideoStream& stream, ProControllerContext& context,
+    Milliseconds mash_duration, Milliseconds enter_game_timeout
 );
 bool openedgame_to_ingame(
-    ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
-    uint16_t load_game_timeout,
-    uint16_t mash_duration, uint16_t enter_game_timeout,
-    uint16_t post_wait_time = 125
+    ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context,
+    Milliseconds load_game_timeout,
+    Milliseconds mash_duration, Milliseconds enter_game_timeout,
+    Milliseconds post_wait_time = 1000ms
 );
 bool reset_game_from_home(
-    ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
+    ProgramEnvironment& env,
+    ConsoleHandle& console, ProControllerContext& context,
     bool tolerate_update_menu,
-    uint16_t post_wait_time = 125
+    Milliseconds post_wait_time = 1000ms
 );
 
 

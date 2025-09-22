@@ -1,20 +1,19 @@
 /*  Sandwich Plate Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_SandwichPlateDetector_H
 #define PokemonAutomation_PokemonSV_SandwichPlateDetector_H
 
-#include <vector>
 #include "Common/Cpp/AbstractLogger.h"
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
 #include "CommonFramework/Language.h"
+#include "CommonTools/VisualDetector.h"
 
 namespace PokemonAutomation{
 
@@ -33,13 +32,14 @@ public:
     enum class Side{
         LEFT,
         MIDDLE,
-        RIGHT
+        RIGHT,
+        NOT_APPLICABLE,
     };
     SandwichPlateDetector(Logger& logger, Color color, Language language, Side side);
     virtual ~SandwichPlateDetector();
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     // Return detected sandwich filling name slug. Return empty string if not detected
     std::string detect_filling_name(const ImageViewRGB32& screen) const;

@@ -1,6 +1,6 @@
 /*  Tera Raid Search Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,12 +10,12 @@
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 
 namespace PokemonAutomation{
-    class ConsoleHandle;
-    class BotBaseContext;
     struct ProgramInfo;
 namespace NintendoSwitch{
 namespace PokemonSV{
@@ -27,18 +27,24 @@ public:
     TeraRaidSearchDetector(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     bool detect_search_location(ImageFloatBox& box, const ImageViewRGB32& screen) const;
-    bool move_cursor_to_search(const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context) const;
+    bool move_cursor_to_search(
+        const ProgramInfo& info,
+        VideoStream& stream, ProControllerContext& context
+    ) const;
 
 private:
     Color m_color;
 };
 class TeraRaidSearchWatcher : public DetectorToFinder<TeraRaidSearchDetector>{
 public:
-    TeraRaidSearchWatcher(Color color = COLOR_RED)
-         : DetectorToFinder("TeraRaidSearchWatcher", std::chrono::milliseconds(250), color)
+    TeraRaidSearchWatcher(
+        Color color = COLOR_RED,
+        std::chrono::milliseconds duration = std::chrono::milliseconds(250)
+    )
+         : DetectorToFinder("TeraRaidSearchWatcher", duration, color)
     {}
 };
 
@@ -49,7 +55,7 @@ public:
     CodeEntryDetector(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;

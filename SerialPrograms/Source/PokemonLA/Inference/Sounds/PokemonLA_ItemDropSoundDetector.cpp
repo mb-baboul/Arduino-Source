@@ -1,12 +1,11 @@
 /*  Item Drop Sound Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/Inference/SpectrogramMatcher.h"
-#include "CommonFramework/Inference/AudioTemplateCache.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "CommonTools/Audio/SpectrogramMatcher.h"
+#include "CommonTools/Audio/AudioTemplateCache.h"
 #include "PokemonLA/PokemonLA_Settings.h"
 #include "PokemonLA_ItemDropSoundDetector.h"
 
@@ -15,9 +14,15 @@ namespace NintendoSwitch{
 namespace PokemonLA{
 
 
-ItemDropSoundDetector::ItemDropSoundDetector(ConsoleHandle& console, DetectedCallback detected_callback)
+ItemDropSoundDetector::ItemDropSoundDetector(VideoStream& stream, DetectedCallback detected_callback)
     // Use a green as the detection color because the shiny symbol in LA is green.
-    : AudioPerSpectrumDetectorBase("ItemDropSoundDetector", "Item drop sound", COLOR_DARKGREEN, console, detected_callback)
+    : AudioPerSpectrumDetectorBase(
+        stream.logger(),
+        "ItemDropSoundDetector",
+        "Item drop sound",
+        COLOR_DARKGREEN,
+        detected_callback
+    )
 {}
 
 

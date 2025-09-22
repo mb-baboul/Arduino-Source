@@ -1,10 +1,14 @@
 /*  Single Switch Program Template
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/Json/JsonValue.h"
+//#include "CommonFramework/VideoPipeline/VideoFeed.h"
+//#include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/StartupChecks/StartProgramChecks.h"
+#include "Controllers/ControllerSession.h"
 #include "NintendoSwitch_SingleSwitchProgram.h"
 #include "Framework/NintendoSwitch_SingleSwitchProgramOption.h"
 
@@ -18,23 +22,25 @@ SingleSwitchProgramDescriptor::SingleSwitchProgramDescriptor(
     std::string category, std::string display_name,
     std::string doc_link,
     std::string description,
+    ProgramControllerClass color_class,
     FeedbackType feedback,
     AllowCommandsWhenRunning allow_commands_while_running,
-    PABotBaseLevel min_pabotbase_level
+    bool deprecated
 )
     : ProgramDescriptor(
-        pick_color(feedback, min_pabotbase_level),
+        pick_color(color_class),
         std::move(identifier),
         std::move(category), std::move(display_name),
         std::move(doc_link),
         std::move(description)
     )
+    , m_color_class(color_class)
     , m_feedback(feedback)
-    , m_min_pabotbase_level(min_pabotbase_level)
     , m_allow_commands_while_running(allow_commands_while_running == AllowCommandsWhenRunning::ENABLE_COMMANDS)
+    , m_deprecated(deprecated)
 {}
 std::unique_ptr<PanelInstance> SingleSwitchProgramDescriptor::make_panel() const{
-    return std::unique_ptr<PanelInstance>(new SingleSwitchProgramOption(*this));
+    return std::make_unique<SingleSwitchProgramOption>(*this);
 }
 
 
@@ -53,17 +59,56 @@ SingleSwitchProgramInstance::SingleSwitchProgramInstance(
     , NOTIFICATION_ERROR_RECOVERABLE(
         "Program Error (Recoverable)",
         true, false,
-        ImageAttachmentMode::PNG,
+        ImageAttachmentMode::JPG,
         error_notification_tags
 
     )
     , NOTIFICATION_ERROR_FATAL(
         "Program Error (Fatal)",
         true, true,
-        ImageAttachmentMode::PNG,
+        ImageAttachmentMode::JPG,
         error_notification_tags
     )
 {}
+
+
+void SingleSwitchProgramInstance::program(SingleSwitchProgramEnvironment& env, CancellableScope& scope){
+    ProControllerContext context(scope, env.console.controller<ProController>());
+    program(env, context);
+}
+void SingleSwitchProgramInstance::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    throw InternalProgramError(&env.logger(), PA_CURRENT_FUNCTION, "Not implemented.");
+}
+
+
+void SingleSwitchProgramInstance::start_program_controller_check(
+    ControllerSession& session
+){
+    if (!session.ready()){
+        throw UserSetupError(session.logger(), "Cannot Start: Controller is not ready.");
+    }
+}
+void SingleSwitchProgramInstance::start_program_feedback_check(
+    VideoStream& stream,
+    FeedbackType feedback_type
+){
+    StartProgramChecks::check_feedback(stream, feedback_type);
+}
+void SingleSwitchProgramInstance::start_program_border_check(
+    VideoStream& stream,
+    FeedbackType feedback_type
+){
+    switch (feedback_type){
+    case FeedbackType::NONE:
+        return;
+    case FeedbackType::OPTIONAL_:
+    case FeedbackType::REQUIRED:
+    case FeedbackType::VIDEO_AUDIO:
+        StartProgramChecks::check_border(stream);
+    }
+}
+
+
 void SingleSwitchProgramInstance::add_option(ConfigOption& option, std::string serialization_string){
     m_options.add_option(option, std::move(serialization_string));
 }

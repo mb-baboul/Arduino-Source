@@ -1,11 +1,11 @@
 /*  Message Logger
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Microcontroller/MessageProtocol.h"
-#include "Common/NintendoSwitch/NintendoSwitch_Protocol_PushButtons.h"
+#include "Common/Cpp/PrettyPrint.h"
+#include "Common/SerialPABotBase/SerialPABotBase_Protocol.h"
 #include "ClientSource/Libraries/MessageConverter.h"
 #include "BotBaseMessage.h"
 #include "MessageLogger.h"
@@ -33,9 +33,10 @@ void MessageLogger::on_send(const BotBaseMessage& message, bool is_retransmit){
         }
 #if 0
         if (message.type == PABB_MSG_CONTROLLER_STATE){
-            pabb_controller_state body;
-            memcpy(&body, message.body.c_str(), sizeof(pabb_controller_state));
-            print = body.ticks >= 5;
+//            pabb_controller_state body;
+//            memcpy(&body, message.body.c_str(), sizeof(pabb_controller_state));
+//            print = body.ticks >= 5;
+            print = false;
         }
 #endif
 
@@ -52,9 +53,9 @@ void MessageLogger::on_send(const BotBaseMessage& message, bool is_retransmit){
         return;
     }
     if (is_retransmit){
-        log("Re-Send: " + str);
+        log("Re-Send: " + str, COLOR_DARKGREEN);
     }else{
-        log("Sending: " + str);
+        log("Sending: " + str, COLOR_DARKGREEN);
     }
 }
 void MessageLogger::on_recv(const BotBaseMessage& message){
@@ -75,7 +76,7 @@ void MessageLogger::on_recv(const BotBaseMessage& message){
     if (!print){
         return;
     }
-    log("Receive: " + message_to_string(message));
+    log("Receive: " + message_to_string(message), COLOR_DARKGREEN);
 }
 
 
@@ -83,17 +84,40 @@ void MessageLogger::on_recv(const BotBaseMessage& message){
 SerialLogger::SerialLogger(Logger& logger, bool log_everything)
     : MessageLogger(log_everything)
     , m_logger(logger)
+    , m_history(200)
 {}
 void SerialLogger::log(const char* msg, Color color){
-    m_logger.log(msg, color);
+    if (ok_to_log()){
+        m_logger.log(msg, color);
+    }
 }
 void SerialLogger::log(const std::string& msg, Color color){
-    m_logger.log(msg, color);
-}
-void SerialLogger::log(std::string msg){
-    m_logger.log(msg, COLOR_DARKGREEN);
+    if (ok_to_log()){
+        m_logger.log(msg, color);
+    }
 }
 
+bool SerialLogger::ok_to_log(){
+    WallClock now = current_time();
+    WriteSpinLock lg(m_lock);
+    while (!m_history.empty()){
+        if (now - m_history.front() < std::chrono::seconds(1)){
+            break;
+        }
+        m_history.pop_front();
+    }
+    if (!m_history.try_push_back(now)){
+        m_messages_dropped++;
+        return false;
+    }
+
+    if (m_messages_dropped != 0){
+        m_logger.log("Dropped " + tostr_u_commas(m_messages_dropped) + " message(s) due to logging rate limit.", COLOR_RED);
+        m_messages_dropped = 0;
+    }
+
+    return true;
+}
 
 
 

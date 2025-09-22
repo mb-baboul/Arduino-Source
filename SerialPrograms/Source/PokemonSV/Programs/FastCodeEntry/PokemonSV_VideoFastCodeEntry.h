@@ -1,6 +1,6 @@
 /*  Video Fast Code Entry
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,10 +9,10 @@
 
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
-#include "CommonFramework/Options/ScreenWatchOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
+#include "CommonTools/Options/ScreenWatchOption.h"
 #include "NintendoSwitch/NintendoSwitch_MultiSwitchProgram.h"
-#include "NintendoSwitch/Programs/NintendoSwitch_FastCodeEntry.h"
+#include "PokemonSV_CodeEntry.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -38,7 +38,7 @@ void wait_for_video_code_and_join(
     MultiSwitchProgramEnvironment& env, CancellableScope& scope,
     ScreenWatchOption& screen_watcher,
     VideoFceSettings& join_method,
-    FastCodeEntrySettingsOption& fce_settings
+    const FastCodeEntrySettings& settings
 );
 
 
@@ -54,6 +54,7 @@ public:
 class VideoFastCodeEntry : public MultiSwitchProgramInstance{
 public:
     VideoFastCodeEntry();
+    virtual void update_active_consoles(size_t switch_count) override;
     virtual void program(MultiSwitchProgramEnvironment& env, CancellableScope& scope) override;
 
 private:
@@ -69,7 +70,7 @@ private:
 
     VideoFceSettings JOIN_METHOD;
 
-    FastCodeEntrySettingsOption FCE_SETTINGS;
+    FastCodeEntrySettingsOption SETTINGS;
     EventNotificationsOption NOTIFICATIONS;
 };
 

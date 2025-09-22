@@ -1,6 +1,6 @@
 /*  Double Battle Leveling
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,7 @@
 #define PokemonAutomation_PokemonBDSP_DoublesLeveling_H
 
 #include "Common/Cpp/Options/StaticTextOption.h"
-//#include "Common/Cpp/Options/BooleanCheckBoxOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
 #include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
@@ -35,11 +35,11 @@ public:
 class DoublesLeveling : public SingleSwitchProgramInstance{
 public:
     DoublesLeveling();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 
 private:
-    bool battle(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    bool battle(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
     GoHomeWhenDoneOption GO_HOME_WHEN_DONE;
 
@@ -53,8 +53,8 @@ private:
     EventNotificationsOption NOTIFICATIONS;
 
     SectionDividerOption m_advanced_options;
-//    TimeExpressionOption<uint16_t> WATCHDOG_TIMER;
-    TimeExpressionOption<uint16_t> EXIT_BATTLE_TIMEOUT;
+//    MillisecondsOption WATCHDOG_TIMER;
+    MillisecondsOption EXIT_BATTLE_TIMEOUT0;
 };
 
 

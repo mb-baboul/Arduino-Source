@@ -1,17 +1,19 @@
 /*  AutoStory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/VideoPipeline/VideoOverlay.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_DirectionDetector.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_NoMinimapDetector.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 #include "PokemonSV_AutoStory_Segment_20.h"
 
@@ -29,7 +31,7 @@ namespace PokemonSV{
 
 
 std::string AutoStory_Segment_20::name() const{
-    return "16: Artazon Gym (Grass)";
+    return "20: Artazon Gym (Grass)";
 }
 
 std::string AutoStory_Segment_20::start_text() const{
@@ -37,46 +39,42 @@ std::string AutoStory_Segment_20::start_text() const{
 }
 
 std::string AutoStory_Segment_20::end_text() const{
-    return "End: Defeated Artazon Gym (Grass). Inside gym building.";
+    return "End: Defeated Artazon Gym (Grass). At East Province (Area One) Pokecenter.";
 }
 
-void AutoStory_Segment_20::run_segment(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AutoStoryOptions options) const{
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
+void AutoStory_Segment_20::run_segment(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    AutoStoryOptions options,
+    AutoStoryStats& stats
+) const{
+    
 
-    context.wait_for_all_requests();
-    env.console.overlay().add_log("Start Segment ", COLOR_ORANGE);
-
-    checkpoint_43(env, context, options.notif_status_update);
-    checkpoint_44(env, context, options.notif_status_update);
-    checkpoint_45(env, context, options.notif_status_update);
-
-    context.wait_for_all_requests();
-    env.console.log("End Segment ", COLOR_GREEN);
     stats.m_segment++;
     env.update_stats();
+    context.wait_for_all_requests();
+    env.console.log("Start Segment " + name(), COLOR_ORANGE);
+
+    checkpoint_43(env, context, options.notif_status_update, stats);
+    checkpoint_44(env, context, options.notif_status_update, stats);
+    checkpoint_45(env, context, options.notif_status_update, stats);
+    checkpoint_46(env, context, options.notif_status_update, stats);
+
+    context.wait_for_all_requests();
+    env.console.log("End Segment " + name(), COLOR_GREEN);
 
 }
 
 
 void checkpoint_43(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }else{
-            enter_menu_from_overworld(env.program_info(), env.console, context, -1);
-            // we wait 10 seconds then save, so that the initial conditions are slightly different on each reset.
-            env.log("Wait 10 seconds.");
-            context.wait_for(Milliseconds(10 * 1000));
-            save_game_from_overworld(env.program_info(), env.console, context);
-        }
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
         context.wait_for_all_requests();
 
         // place the marker somewhere else. the current location disrupts the Stationary detector
@@ -84,7 +82,7 @@ void checkpoint_43(
 
         DirectionDetector direction;
         do_action_and_monitor_for_battles(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 direction.change_direction(env.program_info(), env.console, context, 6.198);
                 pbf_move_left_joystick(context, 128, 0, 400, 100);
                 direction.change_direction(env.program_info(), env.console, context, 4.693);
@@ -109,10 +107,10 @@ void checkpoint_43(
         context.wait_for_all_requests();
 
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 walk_forward_until_dialog(env.program_info(), env.console, context, NavigationMovementMode::DIRECTIONAL_ONLY, 20);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 0, 0, 100, 50);
             },
             5, 5
@@ -120,41 +118,24 @@ void checkpoint_43(
 
         // enter gym building. talk go Nemona and battle her.
         clear_dialog(env.console, context, ClearDialogMode::STOP_BATTLE, 60, {CallbackEnum::BLACK_DIALOG_BOX, CallbackEnum::PROMPT_DIALOG, CallbackEnum::DIALOG_ARROW, CallbackEnum::BATTLE});        
-        run_battle_press_A(env.console, context, BattleStopCondition::STOP_DIALOG, {CallbackEnum::GRADIENT_ARROW});
+        env.console.log("Battle Nemona.");
+        run_trainer_battle_press_A(env.console, context, BattleStopCondition::STOP_DIALOG);
         mash_button_till_overworld(env.console, context, BUTTON_A);
 
        
-        break;
-    }catch (...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }         
-    }
+    });
 
 }
 
 void checkpoint_44(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }else{
-            enter_menu_from_overworld(env.program_info(), env.console, context, -1);
-            // we wait 10 seconds then save, so that the initial conditions are slightly different on each reset.
-            env.log("Wait 10 seconds.");
-            context.wait_for(Milliseconds(10 * 1000));
-            save_game_from_overworld(env.program_info(), env.console, context);
-        }
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
 
         context.wait_for_all_requests();
 
@@ -184,11 +165,11 @@ void checkpoint_44(
         direction.change_direction(env.program_info(), env.console, context, 4.85);
         pbf_move_left_joystick(context, 128, 0, 300, 100);        
         handle_failed_action(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){ 
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_A, 500);
                 check_num_sunflora_found(env, context, 1);
             },
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30, 100);
             },
             3
@@ -198,11 +179,11 @@ void checkpoint_44(
         direction.change_direction(env.program_info(), env.console, context, 0.384);
         pbf_move_left_joystick(context, 128, 0, 120, 100);
         handle_failed_action(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){ 
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_A, 500);
                 check_num_sunflora_found(env, context, 2);
             },
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30, 100);
             },
             3
@@ -212,11 +193,11 @@ void checkpoint_44(
         direction.change_direction(env.program_info(), env.console, context, 5.377);
         pbf_move_left_joystick(context, 128, 0, 120, 100);
         handle_failed_action(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){ 
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_A, 500);
                 check_num_sunflora_found(env, context, 3);
             },
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30, 100);
             },
             3
@@ -234,7 +215,7 @@ void checkpoint_44(
         // align to corner 4.2
         direction.change_direction(env.program_info(), env.console, context, 6.056);
         pbf_move_left_joystick(context, 128, 0, 670, 100);
-        direction.change_direction(env.program_info(), env.console, context, 1.22);
+        direction.change_direction(env.program_info(), env.console, context, 1.55);
         pbf_move_left_joystick(context, 128, 0, 200, 100);
         direction.change_direction(env.program_info(), env.console, context, 1.69);
         pbf_move_left_joystick(context, 0, 0, 500, 100);
@@ -242,11 +223,11 @@ void checkpoint_44(
         direction.change_direction(env.program_info(), env.console, context, 5.85);
         pbf_move_left_joystick(context, 128, 0, 60, 100);
         handle_failed_action(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){ 
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_A, 500);
                 check_num_sunflora_found(env, context, 4);
             },
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30, 100);
             },
             3
@@ -270,11 +251,11 @@ void checkpoint_44(
         direction.change_direction(env.program_info(), env.console, context, 0.78);   
         pbf_move_left_joystick(context, 128, 0, 90, 100);  // todo: adjust this. 80 -> 90?
         handle_failed_action(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){ 
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_A, 500);
                 check_num_sunflora_found(env, context, 5);
             },
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30, 100);
             },
             3
@@ -288,16 +269,16 @@ void checkpoint_44(
         pbf_move_left_joystick(context, 0, 0, 700, 100);        
 
         direction.change_direction(env.program_info(), env.console, context, 0.96);
-        pbf_move_left_joystick(context, 128, 0, 300, 100);
+        pbf_move_left_joystick(context, 128, 0, 250, 100);
         direction.change_direction(env.program_info(), env.console, context, 5.17);        
-        pbf_move_left_joystick(context, 128, 0, 100, 100);
+        pbf_move_left_joystick(context, 128, 0, 50, 100);
         direction.change_direction(env.program_info(), env.console, context, 3.86);
         handle_failed_action(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){ 
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_A, 500);
                 check_num_sunflora_found(env, context, 6);
             },
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30, 100);
             },
             3
@@ -351,11 +332,11 @@ void checkpoint_44(
         direction.change_direction(env.program_info(), env.console, context, 1.17);
         pbf_move_left_joystick(context, 128, 0, 130, 100);
         handle_failed_action(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){ 
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_A, 500);
                 check_num_sunflora_found(env, context, 7);
             },
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30, 100);
             },
             3
@@ -376,7 +357,7 @@ void checkpoint_44(
         pbf_move_left_joystick(context, 128, 0, 100, 100);
 
         handle_failed_action(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){ 
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_press_button(context, BUTTON_A, 50, 50);
                 pbf_press_button(context, BUTTON_A, 50, 50); // extra press in case one is dropped
                 pbf_press_button(context, BUTTON_A, 50, 50);
@@ -385,7 +366,7 @@ void checkpoint_44(
                 check_num_sunflora_found(env, context, 8);  
                 pbf_wait(context, 3 * TICKS_PER_SECOND);
             },
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30, 100);
             },
             3
@@ -412,11 +393,11 @@ void checkpoint_44(
         direction.change_direction(env.program_info(), env.console, context, 5.53);
         pbf_move_left_joystick(context, 128, 0, 600, 100);
         handle_failed_action(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){ 
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_A, 500);
                 check_num_sunflora_found(env, context, 9);
             },
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30, 100);
             },
             3
@@ -429,11 +410,11 @@ void checkpoint_44(
         direction.change_direction(env.program_info(), env.console, context, 4.02);
         pbf_move_left_joystick(context, 128, 0, 250, 100);
         handle_failed_action(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){ 
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_A, 500);
                 check_num_sunflora_found(env, context, 10);
             },
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30, 100);
             },
             3
@@ -451,17 +432,18 @@ void checkpoint_44(
         direction.change_direction(env.program_info(), env.console, context, 5.53);
 
         NoMinimapWatcher no_minimap(env.console, COLOR_RED, Milliseconds(5000));
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [&](BotBaseContext& context){
+            [&](ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 30 * TICKS_PER_SECOND, 100);
             },
             {no_minimap}
         );
         if (ret < 0){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Failed to finish reach the Sunflora NPC."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Failed to finish reach the Sunflora NPC.",
+                env.console
             );
         }
         env.log("No minimap seen. Likely finished the Artazon gym challenge.");
@@ -469,37 +451,19 @@ void checkpoint_44(
         clear_dialog(env.console, context, ClearDialogMode::STOP_OVERWORLD, 60, {CallbackEnum::OVERWORLD});
 
        
-        break;
-    }catch (...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }         
-    }
+    });
 
 }
 
 void checkpoint_45(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }else{
-            enter_menu_from_overworld(env.program_info(), env.console, context, -1);
-            // we wait 10 seconds then save, so that the initial conditions are slightly different on each reset.
-            env.log("Wait 10 seconds.");
-            context.wait_for(Milliseconds(10 * 1000));
-            save_game_from_overworld(env.program_info(), env.console, context);
-        }
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
         
         context.wait_for_all_requests();
 
@@ -518,10 +482,10 @@ void checkpoint_45(
         pbf_move_left_joystick(context, 0, 0, 100, 50);
 
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 walk_forward_until_dialog(env.program_info(), env.console, context, NavigationMovementMode::DIRECTIONAL_SPAM_A, 20);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){   
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 0, 0, 100, 50);
                 pbf_move_left_joystick(context, 255, 0, 100, 50);
             },
@@ -529,23 +493,62 @@ void checkpoint_45(
         ); 
 
         clear_dialog(env.console, context, ClearDialogMode::STOP_BATTLE, 60, {CallbackEnum::PROMPT_DIALOG, CallbackEnum::BATTLE, CallbackEnum::DIALOG_ARROW});
-        run_battle_press_A(env.console, context, BattleStopCondition::STOP_DIALOG, {CallbackEnum::GRADIENT_ARROW});
+        env.console.log("Battle Grass Gym leader.");
+        run_trainer_battle_press_A(env.console, context, BattleStopCondition::STOP_DIALOG);
         mash_button_till_overworld(env.console, context, BUTTON_A);
        
-        break;
-    }catch (...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }         
-    }
+    });
 
 }
 
 
 
+void checkpoint_46(
+    SingleSwitchProgramEnvironment& env, 
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+){
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
+        
+        context.wait_for_all_requests();
+
+        pbf_move_left_joystick(context, 128, 255, 500, 100);
+        pbf_wait(context, 3 * TICKS_PER_SECOND);
+        // wait for overworld after leaving Gym
+        wait_for_overworld(env.program_info(), env.console, context, 30);
+
+        // fly to Porto Marinada pokecenter
+        move_cursor_towards_flypoint_and_go_there(env.program_info(), env.console, context, {ZoomChange::ZOOM_IN, 255, 128, 50});
+
+        // section 1. set marker to pokecenter
+        realign_player_from_landmark(
+            env.program_info(), env.console, context, 
+            {ZoomChange::KEEP_ZOOM, 255, 0, 50},
+            {ZoomChange::ZOOM_IN, 0, 0, 0}
+        );        
+        overworld_navigation(env.program_info(), env.console, context, 
+            NavigationStopCondition::STOP_MARKER, NavigationMovementMode::DIRECTIONAL_ONLY, 
+            128, 0, 80, 20, false);  
+
+        // section 2. set marker past pokecenter
+        handle_unexpected_battles(env.program_info(), env.console, context,
+        [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
+            realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_NEW_MARKER, 180, 0, 30);
+        });      
+        overworld_navigation(env.program_info(), env.console, context, 
+            NavigationStopCondition::STOP_TIME, NavigationMovementMode::DIRECTIONAL_ONLY, 
+            128, 15, 12, 12, false);             
+       
+        fly_to_overlapping_flypoint(env.program_info(), env.console, context);
+
+    });
+
+
+
+}
 
 }
 }

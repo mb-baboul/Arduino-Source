@@ -1,6 +1,6 @@
 /*  Shiny Hunt - Fishing
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,7 @@
 #define PokemonAutomation_PokemonBDSP_ShinyHuntFishing_H
 
 #include "Common/Cpp/Options/StaticTextOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
 #include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
@@ -33,11 +33,11 @@ public:
 class ShinyHuntFishing : public SingleSwitchProgramInstance{
 public:
     ShinyHuntFishing();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 
 private:
-    void run_trigger(BotBaseContext& context) const;
+    void run_trigger(ProControllerContext& context) const;
     bool find_encounter(SingleSwitchProgramEnvironment& env) const;
 
 private:
@@ -52,7 +52,7 @@ private:
     EventNotificationsOption NOTIFICATIONS;
 
     SectionDividerOption m_advanced_options;
-    TimeExpressionOption<uint16_t> EXIT_BATTLE_TIMEOUT;
+    MillisecondsOption EXIT_BATTLE_TIMEOUT0;
 };
 
 

@@ -1,23 +1,25 @@
 /*  Shiny Hunt - Area Zero Platform
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_ShinyHuntAreaZeroPlatform_H
 #define PokemonAutomation_PokemonSV_ShinyHuntAreaZeroPlatform_H
 
-#include <functional>
+//#include <functional>
 //#include "Common/Cpp/Options/BooleanCheckBoxOption.h"
 //#include "Common/Cpp/Options/SimpleIntegerOption.h"
 #include "Common/Cpp/Options/FloatingPointOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
 #include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
 #include "PokemonSV/Options/PokemonSV_EncounterBotCommon.h"
 #include "PokemonSV/Options/PokemonSV_SandwichMakerOption.h"
+#include "PokemonSV/Inference/Overworld/PokemonSV_OverworldSensors.h"
+#include "PokemonSV/Programs/ShinyHunting/PokemonSV_LetsGoTools.h"
 #include "PokemonSV_AreaZeroPlatform.h"
 
 namespace PokemonAutomation{
@@ -45,11 +47,11 @@ public:
     ~ShinyHuntAreaZeroPlatform();
     ShinyHuntAreaZeroPlatform();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     virtual std::string check_validity() const override;
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
     enum class Location{
         UNKNOWN,
@@ -66,11 +68,15 @@ private:
 //    };
 
     void set_flags(SingleSwitchProgramEnvironment& env);
-    void run_state(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    void set_flags_and_run_state(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void run_state(
+        SingleSwitchProgramEnvironment& env, ProControllerContext& context
+    );
+    void set_flags_and_run_state(
+        SingleSwitchProgramEnvironment& env, ProControllerContext& context
+    );
 
     //  Returns true on success.
-    bool run_traversal(BotBaseContext& context);
+    bool run_traversal(ProControllerContext& context);
 
 
 private:
@@ -107,7 +113,8 @@ private:
 
     SingleSwitchProgramEnvironment* m_env;
 
-    LetsGoHpWatcher* m_hp_watcher;
+    OverworldSensors* m_sensors;
+//    LetsGoHpWatcher* m_hp_watcher;
     DiscontiguousTimeTracker* m_time_tracker;
     LetsGoEncounterBotTracker* m_encounter_tracker;
 

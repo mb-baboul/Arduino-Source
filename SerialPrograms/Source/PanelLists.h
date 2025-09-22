@@ -1,6 +1,6 @@
 /*  Program Tabs
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -15,7 +15,11 @@ class QComboBox;
 namespace PokemonAutomation{
 
 
-
+// The program selection UI on the left side of the program window.
+// It has a dropdown menu to select which Switch game's program list to show, and
+// a display list window to show the current active game's program list.
+// This class owns the a vector of PanelListDescriptor. A PanelListDescriptor is
+// like a generator for the programs and their UIs for a game.
 class ProgramSelect : public QGroupBox{
 public:
     ProgramSelect(QWidget& parent, PanelHolder& holder);

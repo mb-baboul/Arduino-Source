@@ -1,6 +1,6 @@
 /*  Serial Connection for POSIX
  * 
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  * 
  */
 
@@ -148,7 +148,7 @@ private:
     void recv_loop(){
         char buffer[32];
         while (!m_exit.load(std::memory_order_acquire)){
-            int actual = read(m_fd, buffer, sizeof(buffer));
+            ssize_t actual = read(m_fd, buffer, sizeof(buffer));
             if (actual > 0){
                 on_recv(buffer, actual);
             }

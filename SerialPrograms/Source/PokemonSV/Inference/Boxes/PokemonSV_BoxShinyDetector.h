@@ -1,6 +1,6 @@
 /*  Box Shiny Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,9 +9,9 @@
 
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
-#include "PokemonSV/Inference/Boxes/PokemonSV_BoxDetection.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
+//#include "PokemonSV/Inference/Boxes/PokemonSV_BoxDetection.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -23,7 +23,7 @@ public:
     BoxShinyDetector(Color color = COLOR_YELLOW, const ImageFloatBox& box = {0.878, 0.081, 0.028, 0.046});
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;

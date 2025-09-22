@@ -1,6 +1,6 @@
 /*  Simple Integer Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -73,7 +73,7 @@ void SimpleIntegerCellWidget<Type>::update_value(){
     this->setText(QString::number(m_value));
 }
 template <typename Type>
-void SimpleIntegerCellWidget<Type>::value_changed(void* object){
+void SimpleIntegerCellWidget<Type>::on_config_value_changed(void* object){
     QMetaObject::invokeMethod(this, [this]{
         update_value();
     }, Qt::QueuedConnection);
@@ -111,8 +111,8 @@ void SimpleIntegerOptionWidget<Type>::update_value(){
     m_cell->update_value();
 }
 template <typename Type>
-void SimpleIntegerOptionWidget<Type>::value_changed(void* object){
-    m_cell->value_changed(object);
+void SimpleIntegerOptionWidget<Type>::on_config_value_changed(void* object){
+    m_cell->on_config_value_changed(object);
 }
 
 
@@ -134,6 +134,13 @@ template class SimpleIntegerOptionWidget<int8_t>;
 template class SimpleIntegerOptionWidget<int16_t>;
 template class SimpleIntegerOptionWidget<int32_t>;
 template class SimpleIntegerOptionWidget<int64_t>;
+
+
+//  This is stupid.
+#ifdef __APPLE__
+template class SimpleIntegerCellWidget<size_t>;
+template class SimpleIntegerOptionWidget<size_t>;
+#endif
 
 
 }

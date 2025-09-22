@@ -1,14 +1,13 @@
 /*  Internet
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/ImageTypes/ImageViewRGB32.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Notifications/ProgramInfo.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSwSh/Inference/PokemonSwSh_YCommDetector.h"
 #include "PokemonSwSh_Internet.h"
@@ -19,31 +18,44 @@ namespace PokemonSwSh{
 
 
 bool connect_to_internet_with_inference(
-    ConsoleHandle& console, BotBaseContext& context,
-    std::chrono::milliseconds post_wait_time,
-    uint16_t timeout_ticks
+    const ProgramInfo& info,
+    VideoStream& stream, ProControllerContext& context,
+    Milliseconds post_wait_time,
+    Milliseconds timeout_ticks
 ){
-    console.log("Connecting to internet...");
+    stream.log("Connecting to internet...");
     //  Enter Y-COMM.
     bool ok = true;
 //    cout << "Waiting for Y-COMM to open..." << endl;
-    {
+    for (size_t attempts = 0;;){
         YCommMenuDetector detector(true);
-        if (!detector.detect(console.video().snapshot())){
-            pbf_press_button(context, BUTTON_Y, 10, TICKS_PER_SECOND);
-            context.wait_for_all_requests();
+        if (detector.detect(stream.video().snapshot())){
+            stream.log("Y-COMM detected.");
+            break;
         }
-        int result = wait_until(
-            console, context,
-            std::chrono::seconds(10),
-            {{detector}}
+
+        int result = run_until<ProControllerContext>(
+            stream, context,
+            [](ProControllerContext& context){
+                pbf_press_button(context, BUTTON_Y, 200ms, 4800ms);
+            },
+            {detector}
         );
         if (result == 0){
-            console.log("Y-COMM detected.");
-        }else{
-            console.log("Failed to detect Y-COMM after timeout.", COLOR_RED);
-            dump_image(console, ProgramInfo(), "connect_to_internet_with_inference", console.video().snapshot());
+            stream.log("Y-COMM detected.");
+            break;
+        }
+        stream.log("Failed to detect Y-COMM.", COLOR_RED);
+
+        attempts++;
+        if (attempts >= 9){
+            dump_image(
+                stream.logger(), info,
+                "connect_to_internet_with_inference",
+                stream.video().snapshot()
+            );
             ok = false;
+            break;
         }
     }
 
@@ -58,17 +70,17 @@ bool connect_to_internet_with_inference(
     //  Mash B until you leave Y-COMM.
     {
         YCommMenuDetector detector(false);
-        int result = run_until(
-            console, context,
-            [&](BotBaseContext& context){
+        int result = run_until<ProControllerContext>(
+            stream, context,
+            [&](ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_B, timeout_ticks);
             },
             {{detector}}
         );
         if (result == 0){
-            console.log("Y-COMM no longer detected. Assume done connected to internet.");
+            stream.log("Y-COMM no longer detected. Assume done connected to internet.");
         }else{
-            console.log("Failed to see Y-COMM go away after timeout.", COLOR_RED);
+            stream.log("Failed to see Y-COMM go away after timeout.", COLOR_RED);
             ok = false;
         }
     }

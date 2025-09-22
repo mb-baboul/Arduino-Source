@@ -1,6 +1,6 @@
 /*  No Minimap Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,9 +9,8 @@
 
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
 #include "PokemonSV_OverworldDetector.h"
 
 
@@ -25,13 +24,13 @@ public:
     NoMinimapDetector(Logger& logger, Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 
 protected:
     const Color m_color;
     const ImageFloatBox m_ball;
-    const OverworldDetector m_overworld;
+    OverworldDetector m_overworld;
 };
 
 class NoMinimapWatcher : public DetectorToFinder<NoMinimapDetector>{

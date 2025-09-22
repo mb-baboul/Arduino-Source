@@ -1,6 +1,6 @@
 /*  Floating-Point Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -51,7 +51,6 @@ public:
 private:
     struct Data;
     Pimpl<Data> m_data;
-    const std::string m_label;
 };
 
 

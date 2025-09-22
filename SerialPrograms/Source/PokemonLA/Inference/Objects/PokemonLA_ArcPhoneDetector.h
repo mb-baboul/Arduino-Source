@@ -1,18 +1,16 @@
 /*  Arc Phone Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonLA_ArcPhoneDetector_H
 #define PokemonAutomation_PokemonLA_ArcPhoneDetector_H
 
-#include "Common/Cpp/Color.h"
 #include "Common/Cpp/Concurrency/SpinLock.h"
-#include "CommonFramework/Logging/Logger.h"
-#include "CommonFramework/ImageMatch/WaterfillTemplateMatcher.h"
-#include "CommonFramework/Inference/DetectionDebouncer.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/ImageMatch/WaterfillTemplateMatcher.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/DetectionDebouncer.h"
 #include "PokemonLA_WhiteObjectDetector.h"
 #include "PokemonLA_ButtonDetector.h"
 

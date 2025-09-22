@@ -1,6 +1,6 @@
 /*  Multi-Video Test
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -30,7 +30,6 @@ SwitchViewer_Descriptor::SwitchViewer_Descriptor()
 SwitchViewer::SwitchViewer(const SwitchViewer_Descriptor& descriptor)
     : PanelInstance(descriptor)
     , m_switches(
-        PABotBaseLevel::NOT_PABOTBASE,
         FeedbackType::NONE,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
         1, 4, 1

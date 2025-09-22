@@ -1,13 +1,12 @@
 /*  Pokemon Sword/Shield Type Matchup
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSwSh_TypeMatchup_H
 #define PokemonAutomation_PokemonSwSh_TypeMatchup_H
 
-#include <string>
 #include "Pokemon/Pokemon_Types.h"
 
 namespace PokemonAutomation{

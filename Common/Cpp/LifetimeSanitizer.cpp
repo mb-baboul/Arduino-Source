@@ -1,11 +1,12 @@
 /*  Lifetime Sanitizer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <set>
 //#include <exception>
+#include <atomic>
 #include <iostream>
 #include "Concurrency/SpinLock.h"
 #include "LifetimeSanitizer.h"
@@ -14,12 +15,12 @@
 #include <Windows.h>
 #endif
 
-#ifdef PA_SANITIZER_ENABLE
-
 
 
 namespace PokemonAutomation{
 
+
+#ifdef PA_SANITIZER_ENABLE
 
 //#define PA_SANITIZER_PRINT_ALL
 const std::set<std::string> SANITIZER_FILTER = {
@@ -31,90 +32,13 @@ SpinLock sanitizer_lock;
 std::set<const LifetimeSanitizer*> sanitizer_map;
 
 
-std::atomic<bool> LifetimeSanitizer_enabled(true);
-bool LifetimeSanitizer_has_been_disabled = false;
+std::atomic<bool> LifetimeSanitizer_disabled(false);
 
-void LifetimeSanitizer::set_enabled(bool enabled){
-    if (enabled){
-        LifetimeSanitizer_enabled.store(true, std::memory_order_relaxed);
-        return;
-    }
+void LifetimeSanitizer::disable(){
     WriteSpinLock lg(sanitizer_lock);
-    LifetimeSanitizer_has_been_disabled = true;
-    LifetimeSanitizer_enabled.store(false, std::memory_order_relaxed);
+    LifetimeSanitizer_disabled.store(true, std::memory_order_relaxed);
+    sanitizer_map.clear();
 }
-
-
-
-void LifetimeSanitizer::internal_construct(){
-    WriteSpinLock lg(sanitizer_lock);
-    if (SANITIZER_FILTER.contains(m_name)){
-        std::cout << "LifetimeSanitizer - Allocating: " << this << " : " << m_name << std::endl;
-    }
-    auto iter = sanitizer_map.find(this);
-    if (iter == sanitizer_map.end()){
-        sanitizer_map.insert(this);
-        return;
-    }
-    std::cerr << "LifetimeSanitizer - Double allocation: " << this << " : " << m_name << std::endl;
-    terminate_with_dump();
-}
-void LifetimeSanitizer::internal_destruct(){
-    void* self = m_self;
-    m_self = nullptr;
-
-    WriteSpinLock lg(sanitizer_lock);
-    if (m_token != SANITIZER_TOKEN || self != this){
-        std::cerr << "LifetimeSanitizer - Free non-existant: " << this << " : " << m_name << std::endl;
-        terminate_with_dump();
-    }
-
-    if (SANITIZER_FILTER.contains(m_name)){
-        std::cout << "LifetimeSanitizer - Freeing: " << this << " : " << m_name << std::endl;
-    }
-    auto iter = sanitizer_map.find(this);
-    if (iter != sanitizer_map.end()){
-        sanitizer_map.erase(this);
-        return;
-    }
-
-    //  Skip this check if we've been disabled before in case there's stuff we
-    //  haven't tracked.
-    if (LifetimeSanitizer_has_been_disabled){
-        return;
-    }
-
-    std::cerr << "LifetimeSanitizer - Free non-existant: " << this << " : " << m_name << std::endl;
-    terminate_with_dump();
-}
-
-
-
-
-
-
-void LifetimeSanitizer::internal_check_usage() const{
-    if (m_token != SANITIZER_TOKEN || m_self != this){
-        std::cerr << "Use non-existant: " << this << " : " << m_name << std::endl;
-        terminate_with_dump();
-    }
-
-    if (LifetimeSanitizer_has_been_disabled){
-        return;
-    }
-
-    ReadSpinLock lg(sanitizer_lock);
-    if (SANITIZER_FILTER.contains(m_name)){
-        std::cout << "LifetimeSanitizer - Using: " << this << " : " << m_name << std::endl;
-    }
-    auto iter = sanitizer_map.find(this);
-    if (iter != sanitizer_map.end()){
-        return;
-    }
-    std::cerr << "Use non-existant: " << this << " : " << m_name << std::endl;
-    terminate_with_dump();
-}
-
 
 PA_NO_INLINE void LifetimeSanitizer::terminate_with_dump(){
     //  Intentionally crash the program here and let the crash dump deal with
@@ -130,5 +54,154 @@ PA_NO_INLINE void LifetimeSanitizer::terminate_with_dump(){
 
 
 
+LifetimeSanitizer::LifetimeSanitizer(const char* name){
+    if (LifetimeSanitizer_disabled.load(std::memory_order_relaxed)){
+        return;
+    }
+    internal_construct(name);
+}
+LifetimeSanitizer::~LifetimeSanitizer(){
+    if (LifetimeSanitizer_disabled.load(std::memory_order_relaxed)){
+        return;
+    }
+    internal_destruct();
+}
+
+
+LifetimeSanitizer::LifetimeSanitizer(LifetimeSanitizer&& x){
+    if (LifetimeSanitizer_disabled.load(std::memory_order_relaxed)){
+        return;
+    }
+    x.check_usage();
+    internal_construct(x.m_name);
+}
+void LifetimeSanitizer::operator=(LifetimeSanitizer&& x){
+    if (LifetimeSanitizer_disabled.load(std::memory_order_relaxed)){
+        return;
+    }
+    check_usage();
+    x.check_usage();
+}
+LifetimeSanitizer::LifetimeSanitizer(const LifetimeSanitizer& x){
+    if (LifetimeSanitizer_disabled.load(std::memory_order_relaxed)){
+        return;
+    }
+    x.check_usage();
+    internal_construct(x.m_name);
+}
+void LifetimeSanitizer::operator=(const LifetimeSanitizer& x){
+    if (LifetimeSanitizer_disabled.load(std::memory_order_relaxed)){
+        return;
+    }
+    check_usage();
+    x.check_usage();
+}
+
+
+
+void LifetimeSanitizer::check_usage() const{
+    if (LifetimeSanitizer_disabled.load(std::memory_order_relaxed)){
+        return;
+    }
+    ReadSpinLock lg(sanitizer_lock);
+    auto iter = sanitizer_map.find(this);
+    if (iter == sanitizer_map.end()){
+        std::cerr << "Use non-existent: " << this << std::endl;
+        terminate_with_dump();
+    }
+    if (SANITIZER_FILTER.contains(m_name)){
+        std::cout << "LifetimeSanitizer - Using: " << this << " : " << m_name << std::endl;
+    }
+    if (m_token != SANITIZER_TOKEN || m_self != this){
+        std::cerr << "Use corrupted: " << this << " : " << m_name << std::endl;
+        terminate_with_dump();
+    }
+}
+void LifetimeSanitizer::start_using() const{
+    if (LifetimeSanitizer_disabled.load(std::memory_order_relaxed)){
+        return;
+    }
+    ReadSpinLock lg(sanitizer_lock);
+    auto iter = sanitizer_map.find(this);
+    if (iter == sanitizer_map.end()){
+        std::cerr << "Start using non-existent: " << this << std::endl;
+        terminate_with_dump();
+    }
+    if (SANITIZER_FILTER.contains(m_name)){
+        std::cout << "LifetimeSanitizer - Start using: " << this << " : " << m_name << std::endl;
+    }
+    if (m_token != SANITIZER_TOKEN || m_self != this){
+        std::cerr << "Start using corrupted: " << this << " : " << m_name << std::endl;
+        terminate_with_dump();
+    }
+    m_use_counter++;
+}
+void LifetimeSanitizer::done_using() const{
+    if (LifetimeSanitizer_disabled.load(std::memory_order_relaxed)){
+        return;
+    }
+    ReadSpinLock lg(sanitizer_lock);
+    auto iter = sanitizer_map.find(this);
+    if (iter == sanitizer_map.end()){
+        std::cerr << "Done using non-existent: " << this << std::endl;
+        terminate_with_dump();
+    }
+    if (SANITIZER_FILTER.contains(m_name)){
+        std::cout << "LifetimeSanitizer - Done using: " << this << " : " << m_name << std::endl;
+    }
+    if (m_token != SANITIZER_TOKEN || m_self != this){
+        std::cerr << "Done using corrupted: " << this << " : " << m_name << std::endl;
+        terminate_with_dump();
+    }
+    m_use_counter--;
+}
+
+
+void LifetimeSanitizer::internal_construct(const char* name){
+    WriteSpinLock lg(sanitizer_lock);
+    if (SANITIZER_FILTER.contains(name)){
+        std::cout << "LifetimeSanitizer - Allocating: " << this << " : " << name << std::endl;
+    }
+
+    auto iter = sanitizer_map.find(this);
+    if (iter != sanitizer_map.end()){
+        std::cerr << "LifetimeSanitizer - Double allocation: " << this << " : " << name << std::endl;
+        terminate_with_dump();
+    }
+    sanitizer_map.insert(this);
+
+    m_token = SANITIZER_TOKEN;
+    m_self = this;
+    m_name = name;
+}
+void LifetimeSanitizer::internal_destruct(){
+    WriteSpinLock lg(sanitizer_lock);
+    if (SANITIZER_FILTER.contains(m_name)){
+        std::cout << "LifetimeSanitizer - Freeing: " << this << " : " << m_name << std::endl;
+    }
+
+    auto iter = sanitizer_map.find(this);
+    if (iter == sanitizer_map.end()){
+        std::cerr << "LifetimeSanitizer - Free non-existent: " << this << " : " << m_name << std::endl;
+        terminate_with_dump();
+    }
+    sanitizer_map.erase(this);
+
+    if (m_token != SANITIZER_TOKEN || m_self != this){
+        std::cerr << "LifetimeSanitizer - Free non-existent: " << this << " : " << m_name << std::endl;
+        terminate_with_dump();
+    }
+    if (m_use_counter != 0){
+        std::cerr << "LifetimeSanitizer - Freeing while in-use: " << this << " : " << m_name << std::endl;
+        terminate_with_dump();
+    }
+    m_self = nullptr;
+}
 #endif
+
+
+
+
+
+
 }

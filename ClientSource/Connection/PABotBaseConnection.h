@@ -1,6 +1,6 @@
 /*  PABotBase Connection
  * 
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  * 
  *      This class wraps a raw SerialConnection object and applies the
  *  communication protocol on top of it. It automatically throws out bad
@@ -15,10 +15,8 @@
 #define PokemonAutomation_PABotBaseConnection_H
 
 #include <memory>
-#include <string>
 #include <deque>
-#include "Common/Compiler.h"
-#include "Common/Microcontroller/MessageProtocol.h"
+#include "Common/SerialPABotBase/SerialPABotBase_Protocol.h"
 #include "BotBase.h"
 #include "MessageSniffer.h"
 #include "StreamInterface.h"
@@ -36,7 +34,7 @@ public:
     void set_sniffer(MessageSniffer* sniffer);
 
 public:
-    void send_zeros(uint8_t bytes = PABB_MAX_PACKET_SIZE);
+    void send_zeros(uint8_t bytes = PABB_PROTOCOL_MAX_PACKET_SIZE);
     void send_message(const BotBaseMessage& message, bool is_retransmit);
 
 protected:
@@ -47,9 +45,21 @@ private:
     virtual void on_recv(const void* data, size_t bytes) override;
     virtual void on_recv_message(BotBaseMessage message) = 0;
 
+    enum class ErrorBatchType{
+        NO_ERROR_,
+        ZERO_BYTES,
+        FF_BYTES,
+        ASCII_BYTES,
+        OTHER,
+    };
+    void push_error_byte(ErrorBatchType type, char byte);
+
 private:
     std::unique_ptr<StreamConnection> m_connection;
     std::deque<char> m_recv_buffer;
+
+    ErrorBatchType m_current_error_type;
+    std::string m_current_error_batch;
 
 protected:
     Logger& m_logger;

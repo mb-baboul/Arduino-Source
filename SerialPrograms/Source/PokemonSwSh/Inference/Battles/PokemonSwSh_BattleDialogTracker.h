@@ -1,6 +1,6 @@
 /*  Encounter Dialog Tracker
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,9 +9,9 @@
 
 #include <chrono>
 #include <atomic>
-#include "CommonFramework/Logging/Logger.h"
-#include "CommonFramework/Inference/VisualDetector.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "Common/Cpp/AbstractLogger.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

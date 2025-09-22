@@ -1,6 +1,6 @@
 /*  Friend Code List
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -77,7 +77,7 @@ FriendCodeListWidget::FriendCodeListWidget(QWidget& parent, FriendCodeListOption
 void FriendCodeListWidget::update_value(){
     m_box->redraw();
 }
-void FriendCodeListWidget::value_changed(void* object){
+void FriendCodeListWidget::on_config_value_changed(void* object){
     QMetaObject::invokeMethod(m_box, [this]{
         update_value();
     }, Qt::QueuedConnection);

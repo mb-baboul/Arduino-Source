@@ -1,6 +1,6 @@
 /*  Egg Hatcher
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,6 @@
 #define PokemonAutomation_PokemonSV_EggHatcher_H
 
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
 #include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
@@ -34,7 +33,7 @@ public:
 class EggHatcher : public SingleSwitchProgramInstance{
 public:
     EggHatcher();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     // Start at box system, where party is empty, the program will:
@@ -42,7 +41,7 @@ private:
     // - hatch
     // - return to box system and offline paty
     // Repeat for all six columns of a box
-    void hatch_one_box(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void hatch_one_box(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
 private:
     GoHomeWhenDoneOption GO_HOME_WHEN_DONE;

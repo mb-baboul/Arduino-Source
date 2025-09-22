@@ -1,22 +1,23 @@
 /*  AutoStory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/Programs/NintendoSwitch_GameEntry.h"
-#include "NintendoSwitch/Inference/NintendoSwitch_DateReader.h"
-#include "NintendoSwitch/NintendoSwitch_Settings.h"
-#include "PokemonSwSh/Commands/PokemonSwSh_Commands_DateSpam.h"
+#include "NintendoSwitch/Programs/DateSpam/NintendoSwitch_HomeToDateTime.h"
+#include "NintendoSwitch/Programs/DateManip/NintendoSwitch_DateManip.h"
 #include "PokemonSV/PokemonSV_Settings.h"
-#include "PokemonSV/Programs/PokemonSV_GameEntry.h"
-#include "PokemonSV/Programs/PokemonSV_SaveGame.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_DirectionDetector.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_OliveDetector.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_NoMinimapDetector.h"
+#include "PokemonSV/Programs/PokemonSV_GameEntry.h"
+#include "PokemonSV/Programs/PokemonSV_SaveGame.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV_OliveActionFailedException.h"
 #include "PokemonSV_AutoStoryTools.h"
 #include "PokemonSV_AutoStory_Segment_11.h"
@@ -36,7 +37,7 @@ namespace PokemonSV{
 
 
 std::string AutoStory_Segment_11::name() const{
-    return "10.2: Cortondo Gym - Gym challenge";
+    return "11: Cortondo Gym (Bug): Gym challenge";
 }
 
 std::string AutoStory_Segment_11::start_text() const{
@@ -44,44 +45,45 @@ std::string AutoStory_Segment_11::start_text() const{
 }
 
 std::string AutoStory_Segment_11::end_text() const{
-    return "End: Beat Cortondo Gym challenge. At Cortondo West Pokecenter.";
+    return "End: Beat Cortondo Gym challenge. At Cortondo East Pokecenter.";
 }
 
-void AutoStory_Segment_11::run_segment(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AutoStoryOptions options) const{
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
+void AutoStory_Segment_11::run_segment(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    AutoStoryOptions options,
+    AutoStoryStats& stats
+) const{
+    
 
-    context.wait_for_all_requests();
-    env.console.overlay().add_log("Start Segment 10.2: Cortondo Gym - Gym challenge", COLOR_ORANGE);
-
-    checkpoint_24(env, context, options.notif_status_update);
-    checkpoint_25(env, context, options.notif_status_update);
-    checkpoint_26(env, context, options.notif_status_update);
-    checkpoint_27(env, context, options.notif_status_update);
-
-    context.wait_for_all_requests();
-    env.console.log("End Segment 10.2: Cortondo Gym - Gym challenge", COLOR_GREEN);
     stats.m_segment++;
     env.update_stats();
+    context.wait_for_all_requests();
+    env.console.log("Start Segment " + name(), COLOR_ORANGE);
+
+    checkpoint_24(env, context, options.notif_status_update, stats);
+    checkpoint_25(env, context, options.notif_status_update, stats);
+    checkpoint_26(env, context, options.notif_status_update, stats);
+    checkpoint_27(env, context, options.notif_status_update, stats);
+
+    context.wait_for_all_requests();
+    env.console.log("End Segment " + name(), COLOR_GREEN);
 
 }
 
 void checkpoint_24(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){         
         context.wait_for_all_requests();
         DirectionDetector direction;
         do_action_and_monitor_for_battles(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 direction.change_direction(env.program_info(), env.console, context, 2.71);
                 pbf_move_left_joystick(context, 128, 0, 375, 100);
                 direction.change_direction(env.program_info(), env.console, context, 1.26);
@@ -93,10 +95,10 @@ void checkpoint_24(
         pbf_wait(context, 5 * TICKS_PER_SECOND);
         context.wait_for_all_requests();
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 walk_forward_until_dialog(env.program_info(), env.console, context, NavigationMovementMode::DIRECTIONAL_ONLY, 20);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 0, 0, 100, 20);
             },
             5, 5
@@ -118,32 +120,20 @@ void checkpoint_24(
         fly_to_overlapping_flypoint(env.program_info(), env.console, context);
         
 
-        break;
-    }catch(...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }             
-    }
+    });
 
 }
 
 
 void checkpoint_25(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){         
         context.wait_for_all_requests();
 
         // section 1. align to Olive roll NPC
@@ -154,11 +144,13 @@ void checkpoint_25(
         
         // section 1.1. keep walking forward and talk to Olive roll NPC
         do_action_and_monitor_for_battles(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 walk_forward_until_dialog(env.program_info(), env.console, context, NavigationMovementMode::DIRECTIONAL_SPAM_A, 10);
             }
         );     
         mash_button_till_overworld(env.console, context, BUTTON_A);
+
+        context.wait_for_all_requests();
 
         // section 2
         pbf_move_left_joystick(context, 128, 0, 1300, 100);
@@ -176,7 +168,8 @@ void checkpoint_25(
         direction.change_direction(env.program_info(), env.console, context,  1.485);
         walk_forward_until_dialog(env.program_info(), env.console, context, NavigationMovementMode::DIRECTIONAL_SPAM_A, 10, 128, 20);
         clear_dialog(env.console, context, ClearDialogMode::STOP_BATTLE, 60, {CallbackEnum::BATTLE, CallbackEnum::DIALOG_ARROW});
-        run_battle_press_A(env.console, context, BattleStopCondition::STOP_DIALOG);
+        env.console.log("Battle Olive Roll NPC 1.");
+        run_trainer_battle_press_A(env.console, context, BattleStopCondition::STOP_DIALOG);
         mash_button_till_overworld(env.console, context, BUTTON_A);
 
         // section 6
@@ -195,7 +188,8 @@ void checkpoint_25(
         direction.change_direction(env.program_info(), env.console, context,  4.275);
         walk_forward_until_dialog(env.program_info(), env.console, context, NavigationMovementMode::DIRECTIONAL_SPAM_A, 10, 128, 20);
         clear_dialog(env.console, context, ClearDialogMode::STOP_BATTLE, 60, {CallbackEnum::BATTLE, CallbackEnum::DIALOG_ARROW});
-        run_battle_press_A(env.console, context, BattleStopCondition::STOP_DIALOG);
+        env.console.log("Battle Olive Roll NPC 2.");
+        run_trainer_battle_press_A(env.console, context, BattleStopCondition::STOP_DIALOG);
         mash_button_till_overworld(env.console, context, BUTTON_A);
 
         // section 10. leave Olive roll
@@ -205,35 +199,23 @@ void checkpoint_25(
         wait_for_overworld(env.program_info(), env.console, context);
         enter_menu_from_overworld(env.program_info(), env.console, context, -1);
 
-        break;
-    }catch(...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }             
-    }
+    });
 
 }
 
 void checkpoint_26(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){         
         context.wait_for_all_requests();
 
         // change the time of day: close game, change time to 5:45 am.
-        pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+        pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY1);
         change_date(env, context, {2025, 1, 1, 5, 45, 0});
         reset_game_from_home(env.program_info(), env.console, context);
 
@@ -517,9 +499,9 @@ void checkpoint_26(
         // section 4.2 past second NPC and into the finish line
         NoMinimapWatcher no_minimap(env.console, COLOR_RED, Milliseconds(5000));
         size_t MAX_ATTEMPTS_SECTION_4 = 3;
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [&](BotBaseContext& context){
+            [&](ProControllerContext& context){
                 for (size_t i = 0; i < MAX_ATTEMPTS_SECTION_4; i++){
                     try{
                         green.push_olive_forward(env.program_info(), env.console, context, 6.0, 250);
@@ -562,52 +544,32 @@ void checkpoint_26(
         mash_button_till_overworld(env.console, context, BUTTON_A, 360);
         
         // fix the time
-        pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
-        home_to_date_time(context, false, false);
+        go_home(env.console, context);
+        home_to_date_time(env.console, context, false);
         pbf_press_button(context, BUTTON_A, 20, 105);
         pbf_press_button(context, BUTTON_A, 20, 105);
-        pbf_press_button(context, BUTTON_HOME, 20, ConsoleSettings::instance().SETTINGS_TO_HOME_DELAY);
+        pbf_press_button(context, BUTTON_HOME, 160ms, ConsoleSettings::instance().SETTINGS_TO_HOME_DELAY0);
         resume_game_from_home(env.console, context);        
 
         enter_menu_from_overworld(env.program_info(), env.console, context, -1);
 
-        break;
-    }catch (...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        // reset_game(env.program_info(), env.console, context); // the checkpoint itself already resets the game, so need to reset twice
-        stats.m_reset++;
-        env.update_stats();
-    }         
-    }
+    });
 
 }
 
 void checkpoint_27(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){         
         context.wait_for_all_requests();
         move_cursor_towards_flypoint_and_go_there(env.program_info(), env.console, context, {ZoomChange::KEEP_ZOOM, 255, 128, 40});
 
-        break;
-    }catch (...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }         
-    }
+    });
 
 }
 

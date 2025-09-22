@@ -1,10 +1,10 @@
 /*  Quantity Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/OCR/OCR_NumberReader.h"
+#include "CommonTools/OCR/OCR_NumberReader.h"
 #include "PokemonSwSh_QuantityReader.h"
 
 namespace PokemonAutomation{

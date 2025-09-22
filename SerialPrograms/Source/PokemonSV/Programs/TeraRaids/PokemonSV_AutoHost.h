@@ -1,6 +1,6 @@
 /*  Auto Host
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -37,21 +37,21 @@ public:
 class AutoHost : public SingleSwitchProgramInstance{
 public:
     AutoHost();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     WallClock wait_for_lobby_open(
-        SingleSwitchProgramEnvironment& env, BotBaseContext& context,
+        SingleSwitchProgramEnvironment& env, ProControllerContext& context,
         std::string& lobby_code
     );
     void update_stats_on_raid_start(SingleSwitchProgramEnvironment& env, uint8_t player_count);
     bool start_raid(
-        SingleSwitchProgramEnvironment& env, BotBaseContext& context,
+        SingleSwitchProgramEnvironment& env, ProControllerContext& context,
         WallClock start_time,
         uint8_t player_count
     );
     bool run_lobby(
-        SingleSwitchProgramEnvironment& env, BotBaseContext& context,
+        SingleSwitchProgramEnvironment& env, ProControllerContext& context,
         std::string& lobby_code,
         std::array<std::map<Language, std::string>, 4>& player_names
     );

@@ -1,6 +1,6 @@
 /*  In-Battle Arrow Finder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -12,11 +12,11 @@
 #include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/Notifications/ProgramInfo.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
-#include "CommonFramework/ImageMatch/ExactImageMatcher.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
 #include "CommonFramework/Tools/DebugDumper.h"
 #include "CommonFramework/VideoPipeline/VideoOverlay.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
+#include "CommonTools/ImageMatch/ExactImageMatcher.h"
 #include "PokemonSwSh_SelectionArrowFinder.h"
 
 //#include <iostream>
@@ -83,7 +83,8 @@ bool is_selection_arrow(const ImageViewRGB32& image, const WaterfillObject& obje
 }
 std::vector<ImagePixelBox> find_selection_arrows(const ImageViewRGB32& image, size_t min_area){
     if (PreloadSettings::debug().IMAGE_TEMPLATE_MATCHING){
-        std::cout << "Match SwSh selection arrow by waterfill, size range (" << min_area << ", SIZE_MAX)" << std::endl;
+        std::cout << "Match SwSh selection arrow by waterfill, size range (" << min_area << ", SIZE_MAX) " 
+                  << "input image size " << image.width() << " x " << image.height() << std::endl;
     }
     PackedBinaryMatrix matrix = compress_rgb32_to_binary_max(image, 63, 63, 63);
     auto session = make_WaterfillSession(matrix);
@@ -91,7 +92,9 @@ std::vector<ImagePixelBox> find_selection_arrows(const ImageViewRGB32& image, si
     std::vector<ImagePixelBox> ret;
     WaterfillObject object;
     while (finder->find_next(object, true)){
-//        cout << object.min_x << "-" << object.max_x << ", " << object.min_y << "-" << object.max_y << endl;
+        if (PreloadSettings::debug().IMAGE_TEMPLATE_MATCHING){
+            std::cout << "Found object: " << object.min_x << "-" << object.max_x << ", " << object.min_y << "-" << object.max_y << std::endl;
+        }
         if (is_selection_arrow(image, object)){
             ret.emplace_back(object);
         }
@@ -194,16 +197,26 @@ RotomPhoneMenuArrowFinder::RotomPhoneMenuArrowFinder(VideoOverlay& overlay)
     }
 }
 
-int RotomPhoneMenuArrowFinder::detect(const ImageViewRGB32& screen){
+void RotomPhoneMenuArrowFinder::make_overlays(VideoOverlaySet& items) const{
+
+}
+bool RotomPhoneMenuArrowFinder::detect(const ImageViewRGB32& screen){
+    return detect_index(screen) >= 0;
+}
+
+int RotomPhoneMenuArrowFinder::detect_index(const ImageViewRGB32& screen){
     const double screen_scale = screen.height() / 1080.0;
     const size_t min_arrow_area = size_t(1400 * screen_scale * screen_scale);
     for (size_t i_row = 0; i_row < 2; i_row++){
         for (size_t j_col = 0; j_col < 5; j_col++){
             ImageFloatBox box(0.047 + j_col*0.183, 0.175 + 0.333*i_row, 0.059, 0.104);
             std::vector<ImagePixelBox> arrows = find_selection_arrows(
-                extract_box_reference(screen, box), min_arrow_area);
+                extract_box_reference(screen, box),
+                min_arrow_area
+            );
             if (arrows.size() > 0){
-                return (int)(i_row * 5 + j_col);
+                m_index = (int)(i_row * 5 + j_col);
+                return m_index;
             }
         }
     }

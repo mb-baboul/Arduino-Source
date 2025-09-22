@@ -1,6 +1,6 @@
 /*  Overworld Trigger
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,9 +9,9 @@
 
 #include "Common/Cpp/Options/GroupOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
-#include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -27,11 +27,11 @@ public:
     //  Return false if an unexpected battle happens where the battle menu is detected but
     //  not the starting animation.
     //  Throw exception if inference times out after Sweet Scent is used.
-    bool find_encounter(ConsoleHandle& console, BotBaseContext& context) const;
+    bool find_encounter(VideoStream& stream, ProControllerContext& context) const;
 
 private:
     //  Move character up and down or left and right once.
-    void run_trigger(BotBaseContext& context) const;
+    void run_trigger(ProControllerContext& context) const;
 
 public:
     enum class TriggerMethod{
@@ -45,7 +45,7 @@ public:
     };
 
     EnumDropdownOption<TriggerMethod> TRIGGER_METHOD;
-    TimeExpressionOption<uint16_t> MOVE_DURATION;
+    MillisecondsOption MOVE_DURATION0;
     IntegerEnumDropdownOption SWEET_SCENT_POKEMON_LOCATION;
 };
 

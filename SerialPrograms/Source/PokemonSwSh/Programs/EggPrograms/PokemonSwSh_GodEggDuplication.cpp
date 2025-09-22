@@ -1,10 +1,11 @@
 /*  God Egg Duplication
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/PrettyPrint.h"
+#include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSwSh/Commands/PokemonSwSh_Commands_EggRoutines.h"
@@ -23,9 +24,9 @@ GodEggDuplication_Descriptor::GodEggDuplication_Descriptor()
         STRING_POKEMON + " SwSh", "God Egg Duplication",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSwSh/GodEggDuplication.md",
         "Mass duplicate " + STRING_POKEMON + " with the God Egg.",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -42,39 +43,43 @@ GodEggDuplication::GodEggDuplication()
         LockMode::LOCK_WHILE_RUNNING,
         6, 1, 6
     )
+    , NOTIFICATIONS({
+        &NOTIFICATION_PROGRAM_FINISH,
+    })
 {
     PA_ADD_OPTION(START_LOCATION);
     PA_ADD_OPTION(MAX_FETCH_ATTEMPTS);
     PA_ADD_OPTION(PARTY_ROUND_ROBIN);
+    PA_ADD_OPTION(NOTIFICATIONS);
 }
 
 
-void GodEggDuplication::collect_godegg(BotBaseContext& context, uint8_t party_slot) const{
+void GodEggDuplication::collect_godegg(ProControllerContext& context, uint8_t party_slot) const{
     pbf_wait(context, 50);
-    ssf_press_button1(context, BUTTON_B, 100);
-    ssf_press_button1(context, BUTTON_B, 100);
+    ssf_press_button_ptv(context, BUTTON_B, 800ms);
+    ssf_press_button_ptv(context, BUTTON_B, 800ms);
     pbf_wait(context, 225);
 
     //  "You received an Egg from the Nursery worker!"
-    ssf_press_button1(context, BUTTON_B, 300);
+    ssf_press_button_ptv(context, BUTTON_B, 2400ms);
 
     //  "Where do you want to send the Egg to?"
-    ssf_press_button1(context, BUTTON_A, 100);
+    ssf_press_button_ptv(context, BUTTON_A, 800ms);
 
     //  (extra line of text for French)
-    ssf_press_button1(context, BUTTON_B, 100);
+    ssf_press_button_ptv(context, BUTTON_B, 800ms);
 
     //  "Please select a Pokemon to swap from your party."
-    ssf_press_button1(context, BUTTON_B, GameSettings::instance().MENU_TO_POKEMON_DELAY);
+    ssf_press_button_ptv(context, BUTTON_B, GameSettings::instance().MENU_TO_POKEMON_DELAY0);
 
     //  Select the party member.
     for (uint8_t c = 0; c < party_slot; c++){
-        ssf_press_dpad1(context, DPAD_DOWN, 10);
+        ssf_press_dpad_ptv(context, DPAD_DOWN, 80ms);
     }
-    ssf_press_button1(context, BUTTON_A, 300);
+    ssf_press_button_ptv(context, BUTTON_A, 2400ms);
     pbf_mash_button(context, BUTTON_B, 500);
 }
-void GodEggDuplication::run_program(Logger& logger, BotBaseContext& context, uint16_t attempts) const{
+void GodEggDuplication::run_program(Logger& logger, ProControllerContext& context, uint16_t attempts) const{
     if (attempts == 0){
         return;
     }
@@ -111,7 +116,7 @@ void GodEggDuplication::run_program(Logger& logger, BotBaseContext& context, uin
     }
 }
 
-void GodEggDuplication::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void GodEggDuplication::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     if (START_LOCATION.start_in_grip_menu()){
         grip_menu_connect_go_home(context);
         resume_game_back_out(env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST, 400);
@@ -120,7 +125,9 @@ void GodEggDuplication::program(SingleSwitchProgramEnvironment& env, BotBaseCont
     }
 
     run_program(env.console, context, MAX_FETCH_ATTEMPTS);
-    ssf_press_button2(context, BUTTON_HOME, GameSettings::instance().GAME_TO_HOME_DELAY_SAFE, 10);
+    ssf_press_button(context, BUTTON_HOME, GameSettings::instance().GAME_TO_HOME_DELAY_SAFE0, 80ms);
+
+    send_program_finished_notification(env, NOTIFICATION_PROGRAM_FINISH);
 }
 
 

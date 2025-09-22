@@ -1,6 +1,6 @@
 /*  Self Touch Trade
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -14,7 +14,8 @@
 namespace PokemonAutomation{
 namespace NintendoSwitch{
 namespace PokemonBDSP{
-    using namespace Pokemon;
+
+using namespace Pokemon;
 
 
 SelfTouchTrade_Descriptor::SelfTouchTrade_Descriptor()
@@ -23,9 +24,9 @@ SelfTouchTrade_Descriptor::SelfTouchTrade_Descriptor()
         STRING_POKEMON + " BDSP", "Self Touch Trade",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/SelfTouchTrade.md",
         "Touch trade boxes of " + STRING_POKEMON + " between two local Switches.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB,
         2, 2, 2
     )
 {}
@@ -69,19 +70,19 @@ void SelfTouchTrade::program(MultiSwitchProgramEnvironment& env, CancellableScop
     env.update_stats();
 
     size_t host_index = HOSTING_SWITCH == HostingSwitch::Switch0 ? 0 : 1;
-    BotBaseContext host(scope, env.consoles[host_index].botbase());
+    ProControllerContext host(scope, env.consoles[host_index].controller<ProController>());
 
     //  Swap trade all the boxes.
     for (uint8_t box = 0; box < BOXES_TO_TRADE; box++){
         if (box != 0){
-            pbf_press_button(host, BUTTON_R, 20, GameSettings::instance().BOX_CHANGE_DELAY_0);
+            pbf_press_button(host, BUTTON_R, 160ms, GameSettings::instance().BOX_CHANGE_DELAY0);
         }
         trade_current_box(env, scope, NOTIFICATION_STATUS_UPDATE, stats);
     }
 
     //  Trade back the last box.
     for (uint8_t box = 1; box < BOXES_TO_TRADE; box++){
-        pbf_press_button(host, BUTTON_L, 20, GameSettings::instance().BOX_CHANGE_DELAY_0);
+        pbf_press_button(host, BUTTON_L, 160ms, GameSettings::instance().BOX_CHANGE_DELAY0);
     }
     trade_current_box(env, scope, NOTIFICATION_STATUS_UPDATE, stats);
 

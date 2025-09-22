@@ -1,6 +1,6 @@
 /*  Lifetime Sanitizer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,9 +8,7 @@
 #define PokemonAutomation_LifetimeSanitizer_H
 
 #include <stdint.h>
-#include <atomic>
-#include <string>
-#include "Common/Compiler.h"
+#include <cstddef>
 
 #define PA_SANITIZER_ENABLE
 
@@ -18,7 +16,6 @@ namespace PokemonAutomation{
 
 
 #ifdef PA_SANITIZER_ENABLE
-extern std::atomic<bool> LifetimeSanitizer_enabled;
 
 
 class LifetimeSanitizer{
@@ -26,68 +23,19 @@ class LifetimeSanitizer{
 
 
 public:
-    //  Default + Destruct
+    //  Rule of 5
 
-    LifetimeSanitizer(const char* name = "(unnamed class)")
-        : m_token(SANITIZER_TOKEN)
-        , m_self(this)
-        , m_name(name)
-    {
-        if (!LifetimeSanitizer_enabled.load(std::memory_order_relaxed)){
-            return;
-        }
-        internal_construct();
-    }
-    ~LifetimeSanitizer(){
-        if (!LifetimeSanitizer_enabled.load(std::memory_order_relaxed)){
-            m_self = nullptr;
-            return;
-        }
-        internal_destruct();
-    }
+    ~LifetimeSanitizer();
+    LifetimeSanitizer(LifetimeSanitizer&& x);
+    void operator=(LifetimeSanitizer&& x);
+    LifetimeSanitizer(const LifetimeSanitizer& x);
+    void operator=(const LifetimeSanitizer& x);
 
 
 public:
-    //  Move
+    //  Constructor
 
-    LifetimeSanitizer(LifetimeSanitizer&& x)
-        : m_token(SANITIZER_TOKEN)
-        , m_self(this)
-        , m_name(x.m_name)
-    {
-        if (!LifetimeSanitizer_enabled.load(std::memory_order_relaxed)){
-            return;
-        }
-        x.check_usage();
-        internal_construct();
-    }
-    void operator=(LifetimeSanitizer&& x){
-        if (!LifetimeSanitizer_enabled.load(std::memory_order_relaxed)){
-            return;
-        }
-        check_usage();
-        x.check_usage();
-    }
-
-
-public:
-    //  Copy
-
-    LifetimeSanitizer(const LifetimeSanitizer& x)
-        : m_token(SANITIZER_TOKEN)
-        , m_self(this)
-        , m_name(x.m_name)
-    {
-        if (!LifetimeSanitizer_enabled.load(std::memory_order_relaxed)){
-            return;
-        }
-        x.check_usage();
-        internal_construct();
-    }
-    void operator=(const LifetimeSanitizer& x){
-        check_usage();
-        x.check_usage();
-    }
+    LifetimeSanitizer(const char* name = "(unnamed class)");
 
 
 public:
@@ -108,38 +56,42 @@ public:
         const LifetimeSanitizer& m_parent;
     };
 
-    void check_usage() const{
-        if (!LifetimeSanitizer_enabled.load(std::memory_order_relaxed)){
-            return;
-        }
-        internal_check_usage();
-    }
+    void check_usage() const;
+    void start_using() const;
+    void done_using() const;
     CheckScope check_scope() const{
         return CheckScope(*this);
     }
 
-    static void set_enabled(bool enabled);
-    static void terminate_with_dump();
-
+    static void disable();
 
 
 private:
-    PA_NO_INLINE void internal_construct();
-    PA_NO_INLINE void internal_destruct();
-    PA_NO_INLINE void internal_check_usage() const;
+    static void terminate_with_dump();
+    void internal_construct(const char* name);
+    void internal_destruct();
+
 
 private:
     uint64_t m_token;
     void* m_self;
-    std::string m_name;
+    const char* m_name;
+    mutable size_t m_use_counter = 0;
 };
 
 
 #else
 class LifetimeSanitizer{
 public:
+    LifetimeSanitizer(const char* = ""){}
+
     void check_usage() const{}
-    static void set_enabled(bool enabled){}
+    static void disable(){}
+
+    struct CheckScope{};
+    CheckScope check_scope() const{
+        return CheckScope();
+    }
 };
 #endif
 

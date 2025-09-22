@@ -1,20 +1,17 @@
 /*  White Object Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <map>
-#include "Common/Cpp/Containers/FixedLimitVector.tpp"
-#include "Kernels/Waterfill/Kernels_Waterfill.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
-#include "CommonFramework/ImageMatch/SubObjectTemplateMatcher.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
 #include "PokemonLA_WhiteObjectDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -40,6 +37,7 @@ void find_overworld_white_objects(
 //    }
 //    compress_rgb32_to_binary_range(image, filters.data(), filters.size());
 
+//    static int count = 0;
     {
         std::vector<std::pair<uint32_t, uint32_t>> filters;
         for (Color filter : threshold_set){
@@ -50,6 +48,8 @@ void find_overworld_white_objects(
 #if 1
         std::unique_ptr<WaterfillSession> session = make_WaterfillSession();
         for (size_t c = 0; c < filters.size(); c++){
+
+//            cout << "filter[" << c << "] = " << filters[c].first << endl;
 //            cout << matrix[c].width() << " x " << matrix[c].height() << endl;
 //            cout << matrix[c].dump() << endl;
             session->set_source(matrix[c]);
@@ -57,6 +57,8 @@ void find_overworld_white_objects(
             WaterfillObject object;
             while (finder->find_next(object, false)){
 //                cout << object.area << endl;
+//                cout << matrix[c].submatrix(object.min_x, object.min_y, object.width(), object.height()).dump() << endl;
+//                extract_box_reference(image, object).save("test-" + std::to_string(count++) + "-" + std::to_string(c) + ".png");
                 for (const auto& detector : detectors){
                     const std::set<Color>& thresholds = detector.first.thresholds();
                     if (thresholds.find((Color)filters[c].first) != thresholds.end()){

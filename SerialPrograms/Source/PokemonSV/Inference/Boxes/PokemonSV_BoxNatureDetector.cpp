@@ -1,6 +1,6 @@
 /*  Box Nature Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -31,7 +31,7 @@ NatureCheckerValue BoxNatureDetector::read(Logger& logger, const ImageViewRGB32&
     if (result.results.size() != 1){
         return NatureCheckerValue::UnableToDetect;
     }
-    return NatureCheckerValue_string_to_enum(result.results.begin()->second.token);
+    return NATURE_CHECKER_VALUE_STRINGS().get_enum(result.results.begin()->second.token);
 }
 NatureReader::Results BoxNatureDetector::read(Logger& logger, const ImageViewRGB32& frame){
     NatureReader::Results results;

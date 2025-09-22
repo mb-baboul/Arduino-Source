@@ -1,24 +1,26 @@
 /*  Leap Grinder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "ClientSource/Connection/BotBase.h"
 #include "Common/Cpp/PrettyPrint.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "Pokemon/Pokemon_Strings.h"
+#include "Pokemon/Pokemon_Notification.h"
+#include "Pokemon/Inference/Pokemon_NameReader.h"
 #include "PokemonLA/PokemonLA_Settings.h"
 #include "PokemonLA/Resources/PokemonLA_NameDatabase.h"
 #include "PokemonLA/Inference/Sounds/PokemonLA_ShinySoundDetector.h"
 #include "PokemonLA/Inference/PokemonLA_OverworldDetector.h"
 #include "PokemonLA/Programs/PokemonLA_GameEntry.h"
+#include "PokemonLA/Programs/PokemonLA_LeapPokemonActions.h"
 #include "PokemonLA/Programs/Farming/PokemonLA_LeapGrinder.h"
 
 namespace PokemonAutomation{
@@ -33,9 +35,9 @@ LeapGrinder_Descriptor::LeapGrinder_Descriptor()
         STRING_POKEMON + " LA", "Leap Grinder",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/LeapGrinder.md",
         "Shake trees and ores to grind tasks",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::VIDEO_AUDIO,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 class LeapGrinder_Descriptor::Stats : public StatsTracker{
@@ -100,7 +102,7 @@ LeapGrinder::LeapGrinder()
     , POKEMON(
         "<b>Pokemon Species</b>",
         POKEMON_DATABASE,
-        LockMode::LOCK_WHILE_RUNNING,
+        LockMode::UNLOCK_WHILE_RUNNING,
         "cherubi"
     )
     , LEAPS(
@@ -110,18 +112,25 @@ LeapGrinder::LeapGrinder()
     )
     , SHINY_DETECTED_ENROUTE(
         "Enroute Shiny Action",
-        "This applies if a shiny is detected while enroute to destination.",
-        "0 * TICKS_PER_SECOND"
+        "This applies if a shiny is detected while traveling in the overworld.",
+        "0 ms"
+    )
+    , FOUND_SHINY_OR_ALPHA(
+        "Found Shiny or Alpha",
+        true, true,
+        ImageAttachmentMode::JPG,
+        {"Notifs", "Showcase"}
     )
     , MATCH_DETECTED_OPTIONS(
         "Match Action",
-        "What to do when the leaping Pokemon matches the *Stop On*.",
-        "0 * TICKS_PER_SECOND"
+        "What to do when the leaping " + Pokemon::STRING_POKEMON + " matches the \"Stop On\" parameter.",
+        "Found Shiny or Alpha"
     )
     , NOTIFICATION_STATUS("Status Update", true, false, std::chrono::seconds(3600))
     , NOTIFICATIONS({
         &NOTIFICATION_STATUS,
         &SHINY_DETECTED_ENROUTE.NOTIFICATIONS,
+        &FOUND_SHINY_OR_ALPHA,
         &MATCH_DETECTED_OPTIONS.NOTIFICATIONS,
         &NOTIFICATION_PROGRAM_FINISH,
         &NOTIFICATION_ERROR_RECOVERABLE,
@@ -139,7 +148,10 @@ LeapGrinder::LeapGrinder()
 }
 
 
-bool LeapGrinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool LeapGrinder::run_iteration(
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
+    bool fresh_from_reset
+){
 
     LeapGrinder_Descriptor::Stats& stats = env.current_stats<LeapGrinder_Descriptor::Stats>();
     stats.attempts++;
@@ -153,8 +165,9 @@ bool LeapGrinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseCont
         }
         if (c >= 5){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Failed to switch to Pokemon selection after 5 attempts."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Failed to switch to Pokemon selection after 5 attempts.",
+                env.console
             );
         }
         env.console.log("Not on Pokemon selection. Attempting to switch to it...", COLOR_ORANGE);
@@ -169,10 +182,10 @@ bool LeapGrinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseCont
         return on_shiny_callback(env, env.console, SHINY_DETECTED_ENROUTE, error_coefficient);
     });
 
-    int ret = run_until(
+    int ret = run_until<ProControllerContext>(
         env.console, context,
-        [&](BotBaseContext& context){
-            route(env, env.console, context, (LeapPokemon)POKEMON.index());
+        [&](ProControllerContext& context){
+            route(env, env.console, context, (LeapPokemon)POKEMON.index(), fresh_from_reset);
         },
         {{shiny_detector}}
     );
@@ -241,8 +254,33 @@ bool LeapGrinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseCont
             break;
         }
 
-        if (pokemon.is_alpha || pokemon.is_shiny){
-            on_match_found(env, env.console, context, MATCH_DETECTED_OPTIONS, is_match);
+        bool notification_sent = false;
+        do{
+            std::string str;
+            if (pokemon.is_shiny){
+                if (pokemon.is_alpha){
+                    str = "Found Shiny Alpha!";
+                }else{
+                    str = "Found Shiny!";
+                }
+            }else{
+                if (pokemon.is_alpha){
+                    str = "Found Alpha!";
+                }else{
+                    break;
+                }
+            }
+            notification_sent |= send_program_notification(
+                env, FOUND_SHINY_OR_ALPHA,
+                Pokemon::COLOR_STAR_SHINY,
+                std::move(str),
+                {}, "",
+                env.console.video().snapshot(), true
+            );
+        }while (false);
+
+        if (is_match){
+            on_battle_match_found(env, env.console, context, MATCH_DETECTED_OPTIONS, !notification_sent);
         }
 
         exit_battle(env.console, context, EXIT_METHOD);
@@ -259,32 +297,36 @@ bool LeapGrinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseCont
     return false;
 }
 
-void LeapGrinder::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void LeapGrinder::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     LeapGrinder_Descriptor::Stats& stats = env.current_stats<LeapGrinder_Descriptor::Stats>();
 
     //  Connect the controller.
     pbf_press_button(context, BUTTON_LCLICK, 5, 5);
 
+    bool fresh_from_reset = false;
     while (true){
         env.update_stats();
         send_program_status_notification(env, NOTIFICATION_STATUS);
         try{
-            if(run_iteration(env, context)){
+            if(run_iteration(env, context, fresh_from_reset)){
                 break;
             }
         }catch (OperationFailedException& e){
             stats.errors++;
             e.send_notification(env, NOTIFICATION_ERROR_RECOVERABLE);
 
-            pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
-            reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
+            pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
+            fresh_from_reset = reset_game_from_home(
+                env, env.console, context,
+                ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST
+            );
             // Switch from items to pokemons
             pbf_press_button(context, BUTTON_X, 20, 30);
         }
     }
 
     env.update_stats();
-    pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+    pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
     send_program_finished_notification(env, NOTIFICATION_PROGRAM_FINISH);
 }
 

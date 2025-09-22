@@ -1,11 +1,11 @@
 /*  Max Lair AI
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/CRC32.h"
-#include "CommonFramework/Environment/Environment.h"
+//#include "CommonFramework/Environment/Environment.h"
 #include "PokemonSwSh_MaxLair_AI.h"
 
 namespace PokemonAutomation{

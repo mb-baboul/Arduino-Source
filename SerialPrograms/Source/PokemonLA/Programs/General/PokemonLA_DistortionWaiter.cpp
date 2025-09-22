@@ -1,14 +1,14 @@
 /*  Distortion Waiter
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "Pokemon/Inference/Pokemon_NameReader.h"
@@ -28,9 +28,9 @@ DistortionWaiter_Descriptor::DistortionWaiter_Descriptor()
         STRING_POKEMON + " LA", "Distortion Waiter",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/DistortionWaiter.md",
         "Wait for a distortion to appear.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 class DistortionWaiter_Descriptor::Stats : public StatsTracker{
@@ -81,7 +81,7 @@ DistortionWaiter::DistortionWaiter()
 
 
 
-void DistortionWaiter::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void DistortionWaiter::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     DistortionWaiter_Descriptor::Stats& stats = env.current_stats<DistortionWaiter_Descriptor::Stats>();
 
 
@@ -95,9 +95,9 @@ void DistortionWaiter::program(SingleSwitchProgramEnvironment& env, BotBaseConte
     while (true){
         env.update_stats();
 
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [&](BotBaseContext& context){
+            [&](ProControllerContext& context){
                 for (size_t c = 0; c < 60; c++){
                     pbf_press_button(context, BUTTON_LCLICK, 20, 60 * TICKS_PER_SECOND - 20);
                     context.wait_for_all_requests();
@@ -114,8 +114,9 @@ void DistortionWaiter::program(SingleSwitchProgramEnvironment& env, BotBaseConte
         if (ret < 0){
             stats.errors++;
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "No distortion found after one hour."
+                ErrorReport::SEND_ERROR_REPORT,
+                "No distortion found after one hour.",
+                env.console
             );
         }
 
@@ -146,7 +147,7 @@ void DistortionWaiter::program(SingleSwitchProgramEnvironment& env, BotBaseConte
         {}, "",
         env.console.video().snapshot()
     );
-    pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
+    pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
 }
 
 

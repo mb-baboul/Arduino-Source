@@ -1,31 +1,27 @@
 /*  Tera Farmer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include <set>
 #include <sstream>
-//#include "Common/Compiler.h"
 #include "Common/Cpp/Exceptions.h"
+#include "Common/Cpp/PrettyPrint.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
 #include "CommonFramework/VideoPipeline/VideoOverlay.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/Programs/NintendoSwitch_GameEntry.h"
+#include "NintendoSwitch/Programs/DateSpam/NintendoSwitch_HomeToDateTime.h"
 #include "Pokemon/Pokemon_Strings.h"
-//#include "Pokemon/Pokemon_Notification.h"
 #include "Pokemon/Inference/Pokemon_NameReader.h"
-#include "PokemonSwSh/Commands/PokemonSwSh_Commands_DateSpam.h"
 #include "PokemonSV/PokemonSV_Settings.h"
-#include "PokemonSV/Inference/Tera/PokemonSV_TeraCardDetector.h"
-//#include "PokemonSV/Inference/PokemonSV_MainMenuDetector.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
 #include "PokemonSV/Programs/TeraRaids/PokemonSV_TeraRoutines.h"
 #include "PokemonSV/Programs/TeraRaids/PokemonSV_TeraBattler.h"
 #include "PokemonSV_TeraSelfFarmer.h"
@@ -47,9 +43,9 @@ TeraSelfFarmer_Descriptor::TeraSelfFarmer_Descriptor()
         STRING_POKEMON + " SV", "Tera Self Farmer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/TeraSelfFarmer.md",
         "Farm items and " + STRING_POKEMON + " from Tera raids. Can also hunt for shiny and high reward raids.",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct TeraSelfFarmer_Descriptor::Stats : public StatsTracker{
@@ -161,14 +157,14 @@ TeraSelfFarmer::TeraSelfFarmer()
 
     CATCH_ON_WIN.add_listener(*this);
 }
-void TeraSelfFarmer::value_changed(void* object){
+void TeraSelfFarmer::on_config_value_changed(void* object){
     STOP_CONDITIONS.STOP_ON_SHINY.set_visibility(
         CATCH_ON_WIN.enabled() ? ConfigOptionState::ENABLED : ConfigOptionState::HIDDEN
     );
 }
 
 
-bool TeraSelfFarmer::run_raid(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+bool TeraSelfFarmer::run_raid(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     env.console.log("Running raid...");
 
     TeraSelfFarmer_Descriptor::Stats& stats = env.current_stats<TeraSelfFarmer_Descriptor::Stats>();
@@ -192,11 +188,11 @@ bool TeraSelfFarmer::run_raid(SingleSwitchProgramEnvironment& env, BotBaseContex
 
 
     if (CATCH_ON_WIN.FIX_TIME_ON_CATCH){
-        pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
-        home_to_date_time(context, false, false);
+        go_home(env.console, context);
+        home_to_date_time(env.console, context, false);
         pbf_press_button(context, BUTTON_A, 20, 105);
         pbf_press_button(context, BUTTON_A, 20, 105);
-        pbf_press_button(context, BUTTON_HOME, 20, ConsoleSettings::instance().SETTINGS_TO_HOME_DELAY);
+        pbf_press_button(context, BUTTON_HOME, 160ms, ConsoleSettings::instance().SETTINGS_TO_HOME_DELAY0);
         resume_game_from_home(env.console, context);
     }
 
@@ -217,7 +213,7 @@ bool TeraSelfFarmer::run_raid(SingleSwitchProgramEnvironment& env, BotBaseContex
 }
 
 
-void TeraSelfFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void TeraSelfFarmer::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
     TeraSelfFarmer_Descriptor::Stats& stats = env.current_stats<TeraSelfFarmer_Descriptor::Stats>();
@@ -248,7 +244,7 @@ void TeraSelfFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext
 
         if (!first){
             day_skip_from_overworld(env.console, context);
-            pbf_wait(context, GameSettings::instance().RAID_SPAWN_DELAY);
+            pbf_wait(context, GameSettings::instance().RAID_SPAWN_DELAY0);
             context.wait_for_all_requests();
             stats.m_skips++;
             skip_counter++;
@@ -312,9 +308,15 @@ void TeraSelfFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext
             std::string tera_type = raid_data.tera_type.empty()
                 ? "unknown tera type"
                 : raid_data.tera_type;
-            std::string pokemon = raid_data.species.empty()
-                ? "unknown " + Pokemon::STRING_POKEMON
-                : raid_data.species;
+
+            std::string pokemon;
+            if (raid_data.species.empty()){
+                pokemon = "unknown " + Pokemon::STRING_POKEMON;
+            }else if (raid_data.species.size() == 1){
+                pokemon = *raid_data.species.begin();
+            }else{
+                pokemon = set_to_str(raid_data.species);
+            }
 
             ss << " a " << stars << "* " << tera_type << " " << pokemon << " raid";
             env.log(ss.str());

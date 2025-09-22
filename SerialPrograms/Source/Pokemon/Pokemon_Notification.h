@@ -1,6 +1,6 @@
 /*  Shiny Notification
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,12 +9,8 @@
 
 #include <string>
 #include <set>
-#include <chrono>
-//#include "CommonFramework/Logging/Logger.h"
-//#include "CommonFramework/Tools/StatsTracking.h"
 #include "CommonFramework/Notifications/EventNotificationOption.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-//#include "Pokemon/Options/Pokemon_EncounterBotOptions.h"
 #include "Pokemon_EncounterStats.h"
 #include "Pokemon_DataTypes.h"
 

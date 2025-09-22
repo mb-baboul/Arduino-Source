@@ -1,23 +1,22 @@
 /*  Sandwich Ingredient Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/ImageMatch/ImageCropper.h"
-#include "CommonFramework/ImageMatch/WaterfillTemplateMatcher.h"
-//#include "CommonFramework/ImageTools/ImageFilter.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTools/WaterfillUtilities.h"
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
-#include "CommonFramework/OCR/OCR_Routines.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/WaterfillUtilities.h"
+#include "CommonTools/ImageMatch/ImageCropper.h"
+#include "CommonTools/ImageMatch/WaterfillTemplateMatcher.h"
+#include "CommonTools/OCR/OCR_Routines.h"
 #include "PokemonSV/Resources/PokemonSV_Ingredients.h"
 #include "PokemonSV_SandwichIngredientDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -71,7 +70,7 @@ void SandwichIngredientArrowDetector::make_overlays(VideoOverlaySet& items) cons
     m_arrow.make_overlays(items);
 }
 
-bool SandwichIngredientArrowDetector::detect(const ImageViewRGB32& screen) const{
+bool SandwichIngredientArrowDetector::detect(const ImageViewRGB32& screen){
     return m_arrow.detect(screen);
 }
 
@@ -92,7 +91,7 @@ void DeterminedSandwichIngredientDetector::make_overlays(VideoOverlaySet& items)
     }
 }
 
-bool DeterminedSandwichIngredientDetector::detect(const ImageViewRGB32& screen) const{
+bool DeterminedSandwichIngredientDetector::detect(const ImageViewRGB32& screen){
     int yellow_count = 0;
     for(int i = 0; i < 4; i++){
         FloatPixel avg = image_stats(extract_box_reference(screen, m_edges[i])).average;
@@ -111,7 +110,7 @@ void SandwichCondimentsPageDetector::make_overlays(VideoOverlaySet& items) const
     items.add(m_color, m_box);
 }
 
-bool SandwichCondimentsPageDetector::detect(const ImageViewRGB32& screen) const{
+bool SandwichCondimentsPageDetector::detect(const ImageViewRGB32& screen){
     const std::vector<std::pair<uint32_t, uint32_t>> filters = {
         {combine_rgb(150, 150, 150), combine_rgb(255, 255, 255)}
     };
@@ -138,7 +137,7 @@ void SandwichPicksPageDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_box);
 }
 
-bool SandwichPicksPageDetector::detect(const ImageViewRGB32& screen) const{
+bool SandwichPicksPageDetector::detect(const ImageViewRGB32& screen){
     const std::vector<std::pair<uint32_t, uint32_t>> filters = {
         {combine_rgb(150, 150, 150), combine_rgb(255, 255, 255)}
     };

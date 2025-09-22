@@ -1,12 +1,11 @@
 /*  Tera Battle Menus
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSV_TeraBattleMenus.h"
 
@@ -27,7 +26,7 @@ void TeraBattleMenuDetector::make_overlays(VideoOverlaySet& items) const{
     m_callouts_button.make_overlays(items);
     m_arrow.make_overlays(items);
 }
-bool TeraBattleMenuDetector::detect(const ImageViewRGB32& screen) const{
+bool TeraBattleMenuDetector::detect(const ImageViewRGB32& screen){
     if (!m_callouts_button.detect(screen)){
 //        cout << "status button" << endl;
         return false;
@@ -38,7 +37,7 @@ bool TeraBattleMenuDetector::detect(const ImageViewRGB32& screen) const{
     }
     return true;
 }
-int8_t TeraBattleMenuDetector::detect_slot(const ImageViewRGB32& screen) const{
+int8_t TeraBattleMenuDetector::detect_slot(const ImageViewRGB32& screen){
     if (!m_callouts_button.detect(screen)){
 //        cout << "status button" << endl;
         return -1;
@@ -56,20 +55,20 @@ int8_t TeraBattleMenuDetector::detect_slot(const ImageViewRGB32& screen) const{
 //    cout << "slot = " << slot << endl;
     return (int8_t)(slot + 0.5);
 }
-bool TeraBattleMenuDetector::move_to_slot(ConsoleHandle& console, BotBaseContext& context, uint8_t slot) const{
+bool TeraBattleMenuDetector::move_to_slot(VideoStream& stream, ProControllerContext& context, uint8_t slot){
     if (slot > 2){
         return false;
     }
     for (size_t attempts = 0;; attempts++){
         context.wait_for_all_requests();
-        VideoSnapshot screen = console.video().snapshot();
+        VideoSnapshot screen = stream.video().snapshot();
         int8_t current_slot = detect_slot(screen);
         if (current_slot < 0 || current_slot > 2){
-            console.log("TeraBattleMenuDetector::move_to_slot(): Unable to detect slot.", COLOR_RED);
+            stream.log("TeraBattleMenuDetector::move_to_slot(): Unable to detect slot.", COLOR_RED);
             return false;
         }
         if (attempts > 10){
-            console.log("TeraBattleMenuDetector::move_to_slot(): Failed to move slot after 10 attempts.", COLOR_RED);
+            stream.log("TeraBattleMenuDetector::move_to_slot(): Failed to move slot after 10 attempts.", COLOR_RED);
             return false;
         }
 
@@ -99,7 +98,7 @@ void CheerSelectDetector::make_overlays(VideoOverlaySet& items) const{
     m_info_button.make_overlays(items);
     m_arrow.make_overlays(items);
 }
-bool CheerSelectDetector::detect(const ImageViewRGB32& screen) const{
+bool CheerSelectDetector::detect(const ImageViewRGB32& screen){
     if (m_info_button.detect(screen)){
 //        cout << "status" << endl;
         return false;
@@ -110,7 +109,7 @@ bool CheerSelectDetector::detect(const ImageViewRGB32& screen) const{
     }
     return true;
 }
-int8_t CheerSelectDetector::detect_slot(const ImageViewRGB32& screen) const{
+int8_t CheerSelectDetector::detect_slot(const ImageViewRGB32& screen){
     if (m_info_button.detect(screen)){
 //        cout << "status" << endl;
         return false;
@@ -128,20 +127,20 @@ int8_t CheerSelectDetector::detect_slot(const ImageViewRGB32& screen) const{
 
     return (int8_t)(y + 0.5);
 }
-bool CheerSelectDetector::move_to_slot(ConsoleHandle& console, BotBaseContext& context, uint8_t slot) const{
+bool CheerSelectDetector::move_to_slot(VideoStream& stream, ProControllerContext& context, uint8_t slot){
     if (slot > 2){
         return false;
     }
     for (size_t attempts = 0;; attempts++){
         context.wait_for_all_requests();
-        VideoSnapshot screen = console.video().snapshot();
+        VideoSnapshot screen = stream.video().snapshot();
         int8_t current_slot = detect_slot(screen);
         if (current_slot < 0 || current_slot > 2){
-            console.log("CheerSelectDetector::move_to_slot(): Unable to detect slot.", COLOR_RED);
+            stream.log("CheerSelectDetector::move_to_slot(): Unable to detect slot.", COLOR_RED);
             return false;
         }
         if (attempts > 10){
-            console.log("CheerSelectDetector::move_to_slot(): Failed to move slot after 10 attempts.", COLOR_RED);
+            stream.log("CheerSelectDetector::move_to_slot(): Failed to move slot after 10 attempts.", COLOR_RED);
             return false;
         }
 
@@ -177,7 +176,7 @@ void TeraTargetSelectDetector::make_overlays(VideoOverlaySet& items) const{
     m_player2.make_overlays(items);
     m_player3.make_overlays(items);
 }
-bool TeraTargetSelectDetector::detect(const ImageViewRGB32& screen) const{
+bool TeraTargetSelectDetector::detect(const ImageViewRGB32& screen){
     if (m_opponent.detect(screen)){
         return true;
     }
@@ -195,7 +194,7 @@ bool TeraTargetSelectDetector::detect(const ImageViewRGB32& screen) const{
     }
     return false;
 }
-int8_t TeraTargetSelectDetector::detect_slot(const ImageViewRGB32& screen) const{
+int8_t TeraTargetSelectDetector::detect_slot(const ImageViewRGB32& screen){
     if (m_opponent.detect(screen)){
         return 0;
     }
@@ -213,20 +212,20 @@ int8_t TeraTargetSelectDetector::detect_slot(const ImageViewRGB32& screen) const
     }
     return -1;
 }
-bool TeraTargetSelectDetector::move_to_slot(ConsoleHandle& console, BotBaseContext& context, uint8_t slot) const{
+bool TeraTargetSelectDetector::move_to_slot(VideoStream& stream, ProControllerContext& context, uint8_t slot){
     if (slot > 4){
         return false;
     }
     for (size_t attempts = 0;; attempts++){
         context.wait_for_all_requests();
-        VideoSnapshot screen = console.video().snapshot();
+        VideoSnapshot screen = stream.video().snapshot();
         int8_t current_slot = detect_slot(screen);
         if (current_slot < 0 || current_slot > 4){
-            console.log("TargetSelectDetector::move_to_slot(): Unable to detect slot.", COLOR_RED);
+            stream.log("TargetSelectDetector::move_to_slot(): Unable to detect slot.", COLOR_RED);
             return false;
         }
         if (attempts > 10){
-            console.log("TargetSelectDetector::move_to_slot(): Failed to move slot after 10 attempts.", COLOR_RED);
+            stream.log("TargetSelectDetector::move_to_slot(): Failed to move slot after 10 attempts.", COLOR_RED);
             return false;
         }
 
@@ -280,7 +279,7 @@ void TeraCatchDetector::make_overlays(VideoOverlaySet& items) const{
     }
 }
 
-bool TeraCatchDetector::detect_slot(const ImageViewRGB32& screen, size_t index) const{
+bool TeraCatchDetector::detect_slot(const ImageViewRGB32& screen, size_t index){
     ImageStats button = image_stats(extract_box_reference(screen, m_button[index]));
 //    cout << button.average << button.stddev << endl;
 //    extract_box_reference(screen, m_button).save("button.png");
@@ -303,7 +302,7 @@ bool TeraCatchDetector::detect_slot(const ImageViewRGB32& screen, size_t index) 
 
     return true;
 }
-bool TeraCatchDetector::detect(const ImageViewRGB32& screen) const{
+bool TeraCatchDetector::detect(const ImageViewRGB32& screen){
     if (m_callouts_button.detect(screen)){
         return false;
     }
@@ -311,24 +310,24 @@ bool TeraCatchDetector::detect(const ImageViewRGB32& screen) const{
     return detect_slot(screen, 0) || detect_slot(screen, 1);
 }
 
-bool TeraCatchDetector::move_to_slot(ConsoleHandle& console, BotBaseContext& context, uint8_t slot) const{
+bool TeraCatchDetector::move_to_slot(VideoStream& stream, ProControllerContext& context, uint8_t slot){
     if (slot > 1){
         return false;
     }
 
     for (size_t attempts = 0; attempts < 10; attempts++){
         context.wait_for_all_requests();
-        VideoSnapshot screen = console.video().snapshot();
+        VideoSnapshot screen = stream.video().snapshot();
 
         if (m_callouts_button.detect(screen)){
-            console.log("TeraCatchDetector::move_to_slot(): Unable to detect catch buttons.", COLOR_RED);
+            stream.log("TeraCatchDetector::move_to_slot(): Unable to detect catch buttons.", COLOR_RED);
             return false;
         }
 
         bool slot0 = detect_slot(screen, 0);
         bool slot1 = detect_slot(screen, 1);
         if (slot0 == slot1){
-            console.log("TeraCatchDetector::move_to_slot(): Unable to detect catch buttons.", COLOR_RED);
+            stream.log("TeraCatchDetector::move_to_slot(): Unable to detect catch buttons.", COLOR_RED);
             return false;
         }
 
@@ -341,7 +340,7 @@ bool TeraCatchDetector::move_to_slot(ConsoleHandle& console, BotBaseContext& con
         pbf_press_dpad(context, DPAD_DOWN, 20, 30);
     }
 
-    console.log("TeraCatchDetector::move_to_slot(): Failed to move slot after 10 attempts.", COLOR_RED);
+    stream.log("TeraCatchDetector::move_to_slot(): Failed to move slot after 10 attempts.", COLOR_RED);
     return false;
 }
 

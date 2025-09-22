@@ -1,19 +1,19 @@
 /*  End Battle Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Compiler.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/Inference/BlackScreenDetector.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/VisualDetectors/BlackScreenDetector.h"
 #include "PokemonBDSP_EndBattleDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -21,7 +21,7 @@ namespace PokemonBDSP{
 
 
 
-
+#if 0
 EndBattleWatcher::EndBattleWatcher(const ImageFloatBox& box, Color color)
     : VisualInferenceCallback("EndBattleWatcher")
     , m_color(color)
@@ -50,6 +50,7 @@ bool EndBattleWatcher::battle_is_over(const ImageViewRGB32& frame){
     }
     return true;
 }
+#endif
 
 
 

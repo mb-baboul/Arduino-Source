@@ -1,12 +1,13 @@
 /*  Shiny Sparkle Set
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_ShinySparkleSet_H
 #define PokemonAutomation_PokemonBDSP_ShinySparkleSet_H
 
+#include <memory>
 #include "CommonFramework/ImageTools/ImageBoxes.h"
 #include "Pokemon/Pokemon_ShinySparkleSet.h"
 
@@ -29,7 +30,7 @@ public:
     ShinySparkleSetBDSP extract_subbox(const ImagePixelBox& subbox) const;
 
     virtual std::string to_str() const override;
-    virtual void read_from_image(const ImageViewRGB32& image) override;
+    virtual void read_from_image(size_t screen_area, const ImageViewRGB32& image) override;
 
     virtual void draw_boxes(
         VideoOverlaySet& overlays,

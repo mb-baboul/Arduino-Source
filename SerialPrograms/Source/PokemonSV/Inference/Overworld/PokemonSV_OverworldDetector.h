@@ -1,6 +1,6 @@
 /*  Overworld Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,8 +10,8 @@
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_DirectionDetector.h"
 
 namespace PokemonAutomation{
@@ -25,7 +25,7 @@ public:
     OverworldDetector(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     // return coordinates of the radar ball. return -1, -1 if unable to find the radar ball.
     // set strict_requirements to true for more accurate detection of radar ball,
@@ -40,7 +40,7 @@ protected:
 
 class OverworldWatcher : public OverworldDetector, public VisualInferenceCallback{
 public:
-    OverworldWatcher(Logger& logger, Color color = COLOR_RED, bool detect_event = false);
+    OverworldWatcher(Logger& logger, Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
     virtual bool process_frame(const VideoSnapshot& frame) override;
@@ -54,7 +54,6 @@ private:
     WallClock m_last_ball;
     WallClock m_last_north;
     VideoSnapshot m_start_of_detection;
-    bool m_detect_event;
     DirectionDetector m_direction_detector;
 };
 

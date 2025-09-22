@@ -1,19 +1,62 @@
 /*  Code Entry
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <map>
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "Common/Cpp/Containers/FixedLimitVector.tpp"
+#include "NintendoSwitch/NintendoSwitch_ConsoleHandle.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_DigitEntry.h"
 #include "NintendoSwitch/NintendoSwitch_MultiSwitchProgram.h"
+#include "NintendoSwitch/Programs/FastCodeEntry/NintendoSwitch_NumberCodeEntry.h"
+#include "NintendoSwitch/Programs/FastCodeEntry/NintendoSwitch_KeyboardCodeEntry.h"
 #include "PokemonSV_CodeEntry.h"
+
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
 namespace PokemonSV{
+
+
+
+FastCodeEntryKeyboardLayout::FastCodeEntryKeyboardLayout()
+    : GroupOption(
+        "Keyboard Layouts",
+        LockMode::UNLOCK_WHILE_RUNNING,
+        EnableMode::ALWAYS_ENABLED
+    )
+    , CONSOLE(4)
+{
+    CONSOLE.emplace_back("<b>Switch 0 (Top Left):</b>");
+    CONSOLE.emplace_back("<b>Switch 1 (Top Right):</b>");
+    CONSOLE.emplace_back("<b>Switch 2 (Bottom Left):</b>");
+    CONSOLE.emplace_back("<b>Switch 3 (Bottom Right):</b>");
+    PA_ADD_OPTION(CONSOLE[0]);
+    PA_ADD_OPTION(CONSOLE[1]);
+    PA_ADD_OPTION(CONSOLE[2]);
+    PA_ADD_OPTION(CONSOLE[3]);
+}
+FastCodeEntryKeyboardLayout::~FastCodeEntryKeyboardLayout() = default;
+
+
+FastCodeEntrySettingsOption::FastCodeEntrySettingsOption()
+    : BatchOption(LockMode::UNLOCK_WHILE_RUNNING)
+{
+    PA_ADD_OPTION(SKIP_PLUS);
+    PA_ADD_OPTION(KEYBOARD_LAYOUTS);
+}
+void FastCodeEntrySettingsOption::set_active_consoles(size_t active_consoles){
+    for (size_t c = 0; c < 4; c++){
+        KEYBOARD_LAYOUTS.CONSOLE[c].set_visibility(
+            c < active_consoles ? ConfigOptionState::ENABLED : ConfigOptionState::HIDDEN
+        );
+    }
+}
+
 
 
 const char* normalize_code(std::string& normalized_code, const std::string& code, bool override_mode){
@@ -95,84 +138,67 @@ const char* normalize_code(std::string& normalized_code, const std::string& code
 }
 
 void enter_code(
-    Logger& logger, BotBaseContext& context,
-    const FastCodeEntrySettings& settings, const std::string& normalized_code,
-    bool connect_controller_press,
-    bool override_mode
+    ConsoleHandle& console, AbstractControllerContext& context,
+    KeyboardLayout keyboard_layout,
+    const std::string& normalized_code, bool force_keyboard_mode,
+    bool include_plus,
+    bool connect_controller_press
 ){
     if (connect_controller_press){
         //  Connect the controller.
-        pbf_press_button(context, BUTTON_R | BUTTON_L, 5, 3);
+        auto* procon = context->cast<ProController>();
+        if (procon){
+            ProControllerContext subcontext(context, *procon);
+            pbf_press_button(subcontext, BUTTON_R | BUTTON_L, 5, 3);
+        }
     }
 
-    if (override_mode){
-        enter_alphanumeric_code(
-            logger, context,
-            settings,
-            normalized_code
+    if (force_keyboard_mode){
+        FastCodeEntry::keyboard_enter_code(
+            console, context, keyboard_layout,
+            normalized_code, include_plus
         );
         return;
     }
 
     switch (normalized_code.size()){
     case 4:
-        enter_digits_str(context, 4, normalized_code.c_str());
+//        enter_digits_str(context, 4, normalized_code.c_str());
+        FastCodeEntry::numberpad_enter_code(console, context, normalized_code, include_plus);
         break;
     case 6:
-        enter_alphanumeric_code(
-            logger, context,
-            settings,
-            normalized_code
+        FastCodeEntry::keyboard_enter_code(
+            console, context, keyboard_layout,
+            normalized_code, include_plus
         );
         break;
     case 8:
-        enter_digits_str(context, 8, normalized_code.c_str());
+//        enter_digits_str(context, 8, normalized_code.c_str());
+        FastCodeEntry::numberpad_enter_code(console, context, normalized_code, include_plus);
         break;
     }
 }
 const char* enter_code(
     MultiSwitchProgramEnvironment& env, CancellableScope& scope,
-    const FastCodeEntrySettings& settings, const std::string& code,
-    bool connect_controller_press,
-    bool override_mode
+    const FastCodeEntrySettings& settings,
+    const std::string& code, bool force_keyboard_mode,
+    bool connect_controller_press
 ){
     std::string normalized_code;
-    const char* error = normalize_code(normalized_code, code, override_mode);
+    const char* error = normalize_code(normalized_code, code, force_keyboard_mode);
     if (error){
         return error;
     }
 
-    env.run_in_parallel(scope, [&](ConsoleHandle& console, BotBaseContext& context){
-        if (connect_controller_press){
-            //  Connect the controller.
-            pbf_press_button(context, BUTTON_R | BUTTON_L, 5, 3);
-        }
-
-        if (override_mode){
-            enter_alphanumeric_code(
-                console.logger(), context,
-                settings,
-                normalized_code
-            );
-            return;
-        }
-
-        switch (normalized_code.size()){
-        case 4:
-            enter_digits_str(context, 4, normalized_code.c_str());
-            break;
-        case 6:
-            enter_alphanumeric_code(
-                console.logger(), context,
-                settings,
-                normalized_code
-            );
-            break;
-        case 8:
-            enter_digits_str(context, 8, normalized_code.c_str());
-            break;
-        }
-
+    env.run_in_parallel(scope, [&](CancellableScope& scope, ConsoleHandle& console){
+        AbstractControllerContext context(scope, console.controller());
+        enter_code(
+            console, context,
+            settings.keyboard_layout[console.index()],
+            normalized_code, force_keyboard_mode,
+            !settings.skip_plus,
+            connect_controller_press
+        );
     });
 
     return nullptr;

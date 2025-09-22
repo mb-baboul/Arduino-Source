@@ -1,6 +1,6 @@
 /*  Test Program (Switch)
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -12,16 +12,20 @@
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
 #include "Common/Cpp/Options/ButtonOption.h"
 #include "Common/Cpp/Options/DateOption.h"
-#include "CommonFramework/Options/StringSelectOption.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
+#include "Common/Cpp/Options/BoxFloatOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
 #include "NintendoSwitch/NintendoSwitch_MultiSwitchProgram.h"
 #include "PokemonSwSh/Options/PokemonSwSh_BallSelectOption.h"
 #include "PokemonSwSh/Options/EncounterFilter/PokemonSwSh_EncounterFilterOption.h"
 #include "PokemonSV/Options/PokemonSV_PlayerList.h"
-#include "CommonFramework/Tools/StatsTracking.h"
 #include "PokemonSV/Options/PokemonSV_SinglesAIOption.h"
+#include "Common/Cpp/Options/ColorOption.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ControllerSettings.h"
+#include "NintendoSwitch/Options/NintendoSwitch_ModelType.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -66,13 +70,10 @@ private:
 
     OCR::LanguageOCROption LANGUAGE;
 
+    StringOption IMAGE_PATH;
+
     StaticTextOption STATIC_TEXT;
-
-    StringSelectOption SELECT;
-
-//    PokemonSV::PlayerListTable PLAYER_LIST;
-    DateTimeOption DATE0;
-    DateTimeOption DATE1;
+    BoxFloatOption BOX;
 
 
 //    PokemonSV::SinglesAIOption battle_AI;

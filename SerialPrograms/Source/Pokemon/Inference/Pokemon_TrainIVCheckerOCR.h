@@ -1,6 +1,6 @@
 /*  Train IV Checker OCR Data
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,8 +9,7 @@
 
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
 #include "Common/Cpp/Options/StringOption.h"
-#include "Common/Cpp/Options/EnumDropdownOption.h"
-#include "CommonFramework/Options/TrainOCRModeOption.h"
+#include "CommonTools/Options/TrainOCRModeOption.h"
 #include "ComputerPrograms/ComputerProgram.h"
 
 namespace PokemonAutomation{

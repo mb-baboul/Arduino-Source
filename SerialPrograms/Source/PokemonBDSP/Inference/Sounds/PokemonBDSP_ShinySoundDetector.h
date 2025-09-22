@@ -1,13 +1,13 @@
 /*  Shiny Sound Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_ShinySoundDetector_H
 #define PokemonAutomation_PokemonBDSP_ShinySoundDetector_H
 
-#include "CommonFramework/Inference/AudioPerSpectrumDetectorBase.h"
+#include "CommonTools/Audio/AudioPerSpectrumDetectorBase.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -17,7 +17,7 @@ namespace PokemonBDSP{
 class ShinySoundDetector : public AudioPerSpectrumDetectorBase{
 public:
     //  Warning: The callback will be called from the audio inference thread.
-    ShinySoundDetector(ConsoleHandle& console, DetectedCallback detected_callback);
+    ShinySoundDetector(Logger& logger, DetectedCallback detected_callback);
 
     // Implement AudioPerSpectrumDetectorBase::get_score_threshold()
     virtual float get_score_threshold() const override;

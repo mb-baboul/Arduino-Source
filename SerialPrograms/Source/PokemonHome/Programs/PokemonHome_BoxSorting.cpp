@@ -1,6 +1,6 @@
 /*  Home Box Sorting
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -32,22 +32,17 @@ language
 #include "Common/Cpp/Json/JsonArray.h"
 #include "Common/Cpp/Json/JsonObject.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTypes/ImageViewRGB32.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/OCR/OCR_NumberReader.h"
-#include "CommonFramework/OCR/OCR_TextMatcher.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
-#include "CommonFramework/Tools/StatsTracking.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/VideoPipeline/VideoOverlay.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/OCR/OCR_NumberReader.h"
+#include "CommonTools/StartupChecks/StartProgramChecks.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonHome/Inference/PokemonHome_BoxGenderDetector.h"
 #include "PokemonHome/Inference/PokemonHome_BallReader.h"
-#include "PokemonSwSh/Commands/PokemonSwSh_Commands_GameEntry.h"
-#include "PokemonSwSh/Programs/ReleaseHelpers.h"
 #include "PokemonHome_BoxSorting.h"
 
 namespace PokemonAutomation{
@@ -66,10 +61,11 @@ BoxSorting_Descriptor::BoxSorting_Descriptor()
         STRING_POKEMON + " Home", "Box Sorter",
         "ComputerControl/blob/master/Wiki/Programs/PokemonHome/BoxSorter.md",
         "Order boxes of " + STRING_POKEMON + ".",
+        ProgramControllerClass::StandardController_RequiresPrecision,
         FeedbackType::REQUIRED,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
-        )
+        {}
+    )
 {}
 struct BoxSorting_Descriptor::Stats : public StatsTracker{
     Stats()
@@ -186,7 +182,8 @@ bool operator==(const Pokemon& lhs, const Pokemon& rhs){
            lhs.shiny == rhs.shiny &&
            lhs.gmax == rhs.gmax &&
            lhs.ball_slug == rhs.ball_slug &&
-           lhs.gender == rhs.gender;
+           lhs.gender == rhs.gender &&
+           lhs.ot_id == rhs.ot_id;
 }
 
 bool operator<(const std::optional<Pokemon>& lhs, const std::optional<Pokemon>& rhs){
@@ -198,39 +195,48 @@ bool operator<(const std::optional<Pokemon>& lhs, const std::optional<Pokemon>& 
     }
 
     for (const BoxSortingSelection preference : *lhs->preferences){
+        std::optional<bool> ret{};
         switch(preference.sort_type){
         // NOTE edit when adding new struct members
         case BoxSortingSortType::NationalDexNo:
             if (lhs->national_dex_number != rhs->national_dex_number){
-                return lhs->national_dex_number < rhs->national_dex_number;
+                ret = lhs->national_dex_number < rhs->national_dex_number;
             }
             break;
         case BoxSortingSortType::Shiny:
             if (lhs->shiny != rhs->shiny){
-                return lhs->shiny;
+                ret = lhs->shiny;
             }
             break;
         case BoxSortingSortType::Gigantamax:
             if (lhs->gmax != rhs->gmax){
-                return lhs->gmax;
+                ret = lhs->gmax;
             }
             break;
         case BoxSortingSortType::Ball_Slug:
             if (lhs->ball_slug < rhs->ball_slug){
-                return true;
+                ret = true;
             }
             if (lhs->ball_slug > rhs->ball_slug){
-                return false;
+                ret = false;
             }
             break;
         case BoxSortingSortType::Gender:
             if (lhs->gender < rhs->gender){
-                return true;
+                ret = true;
             }
             if (lhs->gender > rhs->gender){
-                return false;
+                ret = false;
             }
             break;
+        }
+        if (ret.has_value()){
+            bool value = *ret;
+            if (preference.reverse){
+                return !value;
+            }else{
+                return value;
+            }
         }
     }
 
@@ -255,7 +261,7 @@ std::ostream& operator<<(std::ostream& os, const std::optional<Pokemon>& pokemon
     return os;
 }
 
-bool go_to_first_slot(SingleSwitchProgramEnvironment& env, BotBaseContext& context, uint16_t VIDEO_DELAY){
+bool go_to_first_slot(SingleSwitchProgramEnvironment& env, ProControllerContext& context, uint16_t VIDEO_DELAY){
 
     ImageFloatBox cursor_check(0.07, 0.15, 0.01, 0.01); //cursor position of the first slot of the box
     VideoSnapshot screen = env.console.video().snapshot();
@@ -305,7 +311,7 @@ bool go_to_first_slot(SingleSwitchProgramEnvironment& env, BotBaseContext& conte
 }
 
 //Move the cursor to the given coordinates, knowing current pos via the cursor struct
-[[nodiscard]] Cursor move_cursor_to(SingleSwitchProgramEnvironment& env, BotBaseContext& context, const Cursor& cur_cursor, const Cursor& dest_cursor, uint16_t GAME_DELAY){
+[[nodiscard]] Cursor move_cursor_to(SingleSwitchProgramEnvironment& env, ProControllerContext& context, const Cursor& cur_cursor, const Cursor& dest_cursor, uint16_t GAME_DELAY){
 
     std::ostringstream ss;
     ss << "Moving cursor from " << cur_cursor << " to " << dest_cursor;
@@ -398,7 +404,7 @@ void output_boxes_data_json(const std::vector<std::optional<Pokemon>>& boxes_dat
 
 void do_sort(
     SingleSwitchProgramEnvironment& env,
-    BotBaseContext& context,
+    ProControllerContext& context,
     std::vector<std::optional<Pokemon>> boxes_data,
     std::vector<std::optional<Pokemon>> boxes_sorted,
     BoxSorting_Descriptor::Stats& stats,
@@ -452,7 +458,8 @@ void do_sort(
     }
 }
 
-void BoxSorting::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void BoxSorting::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    StartProgramChecks::check_performance_class_wired_or_wireless(context);
 
     std::vector<BoxSortingSelection> sort_preferences = SORT_TABLE.preferences();
     if (sort_preferences.empty()){
@@ -462,7 +469,7 @@ void BoxSorting::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
     BoxSorting_Descriptor::Stats& stats = env.current_stats< BoxSorting_Descriptor::Stats>();
 
     ImageFloatBox select_check(0.495, 0.0045, 0.01, 0.005); // square color to check which mode is active
-    ImageFloatBox national_dex_number_box(0.448, 0.245, 0.042, 0.04); //pokemon national dex number pos
+    ImageFloatBox national_dex_number_box(0.448, 0.245, 0.049, 0.04); //pokemon national dex number pos
     ImageFloatBox shiny_symbol_box(0.702, 0.09, 0.04, 0.06); // shiny symbol pos
     ImageFloatBox gmax_symbol_box(0.463, 0.09, 0.04, 0.06); // gmax symbol pos
     ImageFloatBox origin_symbol_box(0.623, 0.095, 0.033, 0.05); // origin symbol pos
@@ -554,7 +561,7 @@ void BoxSorting::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
             for (size_t column = 0; column < MAX_COLUMNS; column++){
 
                 ImageFloatBox slot_box(0.06 + (0.072 * column), 0.2 + (0.1035 * row), 0.03, 0.057);
-                int current_box_value = image_stddev(extract_box_reference(screen, slot_box)).sum();
+                int current_box_value = (int)image_stddev(extract_box_reference(screen, slot_box)).sum();
 
                 ss << current_box_value;
 
@@ -615,21 +622,21 @@ void BoxSorting::program(SingleSwitchProgramEnvironment& env, BotBaseContext& co
             for (size_t row = 0; row < MAX_ROWS; row++){
                 for (size_t column = 0; column < MAX_COLUMNS; column++){
 
-                    if(boxes_data[get_index(box_nb, row, column)].has_value()){
+                    if (boxes_data[get_index(box_nb, row, column)].has_value()){
                         screen = env.console.video().snapshot();
 
                         int national_dex_number = OCR::read_number_waterfill(env.console, extract_box_reference(screen, national_dex_number_box), 0xff808080, 0xffffffff);
                         if (national_dex_number < 0 || national_dex_number > 1025) {
                             dump_image(env.console, ProgramInfo(), "ReadSummary_national_dex_number", screen);
                         }
-                        boxes_data[get_index(box_nb, row, column)]->national_dex_number = national_dex_number;
+                        boxes_data[get_index(box_nb, row, column)]->national_dex_number = (uint16_t)national_dex_number;
 
-                        int shiny_stddev_value = image_stddev(extract_box_reference(screen, shiny_symbol_box)).sum();
+                        int shiny_stddev_value = (int)image_stddev(extract_box_reference(screen, shiny_symbol_box)).sum();
                         bool is_shiny = shiny_stddev_value > 30;
                         boxes_data[get_index(box_nb, row, column)]->shiny = is_shiny;
                         env.console.log("Shiny detection stddev:" + std::to_string(shiny_stddev_value) + " is shiny:" + std::to_string(is_shiny));
 
-                        int gmax_stddev_value = image_stddev(extract_box_reference(screen, gmax_symbol_box)).sum();
+                        int gmax_stddev_value = (int)image_stddev(extract_box_reference(screen, gmax_symbol_box)).sum();
                         bool is_gmax = gmax_stddev_value > 30;
                         boxes_data[get_index(box_nb, row, column)]->gmax = is_gmax;
                         env.console.log("Gmax detection stddev:" + std::to_string(gmax_stddev_value) + " is gmax:" + std::to_string(is_gmax));

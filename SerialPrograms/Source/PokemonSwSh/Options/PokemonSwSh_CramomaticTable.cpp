@@ -1,6 +1,6 @@
 /*  Cram-o-matic Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,8 +11,8 @@ namespace NintendoSwitch{
 namespace PokemonSwSh{
 
 
-const EnumDatabase<CramomaticBallType>& BallType_Database(){
-    static const EnumDatabase<CramomaticBallType> database({
+const EnumDropdownDatabase<CramomaticBallType>& BallType_Database(){
+    static const EnumDropdownDatabase<CramomaticBallType> database({
         {CramomaticBallType::Poke,     "poke",     "Poké Ball"},
         {CramomaticBallType::Great,    "great",    "Great Ball"},
         {CramomaticBallType::Shop1,    "shop1",    "Shop 1 (Ultra Ball, Net Ball, Dusk Ball, Premier Ball)"},
@@ -36,6 +36,15 @@ CramomaticRow::CramomaticRow(EditableTableOption& parent_table)
     PA_ADD_OPTION(is_bonus);
     PA_ADD_OPTION(priority);
 }
+
+CramomaticRow::CramomaticRow(EditableTableOption& parent_table, CramomaticBallType p_ball_type, bool p_is_bonus, uint16_t p_priority)
+    : CramomaticRow(parent_table)
+{
+    ball_type.set(p_ball_type);
+    is_bonus = p_is_bonus;
+    priority.set(p_priority);
+}
+
 std::unique_ptr<EditableTableRow> CramomaticRow::clone() const{
     std::unique_ptr<CramomaticRow> ret(new CramomaticRow(parent()));
     ret->ball_type.set_value(ball_type.current_value());
@@ -79,7 +88,8 @@ std::vector<std::string> CramomaticTable::make_header() const{
 
 std::vector<std::unique_ptr<EditableTableRow>> CramomaticTable::make_defaults(){
     std::vector<std::unique_ptr<EditableTableRow>> ret;
-    ret.emplace_back(std::make_unique<CramomaticRow>(*this));
+    ret.emplace_back(std::make_unique<CramomaticRow>(*this, CramomaticBallType::Apricorn, true, (uint16_t)1));
+    ret.emplace_back(std::make_unique<CramomaticRow>(*this, CramomaticBallType::Apricorn, false, (uint16_t)0));
     return ret;
 }
 

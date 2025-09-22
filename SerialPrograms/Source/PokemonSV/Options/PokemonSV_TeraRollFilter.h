@@ -1,22 +1,23 @@
 /*  Tera Roll Filter
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_TeraRollFilter_H
 #define PokemonAutomation_PokemonSV_TeraRollFilter_H
 
+#include <set>
 #include "Common/Cpp/Options/GroupOption.h"
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 
 namespace PokemonAutomation{
     class Logger;
     class ImageViewRGB32;
-    class ConsoleHandle;
-    class BotBaseContext;
     struct ProgramInfo;
 namespace NintendoSwitch{
 namespace PokemonSV{
@@ -37,7 +38,7 @@ struct TeraRaidData{
 
     uint8_t stars = 0;
     std::string tera_type;
-    std::string species;
+    std::set<std::string> species;
 };
 
 
@@ -55,17 +56,17 @@ public:
     };
 
     FilterResult run_filter(
-        const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context,
+        const ProgramInfo& info, VideoStream& stream, ProControllerContext& context,
         TeraRaidData& data
     ) const;
 
 
 private:
     void read_card(
-        const ProgramInfo& info, ConsoleHandle& console, const ImageViewRGB32& screen,
+        const ProgramInfo& info, VideoStream& stream, const ImageViewRGB32& screen,
         TeraCardReader& reader, TeraRaidData& data
     ) const;
-    bool check_herba(const std::string& pokemon_slug) const;
+    bool check_herba(const std::set<std::string>& pokemon_slugs) const;
 
 public:
     enum class EventCheckMode{

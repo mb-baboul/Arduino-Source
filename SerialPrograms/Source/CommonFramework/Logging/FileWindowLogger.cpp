@@ -1,6 +1,6 @@
 /*  File and Window Logger
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,8 +8,11 @@
 #include <QMenuBar>
 #include <QDir>
 #include "CommonFramework/Globals.h"
+#include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/Windows/DpiScaler.h"
 #include "CommonFramework/Windows/WindowTracker.h"
+#include "CommonFramework/Windows/MainWindow.h"
+#include "CommonFramework/Options/ResolutionOption.h"
 #include "FileWindowLogger.h"
 
 //#include <iostream>
@@ -59,18 +62,18 @@ FileWindowLogger::FileWindowLogger(const std::string& path)
     m_thread = std::thread(&FileWindowLogger::thread_loop, this);
 }
 void FileWindowLogger::operator+=(FileWindowLoggerWindow& widget){
-    auto scope_check = m_sanitizer.check_scope();
+//    auto scope_check = m_sanitizer.check_scope();
     std::lock_guard<std::mutex> lg(m_lock);
     m_windows.insert(&widget);
 }
 void FileWindowLogger::operator-=(FileWindowLoggerWindow& widget){
-    auto scope_check = m_sanitizer.check_scope();
+//    auto scope_check = m_sanitizer.check_scope();
     std::lock_guard<std::mutex> lg(m_lock);
     m_windows.erase(&widget);
 }
 
 void FileWindowLogger::log(const std::string& msg, Color color){
-    auto scope_check = m_sanitizer.check_scope();
+//    auto scope_check = m_sanitizer.check_scope();
     std::unique_lock<std::mutex> lg(m_lock);
     m_last_log_tracker += msg;
     m_cv.wait(lg, [this]{ return m_queue.size() < m_max_queue_size; });
@@ -78,7 +81,7 @@ void FileWindowLogger::log(const std::string& msg, Color color){
     m_cv.notify_all();
 }
 void FileWindowLogger::log(std::string&& msg, Color color){
-    auto scope_check = m_sanitizer.check_scope();
+//    auto scope_check = m_sanitizer.check_scope();
     std::unique_lock<std::mutex> lg(m_lock);
     m_last_log_tracker += msg;
     m_cv.wait(lg, [this]{ return m_queue.size() < m_max_queue_size; });
@@ -86,7 +89,7 @@ void FileWindowLogger::log(std::string&& msg, Color color){
     m_cv.notify_all();
 }
 std::vector<std::string> FileWindowLogger::get_last() const{
-    auto scope_check = m_sanitizer.check_scope();
+//    auto scope_check = m_sanitizer.check_scope();
     std::unique_lock<std::mutex> lg(m_lock);
     return m_last_log_tracker.snapshot();
 }
@@ -160,7 +163,7 @@ QString FileWindowLogger::to_window_str(const std::string& msg, Color color){
     return QString::fromStdString(str);
 }
 void FileWindowLogger::internal_log(const std::string& msg, Color color){
-    auto scope_check = m_sanitizer.check_scope();
+//    auto scope_check = m_sanitizer.check_scope();
     std::string line = normalize_newlines(msg);
     {
         if (!m_windows.empty()){
@@ -176,7 +179,7 @@ void FileWindowLogger::internal_log(const std::string& msg, Color color){
     }
 }
 void FileWindowLogger::thread_loop(){
-    auto scope_check = m_sanitizer.check_scope();
+//    auto scope_check = m_sanitizer.check_scope();
     std::unique_lock<std::mutex> lg(m_lock);
     while (true){
         m_cv.wait(lg, [&]{
@@ -212,7 +215,9 @@ FileWindowLoggerWindow::FileWindowLoggerWindow(FileWindowLogger& logger, QWidget
     if (objectName().isEmpty()){
         setObjectName(QString::fromUtf8("TextWindow"));
     }
-    resize(scale_dpi_width(1200), scale_dpi_height(600));
+    uint32_t width = GlobalSettings::instance().LOG_WINDOW_SIZE->WIDTH;
+    uint32_t height = GlobalSettings::instance().LOG_WINDOW_SIZE->HEIGHT;
+    resize(scale_dpi_width(width), scale_dpi_height(height));
     m_text = new QTextEdit(this);
     m_text->setObjectName(QString::fromUtf8("centralwidget"));
     setCentralWidget(m_text);
@@ -236,21 +241,68 @@ FileWindowLoggerWindow::FileWindowLoggerWindow(FileWindowLogger& logger, QWidget
         }
     );
 
+    GlobalSettings::instance().LOG_WINDOW_SIZE->WIDTH.add_listener(*this);
+    GlobalSettings::instance().LOG_WINDOW_SIZE->HEIGHT.add_listener(*this);
+    GlobalSettings::instance().LOG_WINDOW_SIZE->X_POS.add_listener(*this);
+    GlobalSettings::instance().LOG_WINDOW_SIZE->Y_POS.add_listener(*this);  
+
     m_logger += *this;
     log("================================================================================");
     log("<b>Window Startup...</b>");
     log("Current path: " + QDir::currentPath());
     log("Executable path: " + qApp->applicationDirPath());
+    log(QString::fromStdString("Program setting folder: " + SETTINGS_PATH()));
+    log(QString::fromStdString("Program resources folder: " + RESOURCE_PATH()));
     add_window(*this);
 }
 FileWindowLoggerWindow::~FileWindowLoggerWindow(){
     remove_window(*this);
     m_logger -= *this;
+    GlobalSettings::instance().LOG_WINDOW_SIZE->WIDTH.remove_listener(*this);
+    GlobalSettings::instance().LOG_WINDOW_SIZE->HEIGHT.remove_listener(*this);
+    GlobalSettings::instance().LOG_WINDOW_SIZE->X_POS.remove_listener(*this);
+    GlobalSettings::instance().LOG_WINDOW_SIZE->Y_POS.remove_listener(*this);      
 }
 
 void FileWindowLoggerWindow::log(QString msg){
 //    cout << "FileWindowLoggerWindow::log(): " << msg.toStdString() << endl;
     emit signal_log(msg);
+}
+
+void FileWindowLoggerWindow::resizeEvent(QResizeEvent* event){
+    m_pending_resize = true;
+    GlobalSettings::instance().LOG_WINDOW_SIZE->WIDTH.set(width());
+    GlobalSettings::instance().LOG_WINDOW_SIZE->HEIGHT.set(height());
+    m_pending_resize = false;
+}
+
+void FileWindowLoggerWindow::moveEvent(QMoveEvent* event){
+    m_pending_move = true;    
+    GlobalSettings::instance().LOG_WINDOW_SIZE->X_POS.set(x());
+    GlobalSettings::instance().LOG_WINDOW_SIZE->Y_POS.set(y());
+    m_pending_move = false;
+}
+
+void FileWindowLoggerWindow::on_config_value_changed(void* object){
+    if (object == &GlobalSettings::instance().LOG_WINDOW_SIZE->WIDTH || object == &GlobalSettings::instance().LOG_WINDOW_SIZE->HEIGHT){
+        QMetaObject::invokeMethod(this, [this]{
+            if (!m_pending_resize){
+                resize(
+                    GlobalSettings::instance().LOG_WINDOW_SIZE->WIDTH,
+                    GlobalSettings::instance().LOG_WINDOW_SIZE->HEIGHT
+                );
+            }
+        });
+    }else if (object == &GlobalSettings::instance().LOG_WINDOW_SIZE->X_POS || object == &GlobalSettings::instance().LOG_WINDOW_SIZE->Y_POS){
+        QMetaObject::invokeMethod(this, [this]{
+            if (!m_pending_move){
+                move(
+                    move_x_within_screen_bounds(GlobalSettings::instance().LOG_WINDOW_SIZE->X_POS),
+                    move_y_within_screen_bounds(GlobalSettings::instance().LOG_WINDOW_SIZE->Y_POS)
+                );
+            }
+        });        
+    }
 }
 
 

@@ -1,13 +1,13 @@
 /*  Shiny Hunt - Custom Path
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
@@ -35,9 +35,9 @@ ShinyHuntCustomPath_Descriptor::ShinyHuntCustomPath_Descriptor()
         STRING_POKEMON + " LA", "Shiny Hunt - Custom Path",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/ShinyHunt-CustomPath.md",
         "Repeatedly travel on a custom path to shiny hunt " + STRING_POKEMON + " around it.",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::VIDEO_AUDIO,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 class ShinyHuntCustomPath_Descriptor::Stats : public StatsTracker, public ShinyStatIncrementer{
@@ -82,12 +82,12 @@ ShinyHuntCustomPath::ShinyHuntCustomPath()
     , SHINY_DETECTED_ENROUTE(
         "Enroute Shiny Action",
         "This applies if a shiny is detected while you are ignoring shinies.",
-        "0 * TICKS_PER_SECOND"
+        "0 ms"
     )
     , SHINY_DETECTED_DESTINATION(
         "Destination Shiny Action",
         "This applies if a shiny is detected while you are listening for shinies.",
-        "0 * TICKS_PER_SECOND"
+        "0 ms"
     )
     , NOTIFICATION_STATUS("Status Update", true, false, std::chrono::seconds(3600))
     , NOTIFICATIONS({
@@ -112,8 +112,11 @@ ShinyHuntCustomPath::ShinyHuntCustomPath()
 }
 
 
-void ShinyHuntCustomPath::do_non_listen_action(ConsoleHandle& console, BotBaseContext& context, const CustomPathTableRow2& row){
-    console.log("Execute action " + row.action.current_display());
+void ShinyHuntCustomPath::do_non_listen_action(
+    VideoStream& stream, ProControllerContext& context,
+    const CustomPathTableRow& row
+){
+    stream.log("Execute action " + row.action.current_display());
     switch(row.action){
     case PathAction::CHANGE_MOUNT:
     {
@@ -139,9 +142,9 @@ void ShinyHuntCustomPath::do_non_listen_action(ConsoleHandle& console, BotBaseCo
         }
 
         if (mountState == MountState::NOTHING){
-            dismount(console, context);
+            dismount(stream, context);
         }else{
-            change_mount(console, context, mountState);
+            change_mount(stream, context, mountState);
         }
         break;
     }
@@ -160,22 +163,22 @@ void ShinyHuntCustomPath::do_non_listen_action(ConsoleHandle& console, BotBaseCo
     {
         switch(row.parameters.move_speed){
         case PathSpeed::NORMAL_SPEED:
-            pbf_move_left_joystick(context, 128, 0, row.parameters.move_forward_ticks, 0);
+            pbf_move_left_joystick(context, 128, 0, row.parameters.move_forward, 0ms);
             break;
         case PathSpeed::SLOW_SPEED:
-            pbf_move_left_joystick(context, 128, 64, row.parameters.move_forward_ticks, 0);
+            pbf_move_left_joystick(context, 128, 64, row.parameters.move_forward, 0ms);
             break;
         case PathSpeed::RUN:
-            pbf_controller_state(context, BUTTON_LCLICK, DPAD_NONE, 128, 0, 128, 128, row.parameters.move_forward_ticks);
+            pbf_controller_state(context, BUTTON_LCLICK, DPAD_NONE, 128, 0, 128, 128, row.parameters.move_forward);
             break;
         case PathSpeed::DASH:
-            pbf_press_button(context, BUTTON_B, row.parameters.move_forward_ticks, 0);
+            pbf_press_button(context, BUTTON_B, row.parameters.move_forward, 0ms);
             break;
         case PathSpeed::DASH_B_SPAM:
-            pbf_mash_button(context, BUTTON_B, row.parameters.move_forward_ticks);
+            pbf_mash_button(context, BUTTON_B, row.parameters.move_forward);
             break;
         case PathSpeed::DIVE:
-            pbf_press_button(context, BUTTON_Y, row.parameters.move_forward_ticks, 0);
+            pbf_press_button(context, BUTTON_Y, row.parameters.move_forward, 0ms);
             break;
         }
         break;
@@ -184,7 +187,7 @@ void ShinyHuntCustomPath::do_non_listen_action(ConsoleHandle& console, BotBaseCo
     {
         uint8_t x = (uint8_t)((row.parameters.left_x + 1.0) * 127.5 + 0.5);
         uint8_t y = (uint8_t)((-row.parameters.left_y + 1.0) * 127.5 + 0.5);
-        pbf_move_left_joystick(context, x, y, row.parameters.move_forward_ticks, 0);
+        pbf_move_left_joystick(context, x, y, row.parameters.move_forward, 0ms);
         break;
     }
     case PathAction::CENTER_CAMERA:
@@ -194,12 +197,12 @@ void ShinyHuntCustomPath::do_non_listen_action(ConsoleHandle& console, BotBaseCo
     }
     case PathAction::JUMP:
     {
-        pbf_press_button(context, BUTTON_Y, 10, row.parameters.jump_wait_ticks);
+        pbf_press_button(context, BUTTON_Y, 80ms, row.parameters.jump_wait);
         break;
     }
     case PathAction::WAIT:
     {
-        pbf_wait(context, row.parameters.wait_ticks);
+        pbf_wait(context, row.parameters.wait);
         break;
     }
     default:
@@ -209,14 +212,14 @@ void ShinyHuntCustomPath::do_non_listen_action(ConsoleHandle& console, BotBaseCo
 }
 
 
-void ShinyHuntCustomPath::run_path(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void ShinyHuntCustomPath::run_path(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
 
-    std::vector<std::unique_ptr<CustomPathTableRow2>> table = PATH.PATH.copy_snapshot();
+    std::vector<std::unique_ptr<CustomPathTableRow>> table = PATH.PATH.copy_snapshot();
 
     //  Check whether the user has set shiny sound listen action:
     {
         bool has_listen_action = false;
-        for (const std::unique_ptr<CustomPathTableRow2>& row : table){
+        for (const std::unique_ptr<CustomPathTableRow>& row : table){
             if (row->action == PathAction::START_LISTEN){
                 has_listen_action = true;
                 break;
@@ -231,7 +234,7 @@ void ShinyHuntCustomPath::run_path(SingleSwitchProgramEnvironment& env, BotBaseC
 
     std::atomic<bool> listen_for_shiny(false);
     float shiny_coefficient = 1.0;
-    ShinyDetectedActionOption* shiny_action = nullptr;
+    OverworldShinyDetectedActionOption* shiny_action = nullptr;
     ShinySoundDetector shiny_detector(env.console, [&](float error_coefficient) -> bool{
         //  Warning: This callback will be run from a different thread than this function.
         stats.shinies++;
@@ -244,10 +247,10 @@ void ShinyHuntCustomPath::run_path(SingleSwitchProgramEnvironment& env, BotBaseC
         return on_shiny_callback(env, env.console, *shiny_action, error_coefficient);
     });
 
-    int ret = run_until(
+    int ret = run_until<ProControllerContext>(
         env.console, context,
-        [&](BotBaseContext& context){
-            for (const std::unique_ptr<CustomPathTableRow2>& row : table){
+        [&](ProControllerContext& context){
+            for (const std::unique_ptr<CustomPathTableRow>& row : table){
                 if (row->action == PathAction::START_LISTEN){
                     listen_for_shiny.store(true, std::memory_order_release);
                     continue;
@@ -269,7 +272,7 @@ void ShinyHuntCustomPath::run_path(SingleSwitchProgramEnvironment& env, BotBaseC
 }
 
 
-void ShinyHuntCustomPath::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void ShinyHuntCustomPath::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     ShinyHuntCustomPath_Descriptor::Stats& stats = env.current_stats<ShinyHuntCustomPath_Descriptor::Stats>();
 
     //  Connect the controller.
@@ -285,6 +288,7 @@ void ShinyHuntCustomPath::program(SingleSwitchProgramEnvironment& env, BotBaseCo
     // How many runs so far after last time reset
     uint32_t time_reset_run_count = 0;
 
+    bool fresh_from_reset = false;
     while (true){
         env.update_stats();
         send_program_status_notification(env, NOTIFICATION_STATUS);
@@ -292,14 +296,17 @@ void ShinyHuntCustomPath::program(SingleSwitchProgramEnvironment& env, BotBaseCo
             stats.attempts++;
 
             const TravelLocation location = PATH.travel_location();
-            goto_camp_from_jubilife(env, env.console, context, location);
+            goto_camp_from_jubilife(env, env.console, context, location, fresh_from_reset);
             run_path(env, context);
             ++time_reset_run_count;
 
             if(RESET_METHOD == ResetMethod::SoftReset){
                 env.console.log("Resetting by closing the game.");
-                pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
-                reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
+                pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
+                fresh_from_reset = reset_game_from_home(
+                    env, env.console, context,
+                    ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST
+                );
             }else{
                 env.console.log("Resetting by going to village.");
                 goto_camp_from_overworld(env, env.console, context);
@@ -323,8 +330,11 @@ void ShinyHuntCustomPath::program(SingleSwitchProgramEnvironment& env, BotBaseCo
             e.send_notification(env, NOTIFICATION_ERROR_RECOVERABLE);
 
             time_reset_run_count = 0;
-            pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
-            reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
+            pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
+            fresh_from_reset = reset_game_from_home(
+                env, env.console, context,
+                ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST
+            );
         }
 
     }

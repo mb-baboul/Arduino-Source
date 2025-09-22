@@ -1,13 +1,13 @@
 /*  WAV FILE
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  Class to read a .wav file. Edited from Qt multimedia example Spectrum:
  *  https://code.qt.io/cgit/qt/qtmultimedia.git/tree/examples/multimedia/spectrum/app/wavfile.cpp?h=5.15
  *  The git repo for Qt multimedia code and exmamples is https://code.qt.io/qt/qtmultimedia.git 
  *  The version of the code is Qt5.
  *  Since the code is licensed by Qt under BSD, we can safely use it with our code base, provided
- *  that we have the orignal BSD license below and release the source code.
+ *  that we have the original BSD license below and release the source code.
  */
 
 /****************************************************************************

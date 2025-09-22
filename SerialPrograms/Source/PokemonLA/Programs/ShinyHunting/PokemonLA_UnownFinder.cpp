@@ -1,24 +1,18 @@
 /*  Unown Finder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Inference/BlackScreenDetector.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonLA/PokemonLA_Settings.h"
 #include "PokemonLA/PokemonLA_TravelLocations.h"
-#include "PokemonLA/Inference/Objects/PokemonLA_ButtonDetector.h"
-#include "PokemonLA/Inference/Map/PokemonLA_MapDetector.h"
-#include "PokemonLA/Inference/PokemonLA_DialogDetector.h"
-#include "PokemonLA/Inference/PokemonLA_OverworldDetector.h"
-#include "PokemonLA/Inference/PokemonLA_UnderAttackDetector.h"
 #include "PokemonLA/Inference/Sounds/PokemonLA_ShinySoundDetector.h"
 #include "PokemonLA/Programs/PokemonLA_MountChange.h"
 #include "PokemonLA/Programs/PokemonLA_GameEntry.h"
@@ -39,9 +33,9 @@ UnownFinder_Descriptor::UnownFinder_Descriptor()
         STRING_POKEMON + " LA", "Unown Hunter",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/UnownHunter.md",
         "Constantly reset to find a Shiny Unown or any Shiny in the path.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::VIDEO_AUDIO,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 class UnownFinder_Descriptor::Stats : public StatsTracker, public ShinyStatIncrementer{
@@ -74,12 +68,12 @@ UnownFinder::UnownFinder()
     : SHINY_DETECTED_ENROUTE(
         "Enroute Shiny Action",
         "This applies if a shiny is detected while enroute to the ruins.",
-        "0 * TICKS_PER_SECOND"
+        "0 ms"
     )
     , SHINY_DETECTED_DESTINATION(
         "Destination Shiny Action",
         "This applies if a shiny is detected inside the ruins.",
-        "0 * TICKS_PER_SECOND"
+        "0 ms"
     )
     , NOTIFICATION_STATUS("Status Update", true, false, std::chrono::seconds(3600))
     , NOTIFICATIONS({
@@ -98,7 +92,7 @@ UnownFinder::UnownFinder()
 }
 
 
-void ruins_entrance_route(BotBaseContext& context){
+void ruins_entrance_route(ProControllerContext& context){
     pbf_wait(context, (uint16_t)(0.5 * TICKS_PER_SECOND));
     pbf_move_left_joystick(context, 139, 120, 10, 10);
     pbf_wait(context, (uint16_t)(1.3 * TICKS_PER_SECOND));
@@ -111,7 +105,7 @@ void ruins_entrance_route(BotBaseContext& context){
     pbf_press_button(context, BUTTON_PLUS, 10, 10);
 }
 
-void enter_ruins(BotBaseContext& context){
+void enter_ruins(ProControllerContext& context){
     pbf_press_button(context, BUTTON_B, (uint16_t)(4 * TICKS_PER_SECOND), 10);
     pbf_wait(context, (uint16_t)(1.5 * TICKS_PER_SECOND));
     pbf_move_left_joystick(context, 128, 255, 10, 0);
@@ -119,12 +113,19 @@ void enter_ruins(BotBaseContext& context){
 }
 
 
-void UnownFinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void UnownFinder::run_iteration(
+    SingleSwitchProgramEnvironment& env, ProControllerContext& context,
+    bool fresh_from_reset
+){
     UnownFinder_Descriptor::Stats& stats = env.current_stats<UnownFinder_Descriptor::Stats>();
 
     stats.attempts++;
 
-    goto_camp_from_jubilife(env, env.console, context, TravelLocations::instance().Mirelands_Mirelands);
+    goto_camp_from_jubilife(
+        env, env.console, context,
+        TravelLocations::instance().Mirelands_Mirelands,
+        fresh_from_reset
+    );
 
     change_mount(env.console, context, MountState::BRAVIARY_ON);
 
@@ -132,22 +133,24 @@ void UnownFinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseCont
     env.console.log("Beginning Shiny Detection...");
     {
         float shiny_coefficient = 1.0;
-        std::atomic<ShinyDetectedActionOption*> shiny_action(&SHINY_DETECTED_ENROUTE);
+        std::atomic<OverworldShinyDetectedActionOption*> shiny_action(&SHINY_DETECTED_ENROUTE);
+        WallClock destination_time = WallClock::max();
 
         ShinySoundDetector shiny_detector(env.console, [&](float error_coefficient) -> bool{
             //  Warning: This callback will be run from a different thread than this function.
             stats.shinies++;
             shiny_coefficient = error_coefficient;
-            ShinyDetectedActionOption* action = shiny_action.load(std::memory_order_acquire);
+            OverworldShinyDetectedActionOption* action = shiny_action.load(std::memory_order_acquire);
             return on_shiny_callback(env, env.console, *action, error_coefficient);
         });
 
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [&](BotBaseContext& context){
+            [&](ProControllerContext& context){
                 ruins_entrance_route(context);
 
                 context.wait_for_all_requests();
+                destination_time = current_time();
                 shiny_action.store(&SHINY_DETECTED_DESTINATION, std::memory_order_release);
 
                 enter_ruins(context);
@@ -155,8 +158,8 @@ void UnownFinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseCont
             {{shiny_detector}}
         );
         shiny_detector.throw_if_no_sound();
-        if (ret == 0){
-            ShinyDetectedActionOption* action = shiny_action.load(std::memory_order_acquire);
+        if (ret == 0 || shiny_detector.last_detection() > destination_time){
+            OverworldShinyDetectedActionOption* action = shiny_action.load(std::memory_order_acquire);
             on_shiny_sound(env, env.console, context, *action, shiny_coefficient);
         }
     };
@@ -169,23 +172,28 @@ void UnownFinder::run_iteration(SingleSwitchProgramEnvironment& env, BotBaseCont
 }
 
 
-void UnownFinder::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void UnownFinder::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     UnownFinder_Descriptor::Stats& stats = env.current_stats<UnownFinder_Descriptor::Stats>();
 
     //  Connect the controller.
     pbf_press_button(context, BUTTON_LCLICK, 5, 5);
 
+
+    bool fresh_from_reset = false;
     while (true){
         env.update_stats();
         send_program_status_notification(env, NOTIFICATION_STATUS);
         try{
-            run_iteration(env, context);
+            run_iteration(env, context, fresh_from_reset);
         }catch (OperationFailedException& e){
             stats.errors++;
             e.send_notification(env, NOTIFICATION_ERROR_RECOVERABLE);
 
-            pbf_press_button(context, BUTTON_HOME, 20, GameSettings::instance().GAME_TO_HOME_DELAY);
-            reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST);
+            pbf_press_button(context, BUTTON_HOME, 160ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
+            fresh_from_reset = reset_game_from_home(
+                env, env.console, context,
+                ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST
+            );
         }
     }
 

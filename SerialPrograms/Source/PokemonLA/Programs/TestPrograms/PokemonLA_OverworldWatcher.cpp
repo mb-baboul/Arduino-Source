@@ -1,12 +1,10 @@
 /*  Shiny Hunt - Legendary Reset
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "ClientSource/Connection/BotBase.h"
-//#include "CommonFramework/InferenceInfra/VisualInferenceRoutines.h"
-#include "CommonFramework/InferenceInfra/InferenceSession.h"
+#include "CommonTools/Async/InferenceSession.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_BubbleDetector.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_ArcDetector.h"
@@ -27,8 +25,10 @@ OverworldWatcher_Descriptor::OverworldWatcher_Descriptor()
         "",
         "This is a test program that simply observes the game and labels things of interest. "
         "This program doesn't really do anything.",
-        FeedbackType::REQUIRED, AllowCommandsWhenRunning::ENABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        ProgramControllerClass::StandardController_NoRestrictions,
+        FeedbackType::REQUIRED,
+        AllowCommandsWhenRunning::ENABLE_COMMANDS,
+        {}
     )
 {}
 
@@ -36,7 +36,7 @@ OverworldWatcher_Descriptor::OverworldWatcher_Descriptor()
 OverworldWatcher::OverworldWatcher(){}
 
 
-void OverworldWatcher::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void OverworldWatcher::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     BubbleDetector bubbles;
     ArcDetector arcs;
     QuestMarkDetector quest_marks;

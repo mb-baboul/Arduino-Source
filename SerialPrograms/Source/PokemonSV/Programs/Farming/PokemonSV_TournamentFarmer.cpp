@@ -1,28 +1,26 @@
 /*  Tournament Farmer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-//#include "CommonFramework/GlobalSettingsPanel.h"
+#include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
-#include "CommonFramework/Inference/BlackScreenDetector.h"
-//#include "CommonFramework/Tools/ErrorDumper.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Images/ImageFilter.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/VisualDetectors/BlackScreenDetector.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
-//#include "PokemonSV/PokemonSV_Settings.h"
 #include "PokemonSV/Inference/PokemonSV_MoneyReader.h"
 #include "PokemonSV/Inference/Battles/PokemonSV_NormalBattleMenus.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_OverworldDetector.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV/Inference/PokemonSV_TournamentPrizeNameReader.h"
 #include "PokemonSV/Resources/PokemonSV_TournamentPrizeNames.h"
 #include "PokemonSV_TournamentFarmer.h"
@@ -39,9 +37,9 @@ TournamentFarmer_Descriptor::TournamentFarmer_Descriptor()
         STRING_POKEMON + " SV", "Tournament Farmer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/TournamentFarmer.md",
         "Farm the Academy Ace Tournament for money and prizes.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -163,7 +161,7 @@ void TournamentFarmer::on_press(){
 }
 
 //Check and process the amount of money earned at the end of a battle
-void TournamentFarmer::check_money(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void TournamentFarmer::check_money(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     TournamentFarmer_Descriptor::Stats& stats = env.current_stats<TournamentFarmer_Descriptor::Stats>();
 
     int top_money = -1;
@@ -178,14 +176,16 @@ void TournamentFarmer::check_money(SingleSwitchProgramEnvironment& env, BotBaseC
 
         ImageRGB32 image_top = to_blackwhite_rgb32_range(
             extract_box_reference(screen, top_notif),
-            combine_rgb(215, 215, 215), combine_rgb(255, 255, 255), true
+            true,
+            combine_rgb(215, 215, 215), combine_rgb(255, 255, 255)
         );
         //image_top.save("./image_top.png");
 
         //Different color range on the bottom notif ~B0B5B8
         ImageRGB32 image_bottom = to_blackwhite_rgb32_range(
             extract_box_reference(screen, bottom_notif),
-            combine_rgb(130, 130, 130), combine_rgb(240, 240, 240), true
+            true,
+            combine_rgb(130, 130, 130), combine_rgb(240, 240, 240)
         );
         //image_bottom.save("./image_bottom.png");
         
@@ -226,7 +226,7 @@ void TournamentFarmer::check_money(SingleSwitchProgramEnvironment& env, BotBaseC
 
 
 //Handle a single battle by mashing A until AdvanceDialog (end of battle) is detected
-void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     TournamentFarmer_Descriptor::Stats& stats = env.current_stats<TournamentFarmer_Descriptor::Stats>();
 
     //Only applies if the player has The Hidden Treasure of Area Zero Hisuian Zoroark
@@ -260,9 +260,9 @@ void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, BotBaseCo
             context.wait_for_all_requests();
 
             //Try six times, in case of paralysis (only applies to Pachirisu's Nuzzle) preventing use of Memento.
-            int retF = run_until(
+            int retF = run_until<ProControllerContext>(
                 env.console, context,
-                [&](BotBaseContext& context){
+                [&](ProControllerContext& context){
                     for (size_t c = 0; c < 6; c++){
                         NormalBattleMenuWatcher battle_memento(COLOR_RED);
                         int ret_memento = wait_until(
@@ -288,8 +288,9 @@ void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, BotBaseCo
                 env.update_stats();
                 send_program_status_notification(env, NOTIFICATION_STATUS_UPDATE);
                 OperationFailedException::fire(
-                    env.console, ErrorReport::SEND_ERROR_REPORT,
-                    "Took more than 6 turns to use Memento. Was Zoroark able to faint?"
+                    ErrorReport::SEND_ERROR_REPORT,
+                    "Took more than 6 turns to use Memento. Was Zoroark able to faint?",
+                    env.console
                 );
             }
 
@@ -301,8 +302,9 @@ void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, BotBaseCo
             env.update_stats();
             send_program_status_notification(env, NOTIFICATION_STATUS_UPDATE);
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Timed out after Happy Hour."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Timed out after Happy Hour.",
+                env.console
             );
         }
 
@@ -326,8 +328,9 @@ void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, BotBaseCo
             env.update_stats();
             send_program_status_notification(env, NOTIFICATION_STATUS_UPDATE);
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Could not find battle menu."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Could not find battle menu.",
+                env.console
             );
         }
 
@@ -349,9 +352,9 @@ void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, BotBaseCo
     AdvanceDialogWatcher end_of_battle(COLOR_YELLOW);
     WallClock start = current_time();
     uint8_t switch_party_slot = HHH_ZOROARK ? 2: 1;
-    int ret_black = run_until(
+    int ret_black = run_until<ProControllerContext>(
         env.console, context,
-        [&](BotBaseContext& context){
+        [&](ProControllerContext& context){
             for(size_t c = 0; c < 30; c++) { //Sylveon build has 16 PP at max, and Chi-Yu build has 24.
                 if (current_time() - start > std::chrono::minutes(5)){
                     env.log("Timed out during battle after 5 minutes.", COLOR_RED);
@@ -359,8 +362,9 @@ void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, BotBaseCo
                     env.update_stats();
                     send_program_status_notification(env, NOTIFICATION_STATUS_UPDATE);
                     OperationFailedException::fire(
-                        env.console, ErrorReport::SEND_ERROR_REPORT,
-                        "Timed out during battle after 5 minutes."
+                        ErrorReport::SEND_ERROR_REPORT,
+                        "Timed out during battle after 5 minutes.",
+                        env.console
                     );
                 }
 
@@ -406,8 +410,9 @@ void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, BotBaseCo
                     stats.errors++;
                     env.update_stats();
                     OperationFailedException::fire(
-                        env.console, ErrorReport::SEND_ERROR_REPORT,
-                        "Timed out during battle. Stuck, crashed, or took more than 90 seconds for a turn."
+                        ErrorReport::SEND_ERROR_REPORT,
+                        "Timed out during battle. Stuck, crashed, or took more than 90 seconds for a turn.",
+                        env.console
                     );
                 }
             }
@@ -436,8 +441,9 @@ void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, BotBaseCo
         env.update_stats();
         send_program_status_notification(env, NOTIFICATION_STATUS_UPDATE);
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Timed out during battle. Stuck, crashed, or took over 30 turns."
+            ErrorReport::SEND_ERROR_REPORT,
+            "Timed out during battle. Stuck, crashed, or took over 30 turns.",
+            env.console
         );
     }
     context.wait_for_all_requests();
@@ -445,7 +451,7 @@ void TournamentFarmer::run_battle(SingleSwitchProgramEnvironment& env, BotBaseCo
 
 
 //Check prize and notify if it matches filters after a tournament win
-void TournamentFarmer::check_prize(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void TournamentFarmer::check_prize(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     TournamentFarmer_Descriptor::Stats& stats = env.current_stats<TournamentFarmer_Descriptor::Stats>();
 
     VideoSnapshot screen = env.console.video().snapshot();
@@ -491,7 +497,7 @@ void TournamentFarmer::check_prize(SingleSwitchProgramEnvironment& env, BotBaseC
 
 
 //Tournament won and over
-void TournamentFarmer::handle_end_of_tournament(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void TournamentFarmer::handle_end_of_tournament(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     TournamentFarmer_Descriptor::Stats& stats = env.current_stats<TournamentFarmer_Descriptor::Stats>();
 
     //Space out the black screen detection after the "champion" battle
@@ -500,9 +506,9 @@ void TournamentFarmer::handle_end_of_tournament(SingleSwitchProgramEnvironment& 
 
     //One more black screen when done to load the academy
     BlackScreenOverWatcher black_screen(COLOR_RED, { 0.2, 0.2, 0.6, 0.6 });
-    int ret_black_won = run_until(
+    int ret_black_won = run_until<ProControllerContext>(
         env.console, context,
-        [](BotBaseContext& context){
+        [](ProControllerContext& context){
             pbf_mash_button(context, BUTTON_B, 10000);
         },
         { black_screen }
@@ -530,9 +536,9 @@ void TournamentFarmer::handle_end_of_tournament(SingleSwitchProgramEnvironment& 
 
     //Clear remaining dialog
     OverworldWatcher overworld(env.console, COLOR_CYAN);
-    int ret_over = run_until(
+    int ret_over = run_until<ProControllerContext>(
         env.console, context,
-        [](BotBaseContext& context){
+        [](ProControllerContext& context){
             pbf_mash_button(context, BUTTON_B, 700);
         },
         { overworld }
@@ -549,9 +555,13 @@ void TournamentFarmer::handle_end_of_tournament(SingleSwitchProgramEnvironment& 
 
 
 //Fly to academy from west pokemon center after losing.
-void return_to_academy_after_loss(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void return_to_academy_after_loss(
+    ProgramEnvironment& env,
+    VideoStream& stream,
+    ProControllerContext& context
+){
     env.log("Tournament lost! Navigating back to academy.");
-    go_to_academy_fly_point(env, context);
+    go_to_academy_fly_point(env, stream, context);
 
 
     pbf_wait(context, 100);
@@ -568,9 +578,9 @@ void return_to_academy_after_loss(SingleSwitchProgramEnvironment& env, BotBaseCo
     pbf_press_button(context, BUTTON_B, 50, 40);
 
     BlackScreenOverWatcher black_screen(COLOR_RED, { 0.2, 0.2, 0.6, 0.6 });
-    int ret_black_lost = run_until(
-        env.console, context,
-        [](BotBaseContext& context){
+    int ret_black_lost = run_until<ProControllerContext>(
+        stream, context,
+        [](ProControllerContext& context){
             pbf_move_left_joystick(context, 128, 0, 5000, 0);
         },
         { black_screen }
@@ -581,8 +591,8 @@ void return_to_academy_after_loss(SingleSwitchProgramEnvironment& env, BotBaseCo
     }
 
     //Wait for academy to load.
-    OverworldWatcher overworld(env.console, COLOR_CYAN);
-    int ret_academy = wait_until(env.console, context, Milliseconds(4000), { overworld });
+    OverworldWatcher overworld(stream.logger(), COLOR_CYAN);
+    int ret_academy = wait_until(stream, context, Milliseconds(4000), { overworld });
     if (ret_academy == 0){
         env.log("Entered academy. Walking to tournament entry.");
     }
@@ -595,19 +605,19 @@ void return_to_academy_after_loss(SingleSwitchProgramEnvironment& env, BotBaseCo
     context.wait_for_all_requests();
 }
 
-void go_to_academy_fly_point(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void go_to_academy_fly_point(ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context){
     int numAttempts = 0;
     int maxAttempts = 5;
 
     bool isFlySuccessful = false;
 
     while (!isFlySuccessful && numAttempts < maxAttempts ){
-        open_map_from_overworld(env.program_info(), env.console, context);
+        open_map_from_overworld(env.program_info(), stream, context);
         pbf_press_button(context, BUTTON_ZR, 50, 40);
         pbf_move_left_joystick(context, 200, 0, 47, 25);  
         // pbf_move_left_joystick(context, 187, 0, 50, 0);
         numAttempts++;
-        isFlySuccessful = fly_to_overworld_from_map(env.program_info(), env.console, context, true);
+        isFlySuccessful = fly_to_overworld_from_map(env.program_info(), stream, context, true);
         if (!isFlySuccessful){
             env.log("Unsuccessful fly attempt.");
         }
@@ -616,8 +626,9 @@ void go_to_academy_fly_point(SingleSwitchProgramEnvironment& env, BotBaseContext
 
     if(!isFlySuccessful){
         OperationFailedException::fire(
-            env.console, ErrorReport::SEND_ERROR_REPORT,
-            "Failed to fly back to academy!"
+            ErrorReport::SEND_ERROR_REPORT,
+            "Failed to fly back to academy!",
+            stream
         );
     }
 
@@ -640,7 +651,7 @@ private:
 
 
 
-void TournamentFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void TournamentFarmer::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
     TournamentFarmer_Descriptor::Stats& stats = env.current_stats<TournamentFarmer_Descriptor::Stats>();
 
@@ -683,9 +694,9 @@ void TournamentFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseConte
         context.wait_for_all_requests();
 
         NormalBattleMenuWatcher battle_menu(COLOR_YELLOW);
-        int ret_battle = run_until(
+        int ret_battle = run_until<ProControllerContext>(
             env.console, context,
-            [](BotBaseContext& context){
+            [](ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_B, 10000); //it takes a while to load and start
             },
             { battle_menu }
@@ -699,9 +710,9 @@ void TournamentFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseConte
         for (uint16_t battles = 0; battles < 4; battles++){
             NormalBattleMenuWatcher battle_menu2(COLOR_YELLOW); //Next battle started
             OverworldWatcher overworld(env.console, COLOR_CYAN); //Previous battle was lost
-            int ret_battle2 = run_until(
+            int ret_battle2 = run_until<ProControllerContext>(
                 env.console, context,
-                [](BotBaseContext& context){
+                [](ProControllerContext& context){
                     pbf_mash_button(context, BUTTON_B, 120 * TICKS_PER_SECOND);
                 },
                 { battle_menu2, overworld }
@@ -726,8 +737,9 @@ void TournamentFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseConte
                 env.update_stats();
                 send_program_status_notification(env, NOTIFICATION_STATUS_UPDATE);
                 OperationFailedException::fire(
-                    env.console, ErrorReport::SEND_ERROR_REPORT,
-                    "Failed to detect battle menu or dialog prompt!"
+                    ErrorReport::SEND_ERROR_REPORT,
+                    "Failed to detect battle menu or dialog prompt!",
+                    env.console
                 );
                 break;
             }
@@ -761,7 +773,7 @@ void TournamentFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseConte
             }
 
             if (battle_lost){
-                return_to_academy_after_loss(env, context);
+                return_to_academy_after_loss(env, env.console, context);
                 break;
             }
         }

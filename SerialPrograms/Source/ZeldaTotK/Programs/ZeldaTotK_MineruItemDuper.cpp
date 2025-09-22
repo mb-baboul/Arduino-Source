@@ -1,12 +1,13 @@
 /*  TotK Mineru Item Duper
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/PrettyPrint.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/StartupChecks/StartProgramChecks.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "ZeldaTotK_MineruItemDuper.h"
@@ -21,9 +22,10 @@ MineruItemDuper_Descriptor::MineruItemDuper_Descriptor()
         "Zelda: TotK", "Mineru Item Duper",
         "ComputerControl/blob/master/Wiki/Programs/ZeldaTotK/MineruItemDuper.md",
         "Use the Mineru Menu Sort glitch to duplicate items.",
+        ProgramControllerClass::StandardController_RequiresPrecision,
         FeedbackType::NONE,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        {}
     )
 {}
 
@@ -64,7 +66,9 @@ MineruItemDuper::MineruItemDuper()
     PA_ADD_OPTION(NOTIFICATIONS);
 }
 
-void MineruItemDuper::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void MineruItemDuper::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    StartProgramChecks::check_performance_class_wired_or_wireless(context);
+
     MineruItemDuper_Descriptor::Stats& stats = env.current_stats<MineruItemDuper_Descriptor::Stats>();
 
     /*
@@ -112,8 +116,8 @@ void MineruItemDuper::program(SingleSwitchProgramEnvironment& env, BotBaseContex
         }
 
         // Now press Y (sort) and B (exit) at the same time
-        ssf_press_button(context, BUTTON_B, 0, 10);
-        pbf_press_button(context, BUTTON_Y, 10, 40);
+        ssf_press_button(context, BUTTON_B, 0ms, 80ms);
+        pbf_press_button(context, BUTTON_Y, 80ms, 320ms);
 
         // There is no need to pick up Zonai devices 
         if (!IS_ZONAI_DEVICE){

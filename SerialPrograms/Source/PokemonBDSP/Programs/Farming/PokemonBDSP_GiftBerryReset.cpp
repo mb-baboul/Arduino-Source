@@ -1,6 +1,6 @@
 /*  Gift Berry Reset
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,7 +10,7 @@
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/Tools/StatsTracking.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
 #include "Pokemon/Pokemon_Strings.h"
@@ -56,9 +56,9 @@ GiftBerryReset_Descriptor::GiftBerryReset_Descriptor()
         STRING_POKEMON + " BDSP", "Gift Berry Reset",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/GiftBerryReset.md",
         "Reset the game in front of the NPC that gives rare berries in Pastoria City until a desired berry is received.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct GiftBerryReset_Descriptor::Stats : public StatsTracker{
@@ -101,7 +101,7 @@ GiftBerryReset::GiftBerryReset()
 
 
 
-void GiftBerryReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void GiftBerryReset::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     GiftBerryReset_Descriptor::Stats& stats = env.current_stats<GiftBerryReset_Descriptor::Stats>();
     env.update_stats();
 
@@ -132,8 +132,9 @@ void GiftBerryReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext
         VideoSnapshot screen = env.console.video().snapshot();
         if (!dialog_detector.detect(screen)){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "No npc dialog box found when reading berry name"
+                ErrorReport::SEND_ERROR_REPORT,
+                "No npc dialog box found when reading berry name",
+                env.console
             );
         }
 
@@ -145,8 +146,9 @@ void GiftBerryReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext
         );
         if (result.results.empty()){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "No berry name found in dialog box"
+                ErrorReport::SEND_ERROR_REPORT,
+                "No berry name found in dialog box",
+                env.console
             );
         }
         bool found_berry = false;
@@ -168,17 +170,22 @@ void GiftBerryReset::program(SingleSwitchProgramEnvironment& env, BotBaseContext
         }
 
         // Reset game:
-        pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
+        pbf_press_button(context, BUTTON_HOME, 80ms, GameSettings::instance().GAME_TO_HOME_DELAY0);
         if (!reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST)){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Error resetting game"
+                ErrorReport::SEND_ERROR_REPORT,
+                "Error resetting game",
+                env.console
             );
         }
     }
 
     env.update_stats();
-    send_program_finished_notification(env, NOTIFICATION_PROGRAM_FINISH);
+    send_program_finished_notification(
+        env, NOTIFICATION_PROGRAM_FINISH,
+        "Match found!",
+        env.console.video().snapshot()
+    );
     GO_HOME_WHEN_DONE.run_end_of_program(context);
 }
 

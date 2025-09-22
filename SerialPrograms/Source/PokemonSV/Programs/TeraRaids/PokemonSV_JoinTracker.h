@@ -1,6 +1,6 @@
 /*  Join Tracker
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,6 +11,7 @@
 #include <array>
 #include <set>
 #include <map>
+#include <mutex>
 #include "CommonFramework/Language.h"
 #include "Common/Cpp/Options/GroupOption.h"
 #include "Common/Cpp/Options/StaticTextOption.h"
@@ -98,7 +99,7 @@ private:
 class TeraLobbyJoinWatcher2 : public TeraLobbyReader, public VisualInferenceCallback{
 public:
     TeraLobbyJoinWatcher2(
-        Logger& logger, AsyncDispatcher& dispatcher, Color color,
+        Logger& logger, Color color,
         uint8_t host_players
     );
 
@@ -120,7 +121,7 @@ private:
 class TeraLobbyNameWatcher : public TeraLobbyReader, public VisualInferenceCallback{
 public:
     TeraLobbyNameWatcher(
-        Logger& logger, AsyncDispatcher& dispatcher, Color color,
+        Logger& logger, Color color,
         RaidJoinReportOption& report_settings,
         RaidPlayerBanList& ban_settings,
         uint8_t host_players

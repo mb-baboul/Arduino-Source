@@ -1,6 +1,6 @@
 /*  Discord Integration Settings
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -25,15 +25,9 @@ public:
     DiscordIntegrationSettingsOption();
 
     virtual ConfigWidget* make_QtWidget(QWidget& parent) override;
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
     BooleanCheckBoxOption run_on_start;
-
-    enum class Library{
-        SleepyDiscord,
-        DPP,
-    };
-    EnumDropdownOption<Library> library0;
 
     enum class CommandType{
         SlashCommands,
@@ -43,11 +37,8 @@ public:
 
     StringOption token;
     StringOption command_prefix;
-    BooleanCheckBoxOption use_suffix;
     StringOption game_status;
     StringOption hello_message;
-    StringOption sudo;
-    StringOption owner;
     BooleanCheckBoxOption allow_buttons_from_users;
     DiscordIntegrationTable channels;
 };

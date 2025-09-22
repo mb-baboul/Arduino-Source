@@ -1,10 +1,9 @@
 /*  Common Color Check
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-// #include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
 #include "PokemonLA_CommonColorCheck.h"
 

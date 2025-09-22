@@ -1,15 +1,16 @@
 /*  AutoStory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/VideoPipeline/VideoOverlay.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 #include "PokemonSV_AutoStory_Segment_13.h"
 
@@ -27,7 +28,7 @@ namespace PokemonSV{
 
 
 std::string AutoStory_Segment_13::name() const{
-    return "11.1: Bombirdier Titan: Go to West Province Area One Central Pokecenter";
+    return "13: Bombirdier Titan: Go to West Province Area One Central Pokecenter";
 }
 
 std::string AutoStory_Segment_13::start_text() const{
@@ -38,35 +39,35 @@ std::string AutoStory_Segment_13::end_text() const{
     return "End: At West Province Area One Central Pokecenter";
 }
 
-void AutoStory_Segment_13::run_segment(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AutoStoryOptions options) const{
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
+void AutoStory_Segment_13::run_segment(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    AutoStoryOptions options,
+    AutoStoryStats& stats
+) const{
+    
 
-    context.wait_for_all_requests();
-    env.console.overlay().add_log("Start Segment 11.1: Bombirdier Titan: Go to West Province Area One Central Pokecenter", COLOR_ORANGE);
-
-    checkpoint_29(env, context, options.notif_status_update);
-
-    context.wait_for_all_requests();
-    env.console.log("End Segment 11.1: Bombirdier Titan: Go to West Province Area One Central Pokecenter", COLOR_GREEN);
     stats.m_segment++;
     env.update_stats();
+    context.wait_for_all_requests();
+    env.console.log("Start Segment " + name(), COLOR_ORANGE);
+
+    checkpoint_29(env, context, options.notif_status_update, stats);
+
+    context.wait_for_all_requests();
+    env.console.log("End Segment " + name(), COLOR_GREEN);
 
 }
 
-// todo: shift all checkpoint numbers to make space for the Cortondo checkpoints
 void checkpoint_29(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){         
         context.wait_for_all_requests();
 
         fly_to_overlapping_flypoint(env.program_info(), env.console, context);
@@ -153,7 +154,7 @@ void checkpoint_29(
         realign_player_from_landmark(
             env.program_info(), env.console, context, 
             {ZoomChange::ZOOM_IN, 0, 128, 100},
-            {ZoomChange::KEEP_ZOOM, 255, 67, 90} //{ZoomChange::KEEP_ZOOM, 255, 70, 90}
+            {ZoomChange::KEEP_ZOOM, 255, 67, 85} //{ZoomChange::KEEP_ZOOM, 255, 70, 90}
         );
 
 
@@ -174,8 +175,9 @@ void checkpoint_29(
         while (true){
             if (current_time() - start_to_cross_bridge > std::chrono::minutes(6)){
                 OperationFailedException::fire(
-                    env.console, ErrorReport::SEND_ERROR_REPORT,
-                    "checkpoint_26(): Failed to cross bridge after 6 minutes."
+                    ErrorReport::SEND_ERROR_REPORT,
+                    "checkpoint_26(): Failed to cross bridge after 6 minutes.",
+                    env.console
                 );
             }        
 
@@ -186,14 +188,14 @@ void checkpoint_29(
 
                 break;
 
-            }catch (...){ // try again if fall into water
+            }catch(OperationFailedException&){ // try again if fall into water
                 pbf_mash_button(context, BUTTON_A, 250);
 
                 // walk back to start position before bridge
                 realign_player_from_landmark(
                     env.program_info(), env.console, context, 
                     {ZoomChange::ZOOM_IN, 255, 255, 180},
-                    {ZoomChange::KEEP_ZOOM, 33, 0, 180}
+                    {ZoomChange::KEEP_ZOOM, 33, 0, 175}
                 );
 
                 overworld_navigation(env.program_info(), env.console, context, 
@@ -215,7 +217,7 @@ void checkpoint_29(
         confirm_no_overlapping_flypoint(env.program_info(), env.console, context);
         pbf_press_button(context, BUTTON_B, 20, 100);
         handle_unexpected_battles(env.program_info(), env.console, context,
-        [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+        [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
             press_Bs_to_back_to_overworld(env.program_info(), env.console, context);
         });
 
@@ -286,7 +288,7 @@ void checkpoint_29(
 
         // align for post-bridge section 6. set marker past pokecenter
         handle_unexpected_battles(env.program_info(), env.console, context,
-        [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){                        
+        [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
             realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_NEW_MARKER, 0, 200, 30);
         });
                 // realign_player_from_landmark(
@@ -304,15 +306,7 @@ void checkpoint_29(
         fly_to_overlapping_flypoint(env.program_info(), env.console, context);
               
        
-        break;
-    }catch (...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }             
-    }
+    });
 
 }
 

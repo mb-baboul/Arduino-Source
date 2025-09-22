@@ -1,6 +1,6 @@
 /*  Program Tracker
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *      A singleton class that keeps track of all live programs and handles.
  *  This allows Discord integration to safely interface with programs.
@@ -13,9 +13,9 @@
 #include <vector>
 #include <map>
 #include <mutex>
-#include "Common/NintendoSwitch/NintendoSwitch_ControllerDefs.h"
+#include <memory>
 #include "CommonFramework/Globals.h"
-#include "CommonFramework/Tools/BotBaseHandle.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ControllerButtons.h"
 #include "ProgramTrackerInterfaces.h"
 
 namespace PokemonAutomation{
@@ -52,8 +52,8 @@ public:
 
 public:
     //  Nintendo Switch
-    std::string nsw_press_button        (uint64_t console_id, Button button, uint16_t ticks);
-    std::string nsw_press_dpad          (uint64_t console_id, DpadPosition position, uint16_t ticks);
+    std::string nsw_press_button        (uint64_t console_id, NintendoSwitch::Button button, uint16_t ticks);
+    std::string nsw_press_dpad          (uint64_t console_id, NintendoSwitch::DpadPosition position, uint16_t ticks);
     std::string nsw_press_left_joystick (uint64_t console_id, uint8_t x, uint8_t y, uint16_t ticks);
     std::string nsw_press_right_joystick(uint64_t console_id, uint8_t x, uint8_t y, uint16_t ticks);
 

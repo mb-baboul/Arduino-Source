@@ -1,19 +1,12 @@
 /*  Autostory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_AutoStory_Segment_03_H
 #define PokemonAutomation_PokemonSV_AutoStory_Segment_03_H
 
-#include <functional>
-#include "Common/Cpp/Options/EnumDropdownOption.h"
-#include "CommonFramework/Notifications/EventNotificationsTable.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
-#include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
-#include "Common/NintendoSwitch/NintendoSwitch_ControllerDefs.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 
 namespace PokemonAutomation{
@@ -27,22 +20,38 @@ public:
     virtual std::string end_text() const override;
     virtual void run_segment(
         SingleSwitchProgramEnvironment& env, 
-        BotBaseContext& context,
-        AutoStoryOptions options) const override;
+        ProControllerContext& context,
+        AutoStoryOptions options,
+        AutoStoryStats& stats) const override;
 };
 
 
 // start: Battled Nemona on the beach.
 // end: Met mom at gate. Received mom's sandwich.
-void checkpoint_05(SingleSwitchProgramEnvironment& env, BotBaseContext& context, EventNotificationOption& notif_status_update);
+void checkpoint_05(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
 
 // start: Met mom at gate. Received mom's sandwich.
 // end: Cleared catch tutorial.
-void checkpoint_06(SingleSwitchProgramEnvironment& env, BotBaseContext& context, EventNotificationOption& notif_status_update);
+void checkpoint_06(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
 
 // start: Cleared catch tutorial.
-// end: Moved to cliff. Heard mystery cry.
-void checkpoint_07(SingleSwitchProgramEnvironment& env, BotBaseContext& context, EventNotificationOption& notif_status_update);
+// end: Moved to cliff. Heard mystery cry. Standing in front of Nemona near the cliff.
+void checkpoint_07(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
+);
 
 
 }

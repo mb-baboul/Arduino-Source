@@ -1,6 +1,6 @@
 /*  Let's Go Kill Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,8 +11,8 @@
 #include <atomic>
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/Inference/VisualDetector.h"
-#include "CommonFramework/Inference/AudioPerSpectrumDetectorBase.h"
+#include "CommonTools/Audio/AudioPerSpectrumDetectorBase.h"
+#include "CommonTools/VisualDetector.h"
 
 namespace PokemonAutomation{
     class Logger;
@@ -26,7 +26,7 @@ public:
     LetsGoKillDetector(Color color, const ImageFloatBox& box = {0.71, 0.15, 0.04, 0.08});
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;
@@ -62,7 +62,7 @@ private:
 
 class LetsGoKillSoundDetector : public AudioPerSpectrumDetectorBase{
 public:
-    LetsGoKillSoundDetector(ConsoleHandle& console, DetectedCallback detected_callback);
+    LetsGoKillSoundDetector(Logger& logger, DetectedCallback detected_callback = nullptr);
 
     virtual float get_score_threshold() const override;
 

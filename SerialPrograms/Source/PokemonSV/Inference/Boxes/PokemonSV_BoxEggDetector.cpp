@@ -1,17 +1,17 @@
 /*  Box Eggs Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/Containers/FixedLimitVector.tpp"
 #include "Common/Cpp/Exceptions.h"
+#include "Kernels/Waterfill/Kernels_Waterfill_Types.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/ImageMatch/WaterfillTemplateMatcher.h"
-#include "CommonFramework/ImageTools/WaterfillUtilities.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
-#include "Kernels/Waterfill/Kernels_Waterfill_Types.h"
+#include "CommonTools/Images/WaterfillUtilities.h"
+#include "CommonTools/ImageMatch/WaterfillTemplateMatcher.h"
 #include "PokemonSV/Inference/Boxes/PokemonSV_BoxDetection.h"
 #include "PokemonSV_BoxEggDetector.h"
 
@@ -53,7 +53,7 @@ void BoxCurrentEggDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_box);
 }
 
-bool BoxCurrentEggDetector::detect(const ImageViewRGB32& frame) const{
+bool BoxCurrentEggDetector::detect(const ImageViewRGB32& frame){
     const auto stats = image_stats(extract_box_reference(frame, m_box));
     return stats.stddev.sum() < 20;
 }
@@ -74,7 +74,7 @@ void BoxEggDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_box);
 }
 
-bool BoxEggDetector::detect(const ImageViewRGB32& frame) const{
+bool BoxEggDetector::detect(const ImageViewRGB32& frame){
     const std::vector<std::pair<uint32_t, uint32_t>> filters = {
         {combine_rgb(200, 200, 200), combine_rgb(255, 255, 255)},
         {combine_rgb(180, 180, 180), combine_rgb(255, 255, 255)} // for darker capture cards

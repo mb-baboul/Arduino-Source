@@ -1,6 +1,6 @@
 /*  Pokemon Sword/Shield Type Sprites
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,12 +9,12 @@
 #include "CommonFramework/Globals.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTools/BinaryImage_FilterRgb32.h"
+#include "CommonTools/Images/BinaryImage_FilterRgb32.h"
 #include "PokemonSwSh_TypeSprites.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -35,7 +35,7 @@ struct TypeSpriteDatabase{
     }
 
     TypeSpriteDatabase(){
-        for (const auto& item : TYPE_ENUM_TO_SLUG){
+        for (const auto& item : POKEMON_TYPE_SLUGS()){
             if (item.first == PokemonType::NONE){
                 continue;
             }
@@ -80,6 +80,8 @@ TypeSprite::TypeSprite(const std::string& slug)
 //        cout << item.center_x() << "," << item.center_y() << endl;
         object.merge_assume_no_overlap(item);
     }
+
+    m_aspect_ratio = object.aspect_ratio();
 
 //    sprite.save("symbol-" + std::to_string(slug) + ".png");
     m_matcher.reset(

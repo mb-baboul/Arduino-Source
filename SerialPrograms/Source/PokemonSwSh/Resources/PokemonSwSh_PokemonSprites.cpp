@@ -1,15 +1,9 @@
 /*  Pokemon Sword/Shield Pokemon Sprites
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Cpp/Exceptions.h"
-#include "Common/Cpp/Json/JsonValue.h"
-#include "Common/Cpp/Json/JsonArray.h"
-#include "Common/Cpp/Json/JsonObject.h"
-#include "CommonFramework/Globals.h"
-#include "CommonFramework/ImageMatch/ImageCropper.h"
 #include "PokemonSwSh_PokemonSprites.h"
 
 namespace PokemonAutomation{

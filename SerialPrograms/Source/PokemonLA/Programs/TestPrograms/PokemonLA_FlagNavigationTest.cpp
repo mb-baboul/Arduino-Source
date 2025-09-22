@@ -1,6 +1,6 @@
 /*  Flag Navigation Test
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -21,9 +21,9 @@ FlagNavigationTest_Descriptor::FlagNavigationTest_Descriptor()
         STRING_POKEMON + " LA", "Flag Navigation Test",
         "",
         "Navigate to the flag pin.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -55,7 +55,7 @@ FlagNavigationTest::FlagNavigationTest()
 }
 
 
-void FlagNavigationTest::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void FlagNavigationTest::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
 
     FlagNavigationAir session(
         env, env.console, context,

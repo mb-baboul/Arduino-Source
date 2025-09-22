@@ -1,14 +1,14 @@
 /*  Pokemon Types
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_Pokemon_Types_H
 #define PokemonAutomation_Pokemon_Types_H
 
-#include <string>
-#include <map>
+//#include <string>
+#include "Common/Cpp/EnumStringMap.h"
 
 namespace PokemonAutomation{
 namespace Pokemon{
@@ -42,10 +42,7 @@ enum class PokemonType{
     STEEL,
     FAIRY,
 };
-
-extern const std::map<PokemonType, std::string> TYPE_ENUM_TO_SLUG;
-
-const std::string& get_type_slug(PokemonType type);
+const EnumStringMap<PokemonType>& POKEMON_TYPE_SLUGS();
 
 
 }

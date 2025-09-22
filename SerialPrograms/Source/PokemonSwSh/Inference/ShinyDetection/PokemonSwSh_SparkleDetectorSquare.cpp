@@ -1,6 +1,6 @@
 /*  Square Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,7 +9,7 @@
 #include "Kernels/Waterfill/Kernels_Waterfill.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Session.h"
 #include "CommonFramework/ImageTypes/BinaryImage.h"
-#include "CommonFramework/ImageTools/DistanceToLine.h"
+#include "CommonTools/Images/DistanceToLine.h"
 #include "PokemonSwSh_SparkleDetectorSquare.h"
 
 namespace PokemonAutomation{

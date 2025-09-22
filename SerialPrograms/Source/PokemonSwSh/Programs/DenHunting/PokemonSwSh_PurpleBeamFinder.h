@@ -1,6 +1,6 @@
 /*  Purple Beam Finder
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,7 +10,7 @@
 #include "Common/Cpp/Options/StaticTextOption.h"
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
 #include "Common/Cpp/Options/FloatingPointOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
 #include "NintendoSwitch/Options/NintendoSwitch_StartInGripMenuOption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
@@ -33,10 +33,10 @@ public:
 class PurpleBeamFinder : public SingleSwitchProgramInstance{
 public:
     PurpleBeamFinder();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    bool run(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    bool run(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
 private:
     StartInGripOrGameOption START_LOCATION;
@@ -47,7 +47,7 @@ private:
 
     SectionDividerOption m_advanced_options;
     BooleanCheckBoxOption SAVE_SCREENSHOT;
-    TimeExpressionOption<uint16_t> TIMEOUT_DELAY;
+    MillisecondsOption TIMEOUT_DELAY0;
 //    FloatingPoint MAX_STDDEV;
     FloatingPointOption MIN_BRIGHTNESS;
     FloatingPointOption MIN_EUCLIDEAN;

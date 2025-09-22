@@ -1,6 +1,6 @@
 /*  Controller Types and Definitions
  * 
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  * 
  */
 
@@ -9,6 +9,13 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+
+
+#ifdef __cplusplus
+
+#error "C++ shouldn't include this file."
+
+#else
 
 //  One second = 125 ticks. Thus each tick is 8 milliseconds.
 #define TICKS_PER_SECOND    125
@@ -46,6 +53,12 @@
 #define STICK_MIN           0x00
 #define STICK_CENTER        0x80
 #define STICK_MAX           0xff
+
+#endif
+
+
+
+
 
 
 #endif

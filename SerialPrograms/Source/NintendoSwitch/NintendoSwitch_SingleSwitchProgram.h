@@ -1,23 +1,22 @@
 /*  Single Switch Program
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_NintendoSwitch_SingleSwitchProgram_H
 #define PokemonAutomation_NintendoSwitch_SingleSwitchProgram_H
 
-#include "Common/Compiler.h"
 #include "Common/Cpp/Options/BatchOption.h"
 #include "CommonFramework/Globals.h"
 #include "CommonFramework/Notifications/EventNotificationOption.h"
-#include "CommonFramework/ControllerDevices/SerialPortGlobals.h"
 #include "CommonFramework/Tools/ProgramEnvironment.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
 #include "CommonFramework/Panels/ProgramDescriptor.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
+#include "NintendoSwitch/NintendoSwitch_ConsoleHandle.h"
 
 namespace PokemonAutomation{
-    class BotBaseContext;
+    class ControllerSession;
 namespace NintendoSwitch{
 
 
@@ -43,7 +42,7 @@ private:
         : ProgramEnvironment(program_info, session, current_stats, historical_stats)
         , console(0, std::forward<Args>(args)...)
     {
-        console.initialize_inference_threads(scope, inference_dispatcher());
+        console.initialize_inference_threads(scope, realtime_inference_dispatcher());
     }
 };
 
@@ -55,22 +54,25 @@ public:
         std::string category, std::string display_name,
         std::string doc_link,
         std::string description,
+        ProgramControllerClass color_class,
         FeedbackType feedback,
         AllowCommandsWhenRunning allow_commands_while_running,
-        PABotBaseLevel min_pabotbase_level
+        bool deprecated = false
     );
 
+    ProgramControllerClass color_class() const{ return m_color_class; }
     FeedbackType feedback() const{ return m_feedback; }
-    PABotBaseLevel min_pabotbase_level() const{ return m_min_pabotbase_level; }
     bool allow_commands_while_running() const{ return m_allow_commands_while_running; }
+    bool deprecated() const{ return m_deprecated; }
 
     virtual std::unique_ptr<PanelInstance> make_panel() const override;
     virtual std::unique_ptr<SingleSwitchProgramInstance> make_instance() const = 0;
 
 private:
+    const ProgramControllerClass m_color_class;
     const FeedbackType m_feedback;
-    const PABotBaseLevel m_min_pabotbase_level;
     const bool m_allow_commands_while_running;
+    const bool m_deprecated;
 };
 
 
@@ -109,7 +111,25 @@ public:
         const std::vector<std::string>& error_notification_tags = {"Notifs"}
     );
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) = 0;
+    //  Child classes should override one of these.
+    virtual void program(SingleSwitchProgramEnvironment& env, CancellableScope& scope);
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+
+
+public:
+    //  Startup Checks: Feel free to override to change behavior.
+
+    virtual void start_program_controller_check(
+        ControllerSession& session
+    );
+    virtual void start_program_feedback_check(
+        VideoStream& stream,
+        FeedbackType feedback_type
+    );
+    virtual void start_program_border_check(
+        VideoStream& stream,
+        FeedbackType feedback_type
+    );
 
 
 public:
@@ -142,10 +162,11 @@ template <typename Descriptor, typename Instance>
 class SingleSwitchProgramWrapper : public Descriptor{
 public:
     virtual std::unique_ptr<SingleSwitchProgramInstance> make_instance() const override{
-        return std::unique_ptr<SingleSwitchProgramInstance>(new Instance());
+        return std::make_unique<Instance>();
     }
 };
 
+// Create a program PanelDescriptor
 template <typename Descriptor, typename Instance>
 std::unique_ptr<PanelDescriptor> make_single_switch_program(){
     return std::make_unique<SingleSwitchProgramWrapper<Descriptor, Instance>>();

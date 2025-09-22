@@ -1,6 +1,6 @@
 /*  Travel Locations
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,13 +11,12 @@
 #include <string>
 #include <vector>
 #include <map>
-#include "Common/Cpp/EnumDatabase.h"
-#include "ClientSource/Connection/BotBase.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "Common/Cpp/Options/EnumDropdownDatabase.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "PokemonLA_Locations.h"
 
 namespace PokemonAutomation{
-    class ConsoleHandle;
 namespace NintendoSwitch{
 namespace PokemonLA{
 
@@ -28,22 +27,30 @@ struct TravelLocation{
     const char* display;
 
     MapRegion region;
-    uint8_t warp_slot; // which menu slot to warp from the full-Hisui map when leaving the village.
-    uint8_t warp_sub_slot; // which menu slot to warp the region map, if the location is a settlement or arena that requires an in-region warp.
-    bool reverse_sub_menu_direction; // whether it is faster to go upwards in the in-region warp map to reach the destination slot.
+    // which menu slot to warp from the full-Hisui map when leaving the village.
+    uint8_t warp_slot;
+    // which menu slot to warp across the region map, if the location is a settlement
+    // or arena that requires an in-region warp.
+    uint8_t warp_sub_slot; 
+    // whether it is faster to go upwards in the in-region warp map to reach the
+    // destination slot.
+    bool reverse_sub_menu_direction; 
 
-    std::function<void(ConsoleHandle& console, BotBaseContext& context)> post_arrival_maneuver;
+    std::function<void(VideoStream& stream, ProControllerContext& context)> post_arrival_maneuver;
 
     TravelLocation(
         const char* p_slug, const char* p_display,
         MapRegion p_region,
         uint8_t p_warp_slot, uint8_t p_warp_sub_slot,
-        std::function<void(ConsoleHandle& console, BotBaseContext& context)>&& p_post_arrival_maneuver,
+        std::function<void(VideoStream& stream, ProControllerContext& context)>&& p_post_arrival_maneuver,
         bool reverse_sub_menu_direction = false
     );
 };
 
 
+// Singleton to return all travel locations from the Jubilife Village Gate
+// To create a program option to select travel location, use:
+// SerialPrograms/Source/PokemonLA/Options/PokemonLA_TravelLocation.h:TravelLocationOption
 class TravelLocations{
 public:
     static const TravelLocations& instance();
@@ -51,7 +58,8 @@ public:
     const TravelLocation& operator[](size_t index) const{
         return *m_list[index];
     }
-    const IntegerEnumDatabase& database() const;
+    const IntegerEnumDropdownDatabase& database_outside_village() const { return m_database_outside_village; }
+    const IntegerEnumDropdownDatabase& database_including_village() const { return m_database_include_village; }
 
 
 public:
@@ -77,17 +85,26 @@ public:
     const TravelLocation Icelands_Snowfields;
     const TravelLocation Icelands_Icepeak;
     const TravelLocation Icelands_PearlSettlement;
+    const TravelLocation Icelands_PearlSettlement_SW;
     const TravelLocation Icelands_Arena;
 
+    const TravelLocation Retreat;
+
+    const TravelLocation Village_GalaxyHall;
+    const TravelLocation Village_FrontGate;
+    const TravelLocation Village_PracticeField;
+    const TravelLocation Village_Farm;
+    const TravelLocation Village_TrainingGrounds;
 
 private:
     TravelLocations();
-    void add_location(const TravelLocation& location);
+    void add_location(const TravelLocation& location, bool inside_village = false);
 
     std::vector<const TravelLocation*> m_list;
     std::map<std::string, const TravelLocation*> m_map;
-
-    IntegerEnumDatabase m_database;
+ 
+    IntegerEnumDropdownDatabase m_database_outside_village;
+    IntegerEnumDropdownDatabase m_database_include_village;
 };
 
 

@@ -1,14 +1,10 @@
 /*  Clothing Top Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Tools/ErrorDumper.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSV_ClothingTopDetector.h"
 
 //#include <iostream>
@@ -26,7 +22,7 @@ ClothingTopDetector::ClothingTopDetector(Color color)
 void ClothingTopDetector::make_overlays(VideoOverlaySet& items) const{
     m_arrow.make_overlays(items);
 }
-bool ClothingTopDetector::detect(const ImageViewRGB32& screen) const{
+bool ClothingTopDetector::detect(const ImageViewRGB32& screen){
     if (!m_arrow.detect(screen)){
         return false;
     }

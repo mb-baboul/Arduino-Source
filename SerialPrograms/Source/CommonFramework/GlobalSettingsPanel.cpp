@@ -1,11 +1,12 @@
 /*  Global Settings Panel
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <iostream>
 #include <set>
+#include <QStandardPaths>
 #include <QCryptographicHash>
 #include "Common/Cpp/Containers/Pimpl.tpp"
 #include "Common/Cpp/LifetimeSanitizer.h"
@@ -13,6 +14,7 @@
 #include "Common/Cpp/Json/JsonArray.h"
 #include "Common/Cpp/Json/JsonObject.h"
 #include "CommonFramework/Globals.h"
+#include "CommonFramework/Options/CheckForUpdatesOption.h"
 #include "CommonFramework/Options/ResolutionOption.h"
 #include "CommonFramework/Options/Environment/SleepSuppressOption.h"
 #include "CommonFramework/Options/Environment/ThemeSelectorOption.h"
@@ -42,6 +44,7 @@ const std::set<std::string> TOKENS{
     "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", //  jw's token.
     "e8d168bc482e96553ea9f9ecaea5a817474dbccc2a6a228a6bde67f2b2aa2889", //  James' token.
     "7555b7c63481cad42306718c67e7f9def5bfd1da8f6cd299ccd3d7dc95f307ae", //  Kuro's token.
+    "3d475b46d121fc24559d100de2426feaa53cd6578aac2817c4857a610ccde2dd", //  kichi's token.
 };
 
 
@@ -99,41 +102,67 @@ GlobalSettings::~GlobalSettings(){
 }
 GlobalSettings::GlobalSettings()
     : BatchOption(LockMode::LOCK_WHILE_RUNNING)
-    , CHECK_FOR_UPDATES(
-        "<b>Check for Updates:</b><br>Automatically check for updates.",
-        LockMode::UNLOCK_WHILE_RUNNING,
-        true
-    )
+    , CHECK_FOR_UPDATES(CONSTRUCT_TOKEN)
     , STATS_FILE(
         false,
         "<b>Stats File:</b><br>Use the stats file here. Multiple instances of the program can use the same file.",
         LockMode::LOCK_WHILE_RUNNING,
+#if defined(__APPLE__)
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString() + "/UserSettings/PA-Stats.txt",
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString() + "/UserSettings/PA-Stats.txt"
+#else
         "UserSettings/PA-Stats.txt",
         "UserSettings/PA-Stats.txt"
+#endif
     )
     , TEMP_FOLDER(
         false,
         "<b>Temp Folder:</b><br>Place temporary files in this directory.",
         LockMode::LOCK_WHILE_RUNNING,
+#if defined(__APPLE__)
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString() + "/TempFiles/",
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation).toStdString() + "/TempFiles/"
+#else
         "TempFiles/",
         "TempFiles/"
+#endif
     )
     , THEME(CONSTRUCT_TOKEN)
     , WINDOW_SIZE(
         CONSTRUCT_TOKEN,
-        "Window Size:",
-        "Set the size of the window. Takes effect immediately.<br>"
+        "Window Size/Position:",
+        "Set the size/position of the window. Takes effect immediately.<br>"
         "Use this to easily set the window to a specific resolution for streaming alignment.",
-        1280, 1000
+        1280, 1000,
+        0, 0
+    )
+    , LOG_WINDOW_SIZE(
+        CONSTRUCT_TOKEN,
+        "Output Window Size/Position:",
+        "Set the size/position of the output window. Takes effect immediately.<br>",
+        600, 1200,
+        0, 0
+    )
+    , LOG_WINDOW_STARTUP(
+        "<b>Open Output Window at startup:</b>",
+        LockMode::UNLOCK_WHILE_RUNNING,
+        false
     )
     , STREAM_HISTORY(CONSTRUCT_TOKEN)
     , SLEEP_SUPPRESS(CONSTRUCT_TOKEN)
     , m_discord_settings(
         "<font size=4><b>Discord Settings:</b> Integrate with Discord. (" +
         make_text_url(
-            ONLINE_DOC_URL + "ComputerControl/blob/master/Wiki/Software/DiscordIntegration.md",
+            ONLINE_DOC_URL_BASE + "ComputerControl/blob/master/Wiki/Software/DiscordIntegration.md",
             "online documentation"
         ) + ")</font>"
+    )
+    , RICH_PRESENCE(
+        "<b>Enable Rich Presence:</b><br>"
+        "Display program activity and status under your Discord user.<br>"
+        "Restart the program for the change to take effect.",
+        LockMode::UNLOCK_WHILE_RUNNING,
+        true
     )
     , ALL_STATS(
         "<b>All Stats:</b><br>Include all-time stats for notifications.",
@@ -168,7 +197,8 @@ GlobalSettings::GlobalSettings()
     , VIDEO_PIPELINE(CONSTRUCT_TOKEN)
     , ENABLE_LIFETIME_SANITIZER0(
         "<b>Enable Lifetime Sanitizer: (for debugging)</b><br>"
-        "Check for C++ object lifetime violations. Terminate program with stack dump if violations are found.",
+        "Check for C++ object lifetime violations. Terminate program with stack dump if violations are found. "
+        "If enabling, you must restart the program for it to take effect.",
         LockMode::UNLOCK_WHILE_RUNNING,
         true
 //        IS_BETA_VERSION
@@ -186,6 +216,8 @@ GlobalSettings::GlobalSettings()
     PA_ADD_OPTION(TEMP_FOLDER);
     PA_ADD_OPTION(THEME);
     PA_ADD_OPTION(WINDOW_SIZE);
+    PA_ADD_OPTION(LOG_WINDOW_SIZE);
+    PA_ADD_OPTION(LOG_WINDOW_STARTUP);
 #if (QT_VERSION_MAJOR == 6) && (QT_VERSION_MINOR >= 8)
     if (IS_BETA_VERSION || PreloadSettings::instance().DEVELOPER_MODE){
         PA_ADD_OPTION(STREAM_HISTORY);
@@ -198,6 +230,9 @@ GlobalSettings::GlobalSettings()
 #endif
 
     PA_ADD_STATIC(m_discord_settings);
+#ifdef PA_SOCIAL_SDK
+    PA_ADD_OPTION(RICH_PRESENCE);
+#endif
     PA_ADD_OPTION(ALL_STATS);
     PA_ADD_OPTION(DISCORD);
 
@@ -220,7 +255,7 @@ GlobalSettings::GlobalSettings()
 
     PA_ADD_OPTION(DEVELOPER_TOKEN);
 
-    GlobalSettings::value_changed(this);
+    GlobalSettings::on_config_value_changed(this);
     ENABLE_LIFETIME_SANITIZER0.add_listener(*this);
 }
 
@@ -238,7 +273,7 @@ void GlobalSettings::load_json(const JsonValue& json){
     m_discord_settings.set_text(
         "<font size=4><b>Discord Settings:</b> Integrate with Discord. (" +
         make_text_url(
-            ONLINE_DOC_URL + "ComputerControl/blob/master/Wiki/Software/DiscordIntegration.md",
+            ONLINE_DOC_URL_BASE + "ComputerControl/blob/master/Wiki/Software/DiscordIntegration.md",
             "online documentation"
         ) + ")</font>"
     );
@@ -337,13 +372,13 @@ JsonValue GlobalSettings::to_json() const{
     return obj;
 }
 
-void GlobalSettings::value_changed(void* object){
+void GlobalSettings::on_config_value_changed(void* object){
     bool enabled = ENABLE_LIFETIME_SANITIZER0;
-    LifetimeSanitizer::set_enabled(enabled);
     if (enabled){
         global_logger_tagged().log("LifeTime Sanitizer: Enabled", COLOR_BLUE);
     }else{
         global_logger_tagged().log("LifeTime Sanitizer: Disabled", COLOR_BLUE);
+        LifetimeSanitizer::disable();
     }
 }
 

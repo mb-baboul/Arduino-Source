@@ -1,10 +1,10 @@
 /*  Auction Item Name Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/OCR/OCR_RawOCR.h"
+#include "CommonTools/OCR/OCR_RawOCR.h"
 #include "PokemonSV_AuctionItemNameReader.h"
 
 namespace PokemonAutomation{

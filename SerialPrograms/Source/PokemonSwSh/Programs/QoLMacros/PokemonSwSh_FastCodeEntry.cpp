@@ -1,13 +1,11 @@
 /*  Fast Code Entry
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/NintendoSwitch/NintendoSwitch_ControllerDefs.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Device.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_DigitEntry.h"
+#include "NintendoSwitch/Programs/FastCodeEntry/NintendoSwitch_NumberCodeEntry.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSwSh_FastCodeEntry.h"
 
@@ -23,9 +21,9 @@ FastCodeEntry_Descriptor::FastCodeEntry_Descriptor()
         STRING_POKEMON + " SwSh", "Fast Code Entry (FCE)",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSwSh/FastCodeEntry.md",
         "Force your way into raids by entering 8-digit codes in under 1 second.",
+        ProgramControllerClass::StandardController_PerformanceClassSensitive,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -37,28 +35,24 @@ FastCodeEntry::FastCodeEntry()
         8,
         "9107 3091"
     )
-    , INITIAL_DELAY(
+    , INITIAL_DELAY0(
         "<b>Initial Delay:</b><br>Wait this long before entering the code.",
         LockMode::LOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "0 * TICKS_PER_SECOND"
+        "0 ms"
     )
 {
     PA_ADD_OPTION(RAID_CODE);
-    PA_ADD_OPTION(INITIAL_DELAY);
+    PA_ADD_OPTION(INITIAL_DELAY0);
 }
 
-void FastCodeEntry::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
-    uint8_t code[8];
-    RAID_CODE.to_str(code);
+void FastCodeEntry::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    std::string code = RAID_CODE.to_str();
 
-    if (INITIAL_DELAY != 0){
-        start_program_flash(context, INITIAL_DELAY);
-    }
+    pbf_wait(context, INITIAL_DELAY0);
 
     pbf_press_button(context, BUTTON_PLUS, 5, 5);
     pbf_press_button(context, BUTTON_PLUS, 5, 5);
-    enter_digits(context, 8, code);
+    NintendoSwitch::FastCodeEntry::numberpad_enter_code(env.console, context, code, true);
 }
 
 

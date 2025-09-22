@@ -1,14 +1,14 @@
 /*  Dialog Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_BattleDialogDetector_H
 #define PokemonAutomation_PokemonBDSP_BattleDialogDetector_H
 
-#include "CommonFramework/Inference/VisualDetector.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
 #include "PokemonBDSP_SelectionArrow.h"
 
 namespace PokemonAutomation{
@@ -23,7 +23,7 @@ public:
     ShortDialogDetector(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;
@@ -33,12 +33,11 @@ private:
     ImageFloatBox m_right_white;
     ImageFloatBox m_right;
 };
-class ShortDialogWatcher : public ShortDialogDetector, public VisualInferenceCallback{
+class ShortDialogWatcher : public DetectorToFinder<ShortDialogDetector>{
 public:
-    ShortDialogWatcher(Color color = COLOR_RED);
-
-    virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool process_frame(const ImageViewRGB32& frame, WallClock timestamp) override;
+    ShortDialogWatcher(Color color = COLOR_RED)
+        : DetectorToFinder("ShortDialogWatcher", std::chrono::milliseconds(250), color)
+    {}
 };
 
 
@@ -50,7 +49,7 @@ public:
     BattleDialogDetector(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;

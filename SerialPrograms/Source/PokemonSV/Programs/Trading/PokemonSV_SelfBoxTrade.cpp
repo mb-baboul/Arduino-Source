@@ -1,6 +1,6 @@
 /*  Self Box Trade
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -24,9 +24,9 @@ SelfBoxTrade_Descriptor::SelfBoxTrade_Descriptor()
         STRING_POKEMON + " SV", "Self Box Trade",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/SelfBoxTrade.md",
         "Trade boxes of " + STRING_POKEMON + " between two local Switches.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
         AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB,
         2, 2, 2
     )
 {}
@@ -76,7 +76,7 @@ void SelfBoxTrade::program(MultiSwitchProgramEnvironment& env, CancellableScope&
 
     for (uint8_t box = 0; box < BOXES_TO_TRADE; box++){
         if (box != 0){
-            env.run_in_parallel(scope, [](ConsoleHandle& console, BotBaseContext& context){
+            env.run_in_parallel(scope, [](ConsoleHandle& console, ProControllerContext& context){
                 move_to_right_box(context);
 //                pbf_press_dpad(context, DPAD_RIGHT, 20, 30);
 //                pbf_press_dpad(context, DPAD_DOWN, 20, 30);

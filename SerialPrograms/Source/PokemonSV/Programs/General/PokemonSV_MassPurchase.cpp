@@ -1,16 +1,16 @@
 /*  SV Mass Purchase
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/Exceptions.h"
 #include "CommonFramework/Exceptions/FatalProgramException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "CommonFramework/Tools/ProgramEnvironment.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
@@ -28,9 +28,9 @@ MassPurchase_Descriptor::MassPurchase_Descriptor()
         STRING_POKEMON + " SV", "Mass Purchase",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/MassPurchase.md",
         "Purchase a specified amount of items from a shop.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -54,7 +54,7 @@ std::unique_ptr<StatsTracker> MassPurchase_Descriptor::make_stats() const{
 
 MassPurchase::MassPurchase()
     : ITEMS(
-        "<b>Items to Buy:</b><br>The amount of Items to buy from the postion of the cursor.",
+        "<b>Items to Buy:</b><br>The amount of Items to buy from the position of the cursor.",
         LockMode::LOCK_WHILE_RUNNING,
         50
     )
@@ -83,14 +83,14 @@ MassPurchase::MassPurchase()
     PA_ADD_OPTION(NOTIFICATIONS);
 }
 
-bool MassPurchase::mass_purchase(ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context){
+bool MassPurchase::mass_purchase(ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context){
     MassPurchase_Descriptor::Stats& stats = env.current_stats<MassPurchase_Descriptor::Stats>();
 
-    OverworldWatcher overworld(console, COLOR_RED);
+    OverworldWatcher overworld(stream.logger(), COLOR_RED);
     AdvanceDialogWatcher dialog(COLOR_CYAN);
     context.wait_for_all_requests();
     int ret = wait_until(
-        console, context,
+        stream, context,
         std::chrono::seconds(2),
         {
             overworld,
@@ -104,9 +104,9 @@ bool MassPurchase::mass_purchase(ProgramEnvironment& env, ConsoleHandle& console
         env.log("Error - Stuck in Overworld");
         stats.errors++;
         throw_and_log<FatalProgramException>(
-            console, ErrorReport::SEND_ERROR_REPORT,
+            stream.logger(), ErrorReport::SEND_ERROR_REPORT,
             "Stuck in Overworld.",
-            console
+            stream
         );
 
     case 1:
@@ -120,14 +120,14 @@ bool MassPurchase::mass_purchase(ProgramEnvironment& env, ConsoleHandle& console
     }
 };
     
-bool MassPurchase::extra_items(ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context){
+bool MassPurchase::extra_items(ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context){
     MassPurchase_Descriptor::Stats& stats = env.current_stats<MassPurchase_Descriptor::Stats>();
 
-    OverworldWatcher overworld(console, COLOR_RED);
+    OverworldWatcher overworld(stream.logger(), COLOR_RED);
     AdvanceDialogWatcher dialog(COLOR_CYAN);
     context.wait_for_all_requests();
     int ret = wait_until(
-        console, context,
+        stream, context,
         std::chrono::seconds(2),
         {
             overworld,
@@ -141,9 +141,9 @@ bool MassPurchase::extra_items(ProgramEnvironment& env, ConsoleHandle& console, 
         env.log("Error - Stuck in Overworld");
         stats.errors++;
         throw_and_log<FatalProgramException>(
-            console, ErrorReport::SEND_ERROR_REPORT,
+            stream.logger(), ErrorReport::SEND_ERROR_REPORT,
             "Stuck in Overworld.",
-            console
+            stream
         );
 
     case 1:
@@ -155,7 +155,7 @@ bool MassPurchase::extra_items(ProgramEnvironment& env, ConsoleHandle& console, 
     }
 };
 
-void PokemonSV::MassPurchase::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void PokemonSV::MassPurchase::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
     MassPurchase_Descriptor::Stats& stats = env.current_stats<MassPurchase_Descriptor::Stats>();
 

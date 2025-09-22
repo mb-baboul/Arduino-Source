@@ -1,15 +1,15 @@
 /*  Shiny Hunt Autonomous - Overworld
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "NintendoSwitch/NintendoSwitch_Settings.h"
+#include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "NintendoSwitch/Programs/NintendoSwitch_GameEntry.h"
 #include "PokemonSwSh/ShinyHuntTracker.h"
-#include "PokemonBDSP/PokemonBDSP_Settings.h"
 #include "PokemonBDSP/Inference/ShinyDetection/PokemonBDSP_ShinyEncounterDetector.h"
 #include "PokemonBDSP/Programs/PokemonBDSP_EncounterHandler.h"
 #include "PokemonBDSP/Programs/PokemonBDSP_GameEntry.h"
@@ -26,9 +26,9 @@ ShinyHuntOverworld_Descriptor::ShinyHuntOverworld_Descriptor()
         STRING_POKEMON + " BDSP", "Shiny Hunt - Overworld",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/ShinyHunt-Overworld.md",
         "Shiny hunt overworld " + STRING_POKEMON + ".",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct ShinyHuntOverworld_Descriptor::Stats : public PokemonSwSh::ShinyHuntTracker{
@@ -69,11 +69,10 @@ ShinyHuntOverworld::ShinyHuntOverworld()
     , m_advanced_options(
         "<font size=4><b>Advanced Options:</b> You should not need to touch anything below here.</font>"
     )
-    , EXIT_BATTLE_TIMEOUT(
+    , EXIT_BATTLE_TIMEOUT0(
         "<b>Exit Battle Timeout:</b><br>After running, wait this long to return to overworld.",
         LockMode::LOCK_WHILE_RUNNING,
-        TICKS_PER_SECOND,
-        "10 * TICKS_PER_SECOND"
+        "10 s"
     )
 {
     PA_ADD_OPTION(GO_HOME_WHEN_DONE);
@@ -87,8 +86,8 @@ ShinyHuntOverworld::ShinyHuntOverworld()
     PA_ADD_OPTION(NOTIFICATIONS);
 
     PA_ADD_STATIC(m_advanced_options);
-//    PA_ADD_OPTION(WATCHDOG_TIMER);
-    PA_ADD_OPTION(EXIT_BATTLE_TIMEOUT);
+//    PA_ADD_OPTION(WATCHDOG_TIMER0);
+    PA_ADD_OPTION(EXIT_BATTLE_TIMEOUT0);
 }
 
 
@@ -96,7 +95,7 @@ ShinyHuntOverworld::ShinyHuntOverworld()
 
 
 
-void ShinyHuntOverworld::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void ShinyHuntOverworld::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     OverlayLogTextScope overlay_log_text_scope(env.console.overlay());
     ShinyHuntOverworld_Descriptor::Stats& stats = env.current_stats<ShinyHuntOverworld_Descriptor::Stats>();
     env.update_stats();
@@ -119,7 +118,7 @@ void ShinyHuntOverworld::program(SingleSwitchProgramEnvironment& env, BotBaseCon
             bool battle = TRIGGER_METHOD.find_encounter(env.console, context);
             if (!battle){
                 stats.add_error();
-                handler.run_away_due_to_error(EXIT_BATTLE_TIMEOUT);
+                handler.run_away_due_to_error(EXIT_BATTLE_TIMEOUT0);
                 continue;
             }
             env.console.overlay().add_log("Battle started", COLOR_GREEN);
@@ -140,7 +139,9 @@ void ShinyHuntOverworld::program(SingleSwitchProgramEnvironment& env, BotBaseCon
     //        result_wild.left_is_shiny = false;
     //        result_wild.right_is_shiny = true;
 
-            bool stop = handler.handle_standard_encounter_end_battle(result_wild, EXIT_BATTLE_TIMEOUT);
+            bool stop = handler.handle_standard_encounter_end_battle(
+                result_wild, EXIT_BATTLE_TIMEOUT0
+            );
 
             if (stop){
                 break;
@@ -154,8 +155,11 @@ void ShinyHuntOverworld::program(SingleSwitchProgramEnvironment& env, BotBaseCon
             e.send_notification(env, NOTIFICATION_ERROR_RECOVERABLE);
 
             stats.add_error();
-            pbf_press_button(context, BUTTON_HOME, 10, GameSettings::instance().GAME_TO_HOME_DELAY);
-            if (!reset_game_from_home(env, env.console, context, ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST)){
+            go_home(env.console, context);
+            if (!reset_game_from_home(
+                env, env.console, context,
+                ConsoleSettings::instance().TOLERATE_SYSTEM_UPDATE_MENU_FAST
+            )){
                 stats.add_error();
                 continue;
             }

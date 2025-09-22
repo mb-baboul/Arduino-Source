@@ -1,6 +1,6 @@
 /*  Dialog Triangle Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,13 +9,13 @@
 
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonSwSh_DialogBoxDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -50,8 +50,8 @@ void BlackDialogBoxDetector::make_overlays(VideoOverlaySet& items) const{
 
 bool BlackDialogBoxDetector::process_frame(const ImageViewRGB32& frame, WallClock timestamp){
     bool detected = true;
-    for(const auto& box : BLACK_BOXES){
-        if (is_black(extract_box_reference(frame, box), 180, 30) == false){
+    for (const auto& box : BLACK_BOXES){
+        if (is_black(extract_box_reference(frame, box), 200, 35) == false){
             detected = false;
             break;
         }

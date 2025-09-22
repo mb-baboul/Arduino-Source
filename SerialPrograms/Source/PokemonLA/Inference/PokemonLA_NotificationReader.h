@@ -1,6 +1,6 @@
 /*  Notification Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *  
  *  Read overworld notification texts like when distortion appears.
  */
@@ -9,9 +9,9 @@
 #define PokemonAutomation_PokemonLA_NotificationReader_H
 
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/OCR/OCR_SmallDictionaryMatcher.h"
-#include "CommonFramework/Inference/VisualDetector.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/OCR/OCR_SmallDictionaryMatcher.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{

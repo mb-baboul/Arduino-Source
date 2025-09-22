@@ -1,11 +1,11 @@
 /*  Mass Release
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/Tools/StatsTracking.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonBDSP/PokemonBDSP_Settings.h"
@@ -24,9 +24,9 @@ MassRelease_Descriptor::MassRelease_Descriptor()
         STRING_POKEMON + " BDSP", "Mass Release",
         "ComputerControl/blob/master/Wiki/Programs/PokemonBDSP/MassRelease.md",
         "Mass release boxes of " + STRING_POKEMON + ".",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct MassRelease_Descriptor::Stats : public StatsTracker{
@@ -66,15 +66,15 @@ MassRelease::MassRelease()
 
 
 
-void MassRelease::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void MassRelease::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     MassRelease_Descriptor::Stats& stats = env.current_stats<MassRelease_Descriptor::Stats>();
     env.update_stats();
 
     //  Connect the controller.
     pbf_press_button(context, BUTTON_LCLICK, 5, 5);
 
-    uint16_t box_scroll_delay = GameSettings::instance().BOX_SCROLL_DELAY_0;
-    uint16_t box_change_delay = GameSettings::instance().BOX_CHANGE_DELAY_0;
+    Milliseconds box_scroll_delay = GameSettings::instance().BOX_SCROLL_DELAY0;
+    Milliseconds box_change_delay = GameSettings::instance().BOX_CHANGE_DELAY0;
 
     if (BOXES_TO_RELEASE > 0){
         env.update_stats();
@@ -82,13 +82,13 @@ void MassRelease::program(SingleSwitchProgramEnvironment& env, BotBaseContext& c
         stats.m_boxes_released++;
         for (uint8_t box = 1; box < BOXES_TO_RELEASE; box++){
             env.update_stats();
-            pbf_press_dpad(context, DPAD_DOWN, 20, box_scroll_delay);
-            pbf_press_dpad(context, DPAD_DOWN, 20, box_scroll_delay);
-            pbf_press_dpad(context, DPAD_DOWN, 20, box_scroll_delay);
-            pbf_press_dpad(context, DPAD_RIGHT, 20, box_scroll_delay);
-            pbf_press_dpad(context, DPAD_RIGHT, 20, box_scroll_delay);
+            pbf_press_dpad(context, DPAD_DOWN, 160ms, box_scroll_delay);
+            pbf_press_dpad(context, DPAD_DOWN, 160ms, box_scroll_delay);
+            pbf_press_dpad(context, DPAD_DOWN, 160ms, box_scroll_delay);
+            pbf_press_dpad(context, DPAD_RIGHT, 160ms, box_scroll_delay);
+            pbf_press_dpad(context, DPAD_RIGHT, 160ms, box_scroll_delay);
             pbf_wait(context, 50);
-            pbf_press_button(context, BUTTON_R, 20, box_change_delay);
+            pbf_press_button(context, BUTTON_R, 160ms, box_change_delay);
             release_box(context, box_scroll_delay);
             stats.m_boxes_released++;
         }

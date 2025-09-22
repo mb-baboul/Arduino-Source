@@ -1,16 +1,18 @@
 /*  AutoStory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/VideoPipeline/VideoOverlay.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
+#include "PokemonSV/Inference/PokemonSV_TutorialDetector.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
-#include "PokemonSV/Inference/PokemonSV_TutorialDetector.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 #include "PokemonSV_AutoStory_Segment_04.h"
 
@@ -33,43 +35,41 @@ std::string AutoStory_Segment_04::name() const{
 }
 
 std::string AutoStory_Segment_04::start_text() const{
-    return "Start: Finished catch tutorial. Walked to the cliff and heard mystery cry.";
+    return "Start: Finished catch tutorial. Walked to the cliff and heard mystery cry. Standing in front of Nemona near the cliff.";
 }
 
 std::string AutoStory_Segment_04::end_text() const{
-    return "End: Saved the Legendary. Escaped from the Houndoom cave.";
+    return "End: Saved the Legendary. Escaped from the Houndoom cave. Standing next to Koraidon/Miraidon just outside the cave exit.";
 }
 
-void AutoStory_Segment_04::run_segment(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AutoStoryOptions options) const{
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
+void AutoStory_Segment_04::run_segment(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    AutoStoryOptions options,
+    AutoStoryStats& stats
+) const{
 
+    stats.m_segment++;
+    env.update_stats();
     context.wait_for_all_requests();
     env.console.log("Start Segment 04: Rescue Legendary", COLOR_ORANGE);
-    env.console.overlay().add_log("Start Segment 04: Rescue Legendary", COLOR_ORANGE);
 
-    checkpoint_08(env, context, options.notif_status_update);
+    checkpoint_08(env, context, options.notif_status_update, stats);
 
     context.wait_for_all_requests();
     env.console.log("End Segment 04: Rescue Legendary", COLOR_GREEN);
-    env.console.overlay().add_log("End Segment 04: Rescue Legendary", COLOR_GREEN);
-    stats.m_segment++;
-    env.update_stats();
 
 }
 
 void checkpoint_08(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){
+
         context.wait_for_all_requests();
 
         realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_NEW_MARKER, 230, 70, 100);
@@ -96,9 +96,9 @@ void checkpoint_08(
         GradientArrowWatcher arrow(COLOR_RED, GradientArrowType::RIGHT, {0.104, 0.312, 0.043, 0.08});
         context.wait_for_all_requests();
 
-        int ret = run_until(
+        int ret = run_until<ProControllerContext>(
             env.console, context,
-            [](BotBaseContext& context){
+            [](ProControllerContext& context){
                 for (int i = 0; i < 10; i++){
                     pbf_press_dpad(context, DPAD_UP, 20, 250);
                 }
@@ -107,8 +107,9 @@ void checkpoint_08(
         );
         if (ret < 0){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Failed to feed mom's sandwich."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Failed to feed mom's sandwich.",
+                env.console
             );  
         }
 
@@ -125,11 +126,11 @@ void checkpoint_08(
         env.console.log("Enter cave");
         env.console.overlay().add_log("Enter cave", COLOR_WHITE);
         do_action_and_monitor_for_battles(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 600, 50);
-                realign_player(env.program_info(), console, context, PlayerRealignMode::REALIGN_NO_MARKER, 150, 20, 20);
+                realign_player(env.program_info(), stream, context, PlayerRealignMode::REALIGN_NO_MARKER, 150, 20, 20);
                 pbf_move_left_joystick(context, 128, 0, 1000, 50);
-                realign_player(env.program_info(), console, context, PlayerRealignMode::REALIGN_NO_MARKER, 160, 20, 20);
+                realign_player(env.program_info(), stream, context, PlayerRealignMode::REALIGN_NO_MARKER, 160, 20, 20);
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_DIALOG, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 20, 20, true, true);
@@ -140,43 +141,43 @@ void checkpoint_08(
         clear_dialog(env.console, context, ClearDialogMode::STOP_TIMEOUT, 10, {CallbackEnum::PROMPT_DIALOG});
 
         do_action_and_monitor_for_battles(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 // Legendary rock break
                 context.wait_for_all_requests();
-                console.log("Rock break");
-                console.overlay().add_log("Rock break", COLOR_WHITE);
+                stream.log("Rock break");
+                stream.overlay().add_log("Rock break", COLOR_WHITE);
                 pbf_move_left_joystick(context, 128, 20, 3 * TICKS_PER_SECOND, 20);
-                realign_player(env.program_info(), console, context, PlayerRealignMode::REALIGN_NO_MARKER, 230, 25, 30);
+                realign_player(env.program_info(), stream, context, PlayerRealignMode::REALIGN_NO_MARKER, 230, 25, 30);
                 pbf_move_left_joystick(context, 128, 0, 2 * TICKS_PER_SECOND, 5 * TICKS_PER_SECOND);
 
                 // Houndour wave
                 context.wait_for_all_requests();
-                console.log("Houndour wave");
-                console.overlay().add_log("Houndour wave", COLOR_WHITE);
+                stream.log("Houndour wave");
+                stream.overlay().add_log("Houndour wave", COLOR_WHITE);
                 // walk to room entrance
-                realign_player(env.program_info(), console, context, PlayerRealignMode::REALIGN_NO_MARKER, 150, 15, 30);
+                realign_player(env.program_info(), stream, context, PlayerRealignMode::REALIGN_NO_MARKER, 150, 15, 30);
                 pbf_move_left_joystick(context, 128, 20, 4 * TICKS_PER_SECOND, 2 * TICKS_PER_SECOND);
 
-                realign_player(env.program_info(), console, context, PlayerRealignMode::REALIGN_NO_MARKER, 210, 15, 30);
+                realign_player(env.program_info(), stream, context, PlayerRealignMode::REALIGN_NO_MARKER, 210, 15, 30);
                 pbf_move_left_joystick(context, 128, 20, 3 * TICKS_PER_SECOND, 2 * TICKS_PER_SECOND);
                 pbf_move_left_joystick(context, 128, 20, 2 * TICKS_PER_SECOND, 2 * TICKS_PER_SECOND);
                 pbf_move_left_joystick(context, 128, 20, 6 * TICKS_PER_SECOND, 2 * TICKS_PER_SECOND);
 
-                realign_player(env.program_info(), console, context, PlayerRealignMode::REALIGN_NO_MARKER, 200, 25, 20);
+                realign_player(env.program_info(), stream, context, PlayerRealignMode::REALIGN_NO_MARKER, 200, 25, 20);
                 pbf_move_left_joystick(context, 128, 20, 4 * TICKS_PER_SECOND, 2 * TICKS_PER_SECOND);
                 pbf_move_left_joystick(context, 128, 20, 4 * TICKS_PER_SECOND, 2 * TICKS_PER_SECOND);
 
-                realign_player(env.program_info(), console, context, PlayerRealignMode::REALIGN_NO_MARKER, 210, 25, 25);
+                realign_player(env.program_info(), stream, context, PlayerRealignMode::REALIGN_NO_MARKER, 210, 25, 25);
                 pbf_move_left_joystick(context, 128, 20, 6 * TICKS_PER_SECOND, 20 * TICKS_PER_SECOND);
 
                 // Houndoom encounter
                 context.wait_for_all_requests();
-                console.log("Houndoom encounter");
-                console.overlay().add_log("Houndoom encounter", COLOR_WHITE);
+                stream.log("Houndoom encounter");
+                stream.overlay().add_log("Houndoom encounter", COLOR_WHITE);
                 pbf_move_left_joystick(context, 128, 20, 4 * TICKS_PER_SECOND, 20);
-                realign_player(env.program_info(), console, context, PlayerRealignMode::REALIGN_NO_MARKER, 245, 20, 20);
+                realign_player(env.program_info(), stream, context, PlayerRealignMode::REALIGN_NO_MARKER, 245, 20, 20);
                 pbf_move_left_joystick(context, 128, 20, 2 * TICKS_PER_SECOND, 20);
-                realign_player(env.program_info(), console, context, PlayerRealignMode::REALIGN_NO_MARKER, 255, 90, 20);
+                realign_player(env.program_info(), stream, context, PlayerRealignMode::REALIGN_NO_MARKER, 255, 90, 20);
                 pbf_move_left_joystick(context, 128, 20, 8 * TICKS_PER_SECOND, 8 * TICKS_PER_SECOND);
                 pbf_press_button(context, BUTTON_L, 20, 20);
             }
@@ -187,15 +188,9 @@ void checkpoint_08(
         
         mash_button_till_overworld(env.console, context, BUTTON_A);
 
-        break;
-    }catch(...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }            
-    }
+    
+    });
+
 
 }
 

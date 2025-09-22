@@ -1,18 +1,19 @@
 /*  Sandwich Plate Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 
-#include "PokemonSV/Inference/Picnics/PokemonSV_SandwichIngredientDetector.h"
+#include "Common/Cpp/Exceptions.h"
 #include "CommonFramework/ImageTypes/ImageViewRGB32.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
+#include "CommonTools/Images/ImageFilter.h"
 #include "PokemonSV_SandwichPlateDetector.h"
+#include "PokemonSV/Inference/Picnics/PokemonSV_SandwichIngredientDetector.h"
 // #include "CommonFramework/Tools/DebugDumper.h"
 
-#include <iostream>
+//#include <iostream>
 //using std::cout;
 //using std::endl;
 
@@ -36,6 +37,9 @@ SandwichPlateDetector::SandwichPlateDetector(Logger& logger, Color color, Langua
     case Side::RIGHT:
         m_box = ImageFloatBox(0.699, 0.269, 0.201, 0.044);
         break;
+    default:
+        throw InternalProgramError(&logger, PA_CURRENT_FUNCTION,
+            "Invalid Side for SandwichPlateDetector()");
     }
 }
 
@@ -43,7 +47,7 @@ void SandwichPlateDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_box);
 }
 
-bool SandwichPlateDetector::detect(const ImageViewRGB32& screen) const{
+bool SandwichPlateDetector::detect(const ImageViewRGB32& screen){
     return !detect_filling_name(screen).empty();
 }
 
@@ -59,7 +63,8 @@ std::string SandwichPlateDetector::detect_filling_name(const ImageViewRGB32& scr
     for (uint32_t image_filter_low_bound : image_filter_low_bounds){
         ImageRGB32 plate_label = to_blackwhite_rgb32_range(
             extract_box_reference(screen, m_box),
-            image_filter_low_bound, image_filter_high_bound, true
+            true,
+            image_filter_low_bound, image_filter_high_bound
         );
 
         // dump_debug_image(m_logger, "PokemonSV/SandwichPlateDetector", "blackwhite_input", plate_label);

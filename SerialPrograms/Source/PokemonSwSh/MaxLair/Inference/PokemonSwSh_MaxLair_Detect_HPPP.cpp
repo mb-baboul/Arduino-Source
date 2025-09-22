@@ -1,16 +1,16 @@
 /*  Max Lair Detect PP
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Qt/StringToolsQt.h"
 #include "CommonFramework/ImageTypes/ImageRGB32.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
-#include "CommonFramework/OCR/OCR_StringNormalization.h"
-#include "CommonFramework/OCR/OCR_RawOCR.h"
+#include "CommonTools/Images/ImageFilter.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "CommonTools/OCR/OCR_StringNormalization.h"
+#include "CommonTools/OCR/OCR_RawOCR.h"
 #include "Pokemon/Inference/Pokemon_ReadHpBar.h"
 #include "PokemonSwSh_MaxLair_Detect_HPPP.h"
 
@@ -141,7 +141,11 @@ int8_t read_pp_text(Logger& logger, const ImageViewRGB32& image){
 //    cout << "============" << endl;
     for (const auto& item : filters){
         size_t text_pixels;
-        processed = to_blackwhite_rgb32_range(text_pixels, image, item.first, item.second, false);
+        processed = to_blackwhite_rgb32_range(
+            text_pixels, image,
+            false,
+            item.first, item.second
+        );
         double text_ratio = 1.0 - (double)text_pixels / (image.width() * image.height());
 //        cout << "text_ratio = " << text_ratio << endl;
         if (0.02 <= text_ratio && text_ratio <= 0.50){

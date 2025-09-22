@@ -1,17 +1,17 @@
 /*  Egg Autonomous State
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_EggAutonomousState_H
 #define PokemonAutomation_PokemonBDSP_EggAutonomousState_H
 
-#include "Common/Compiler.h"
+//#include "Common/Compiler.h"
 #include "CommonFramework/Language.h"
 #include "CommonFramework/Notifications/EventNotificationOption.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonFramework/Tools/VideoStream.h"
 #include "Pokemon/Options/Pokemon_StatsHuntFilter.h"
 #include "PokemonBDSP/Options/PokemonBDSP_ShortcutDirection.h"
 
@@ -36,14 +36,14 @@ struct EggAutonomousStats : public StatsTracker{
 class EggAutonomousState{
 public:
     EggAutonomousState(
-        ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
+        ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context,
         EggAutonomousStats& stats,
         EventNotificationOption& notification_nonshiny_keep,
         EventNotificationOption& notification_shiny,
-        uint16_t scroll_to_read_delay,
+        Milliseconds scroll_to_read_delay,
         Language language,
         ShortcutDirectionOption& shortcut,
-        uint16_t travel_time_per_fetch,
+        Milliseconds travel_time_per_fetch,
         const Pokemon::StatsHuntIvJudgeFilterTable& filters,
         uint8_t max_keepers,
         uint8_t existing_eggs_in_columns
@@ -79,16 +79,16 @@ private:
 
 private:
     ProgramEnvironment& m_env;
-    ConsoleHandle& m_console;
-    BotBaseContext& m_context;
+    VideoStream& m_stream;
+    ProControllerContext& m_context;
     EggAutonomousStats& m_stats;
     static EventNotificationOption m_notification_noop;
     EventNotificationOption& m_notification_nonshiny_keep;
     EventNotificationOption& m_notification_shiny;
-    uint16_t m_scroll_to_read_delay;
+    Milliseconds m_scroll_to_read_delay;
     Language m_language;
     ShortcutDirectionOption& m_shortcut;
-    uint16_t m_travel_time_per_fetch;
+    Milliseconds m_travel_time_per_fetch;
     const Pokemon::StatsHuntIvJudgeFilterTable& m_filters;
     uint8_t m_max_keepers;
 

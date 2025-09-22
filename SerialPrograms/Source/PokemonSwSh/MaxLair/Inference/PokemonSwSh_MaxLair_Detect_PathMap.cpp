@@ -1,6 +1,6 @@
 /*  Max Lair Detect Path Map
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,8 +10,12 @@
 #include "CommonFramework/Tools/ProgramEnvironment.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSwSh/Inference/PokemonSwSh_TypeSymbolFinder.h"
-#include "PokemonSwSh/MaxLair/Options/PokemonSwSh_MaxLair_Options.h"
+//#include "PokemonSwSh/MaxLair/Options/PokemonSwSh_MaxLair_Options.h"
 #include "PokemonSwSh_MaxLair_Detect_PathMap.h"
+
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -20,7 +24,7 @@ namespace MaxLairInternal{
 
 
 bool read_type_array(
-    ConsoleHandle& console,
+    VideoStream& stream,
     const ImageViewRGB32& screen,
     const ImageFloatBox& box,
     std::deque<OverlayBoxScope>& hits,
@@ -32,7 +36,15 @@ bool read_type_array(
         type[c] = PokemonType::NONE;
     }
 
-    std::multimap<double, std::pair<PokemonType, ImagePixelBox>> candidates = find_symbols(image, 0.20);
+    std::multimap<double, std::pair<PokemonType, ImagePixelBox>> candidates = find_type_symbols(screen, image, 0.20);
+//    cout << candidates.size() << endl;
+
+#if 0
+    for (auto& item : candidates){
+        cout << item.first << " : " << POKEMON_TYPE_SLUGS().get_string(item.second.first) << endl;
+    }
+#endif
+
     if (candidates.size() < count){
 //        dump_image(console, screen, "ReadPath");
         return false;
@@ -43,7 +55,12 @@ bool read_type_array(
     hits.clear();
     size_t c = 0;
     for (const auto& item : candidates){
-        hits.emplace_back(console.overlay(), translate_to_parent(screen, box, item.second.second), COLOR_GREEN);
+        hits.emplace_back(
+            stream.overlay(),
+            COLOR_GREEN,
+            translate_to_parent(screen, box, item.second.second),
+            POKEMON_TYPE_SLUGS().get_string(item.second.first)
+        );
         sorted.emplace(item.second.second.min_x, &item.second);
         c++;
         if (c >= count){
@@ -64,7 +81,7 @@ bool read_type_array(
 }
 
 std::shared_ptr<const ImageRGB32> read_type_array_retry(
-    ConsoleHandle& console, CancellableScope& scope,
+    VideoStream& stream, CancellableScope& scope,
     const ImageFloatBox& box,
     std::deque<OverlayBoxScope>& hits,
     size_t count,
@@ -73,8 +90,8 @@ std::shared_ptr<const ImageRGB32> read_type_array_retry(
 ){
     VideoSnapshot screen;
     for (size_t c = 0; c < max_attempts; c++){
-        screen = console.video().snapshot();
-        if (read_type_array(console, screen, box, hits, count, type, boxes)){
+        screen = stream.video().snapshot();
+        if (read_type_array(stream, screen, box, hits, count, type, boxes)){
             return nullptr;
         }
         scope.wait_for(std::chrono::milliseconds(200));
@@ -84,7 +101,7 @@ std::shared_ptr<const ImageRGB32> read_type_array_retry(
 
 
 bool read_path(
-    ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context,
+    ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context,
     PathMap& path,
     const ImageFloatBox& box
 ){
@@ -93,18 +110,18 @@ bool read_path(
     std::deque<OverlayBoxScope> hits;
 
     std::shared_ptr<const ImageRGB32> error_image;
-    error_image = read_type_array_retry(console, context, box, hits, 2, path.mon1, nullptr);
+    error_image = read_type_array_retry(stream, context, box, hits, 2, path.mon1, nullptr);
     if (error_image){
-        dump_image(console, env.program_info(), "ReadPath", *error_image);
+        dump_image(stream.logger(), env.program_info(), "ReadPath", *error_image);
         return false;
     }
 
     pbf_move_right_joystick(context, 128, 0, 70, 50);
     context.wait_for_all_requests();
     ImagePixelBox boxes[4];
-    error_image = read_type_array_retry(console, context, box, hits, 4, path.mon2, boxes);
+    error_image = read_type_array_retry(stream, context, box, hits, 4, path.mon2, boxes);
     if (error_image){
-        dump_image(console, env.program_info(), "ReadPath", *error_image);
+        dump_image(stream.logger(), env.program_info(), "ReadPath", *error_image);
         return false;
     }
 
@@ -112,27 +129,27 @@ bool read_path(
         pbf_move_right_joystick(context, 128, 0, 80, 50);
         context.wait_for_all_requests();
 
-        error_image = read_type_array_retry(console, context, box, hits, 4, path.mon3, nullptr);
+        error_image = read_type_array_retry(stream, context, box, hits, 4, path.mon3, nullptr);
         if (!error_image){
             break;
         }
         pbf_move_right_joystick(context, 128, 0, 20, 50);
         context.wait_for_all_requests();
-        error_image = read_type_array_retry(console, context, box, hits, 4, path.mon3, nullptr);
+        error_image = read_type_array_retry(stream, context, box, hits, 4, path.mon3, nullptr);
         if (!error_image){
             break;
         }
 
-        dump_image(console, env.program_info(), "ReadPath", *error_image);
+        dump_image(stream.logger(), env.program_info(), "ReadPath", *error_image);
         return false;
     }
 
     pbf_move_right_joystick(context, 128, 0, 125, 50);
     context.wait_for_all_requests();
 
-    error_image = read_type_array_retry(console, context, box, hits, 1, &path.boss, nullptr);
+    error_image = read_type_array_retry(stream, context, box, hits, 1, &path.boss, nullptr);
     if (error_image){
-        dump_image(console, env.program_info(), "ReadPath", *error_image);
+        dump_image(stream.logger(), env.program_info(), "ReadPath", *error_image);
         return false;
     }
 

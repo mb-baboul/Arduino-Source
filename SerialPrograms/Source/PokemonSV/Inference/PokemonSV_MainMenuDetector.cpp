@@ -1,15 +1,14 @@
 /*  Main Menu Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "Common/Cpp/Exceptions.h"
-#include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
+#include "CommonTools/Images/SolidColorTest.h"
+#include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSV_MainMenuDetector.h"
 
 //#include <iostream>
@@ -34,7 +33,7 @@ void MainMenuDetector::make_overlays(VideoOverlaySet& items) const{
     m_arrow_right.make_overlays(items);
     m_dlc_icon.make_overlays(items);
 }
-bool MainMenuDetector::detect(const ImageViewRGB32& screen) const{
+bool MainMenuDetector::detect(const ImageViewRGB32& screen){
     //  Disambiguate against the Poke Portal.
     ImageStats bottom = image_stats(extract_box_reference(screen, m_bottom));
 //    cout << bottom.average << bottom.stddev << endl;
@@ -56,7 +55,7 @@ bool MainMenuDetector::detect(const ImageViewRGB32& screen) const{
     return false;
 }
 
-std::pair<MenuSide, int> MainMenuDetector::detect_location(const ImageViewRGB32& screen) const{
+std::pair<MenuSide, int> MainMenuDetector::detect_location(const ImageViewRGB32& screen){
     //  Disambiguate against the Poke Portal.
     ImageStats bottom = image_stats(extract_box_reference(screen, m_bottom));
     if (is_solid(bottom, {0.582218, 0.417782, 0.})){
@@ -92,12 +91,13 @@ std::pair<MenuSide, int> MainMenuDetector::detect_location(const ImageViewRGB32&
 
 
 bool MainMenuDetector::move_cursor(
-    const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context,
+    const ProgramInfo& info,
+    VideoStream& stream, ProControllerContext& context,
     MenuSide side, int row, bool fast
-) const{
+){
     if (side == MenuSide::NONE){
         throw InternalProgramError(
-            &console.logger(), PA_CURRENT_FUNCTION,
+            &stream.logger(), PA_CURRENT_FUNCTION,
             "MainMenuDetector::move_cursor() called with MenuSide::NONE."
         );
     }
@@ -107,7 +107,7 @@ bool MainMenuDetector::move_cursor(
     bool target_reached = false;
     while (true){
         context.wait_for_all_requests();
-        VideoSnapshot screen = console.video().snapshot();
+        VideoSnapshot screen = stream.video().snapshot();
         std::pair<MenuSide, int> current = this->detect_location(screen);
 
         {
@@ -124,7 +124,7 @@ bool MainMenuDetector::move_cursor(
                 break;
             }
             text += " " + std::to_string(current.second);
-            console.log(text);
+            stream.log(text);
         }
 
         //  Failed to detect menu.
@@ -132,8 +132,9 @@ bool MainMenuDetector::move_cursor(
             consecutive_detection_fails++;
             if (consecutive_detection_fails > 10){
                 OperationFailedException::fire(
-                    console, ErrorReport::SEND_ERROR_REPORT,
+                    ErrorReport::SEND_ERROR_REPORT,
                     "MainMenuDetector::move_cursor(): Unable to detect menu.",
+                    stream,
                     screen
                 );
             }
@@ -143,7 +144,7 @@ bool MainMenuDetector::move_cursor(
         consecutive_detection_fails = 0;
 
         if (moves >= 20){
-            console.log("Unable to move to target after 20 moves.", COLOR_RED);
+            stream.log("Unable to move to target after 20 moves.", COLOR_RED);
             return false;
         }
 

@@ -1,15 +1,12 @@
 /*  Common Color Check
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  * 
  *  Several checks for commonly used color in LA. These checks are used by various inference detector classes.
  */
 
 #ifndef PokemonAutomation_PokemonLA_MapDetector_H
 #define PokemonAutomation_PokemonLA_MapDetector_H
-
-#include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
 
 namespace PokemonAutomation{
 

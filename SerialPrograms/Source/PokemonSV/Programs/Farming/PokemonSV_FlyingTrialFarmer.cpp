@@ -1,16 +1,17 @@
 /*  Flying Trial Farmer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/GlobalSettingsPanel.h"
 #include "CommonFramework/Exceptions/OperationFailedException.h"
-#include "CommonFramework/Inference/BlackScreenDetector.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/VisualDetectors/BlackScreenDetector.h"
+#include "CommonTools/StartupChecks/StartProgramChecks.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_DialogDetector.h"
@@ -33,9 +34,9 @@ FlyingTrialFarmer_Descriptor::FlyingTrialFarmer_Descriptor()
         STRING_POKEMON + " SV", "Flying Trial Farmer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/FlyingTrialFarmer.md",
         "Farm the flying trial for BP.",
+        ProgramControllerClass::StandardController_RequiresPrecision,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 struct FlyingTrialFarmer_Descriptor::Stats : public StatsTracker{
@@ -110,32 +111,58 @@ FlyingTrialFarmer::FlyingTrialFarmer()
 
 
 
-bool FlyingTrialFarmer::run_rewards(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
-    bool trial_failed = true;
+bool FlyingTrialFarmer::run_rewards(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    //  Wait until a dialog shows up.
+    {
+        AdvanceDialogWatcher dialog(COLOR_RED);
+        int ret = wait_until(
+            env.console, context,
+            std::chrono::seconds(180),
+            {dialog}
+        );
+        if (ret != 0){
+            OperationFailedException::fire(
+                ErrorReport::SEND_ERROR_REPORT,
+                "End of trial not detected after 3 minutes.",
+                env.console
+            );
+        }
+        env.log("Detected end of trial.");
+    }
+
+    bool trial_passed = false;
     while (true){
-        DialogBoxWatcher dialog(COLOR_GREEN, true, std::chrono::milliseconds(250), DialogType::DIALOG_BLACK);
         OverworldWatcher overworld(env.console, COLOR_CYAN);
+        AdvanceDialogWatcher dialog_white(COLOR_RED, DialogType::DIALOG_WHITE);
+        AdvanceDialogWatcher dialog_black(COLOR_RED, DialogType::DIALOG_BLACK);
         context.wait_for_all_requests();
 
-        int ret_finish = run_until(
+        int ret_finish = wait_until(
             env.console, context,
-            [](BotBaseContext& context){
-                pbf_mash_button(context, BUTTON_B, 10000);
-            },
-            { dialog, overworld }
+            std::chrono::seconds(80),
+            {
+                overworld,
+                dialog_white,
+                dialog_black
+            }
         );
         context.wait_for_all_requests();
 
         switch (ret_finish){
-        case 0: // dialog
-            trial_failed = false;
+        case 0: // overworld
+            return trial_passed;
+        case 1: // white dialog
+            pbf_press_button(context, BUTTON_B, 160ms, 0ms);
             continue;
-        case 1: // overworld
-            return trial_failed;
+        case 2: // black dialog
+            pbf_press_button(context, BUTTON_B, 160ms, 0ms);
+            trial_passed = true;
+            continue;
         default:
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "No recognized state after 80 seconds."
+                ErrorReport::SEND_ERROR_REPORT,
+                "No recognized state after 80 seconds.",
+                env.console
             );
         }
     }
@@ -149,7 +176,8 @@ uint8_t FlyingTrialFarmer::get_final_y_axis(int8_t delta_y){
     }
 }
 
-void FlyingTrialFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void FlyingTrialFarmer::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
+    StartProgramChecks::check_performance_class_wired_or_wireless(context);
     assert_16_9_720p_min(env.logger(), env.console);
 
     FlyingTrialFarmer_Descriptor::Stats& stats = env.current_stats<FlyingTrialFarmer_Descriptor::Stats>();
@@ -161,9 +189,9 @@ void FlyingTrialFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseCont
         BlackScreenOverWatcher black_screen(COLOR_RED, { 0.2, 0.2, 0.6, 0.6 });
         context.wait_for_all_requests();
 
-        int ret_entry = run_until(
+        int ret_entry = run_until<ProControllerContext>(
             env.console, context,
-            [](BotBaseContext& context){
+            [](ProControllerContext& context){
                 pbf_mash_button(context, BUTTON_A, 10000);
             },
             { black_screen }
@@ -212,15 +240,29 @@ void FlyingTrialFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseCont
                 pbf_wait(context,  9 * TICKS_PER_SECOND);
                 break;
             case FlightPath::BACK_ENTRY_SOFT_TURN:
-                pbf_wait(context,  3 * TICKS_PER_SECOND);
-                pbf_move_left_joystick(context, 180, get_final_y_axis(-108), 1 * TICKS_PER_SECOND, 0);
-                pbf_wait(context,  2 * TICKS_PER_SECOND);
-                pbf_move_left_joystick(context,  40, get_final_y_axis( -78), 240, 0);
-                pbf_wait(context,  1 * TICKS_PER_SECOND);
-                pbf_move_left_joystick(context, 110, get_final_y_axis( -78), 2 * TICKS_PER_SECOND, 0);
-                pbf_wait(context, 14 * TICKS_PER_SECOND);
-                pbf_move_left_joystick(context, 205, get_final_y_axis(  37), 160, 0);
-                pbf_wait(context,  9 * TICKS_PER_SECOND);
+#if 0
+                if (env.console.controller().controller_type() == ControllerType::NintendoSwitch_WirelessProController){
+                    pbf_wait(context,  Milliseconds(3000));
+                    pbf_move_left_joystick(context, 180, get_final_y_axis(-108), Milliseconds(1005), Milliseconds(0));
+                    pbf_wait(context,  Milliseconds(1995)); 
+                    pbf_move_left_joystick(context,  40, get_final_y_axis( -78), Milliseconds(1605), Milliseconds(0));
+                    pbf_wait(context,  Milliseconds(1005)); 
+                    pbf_move_left_joystick(context, 110, get_final_y_axis( -78), Milliseconds(1995), Milliseconds(0)); 
+                    pbf_wait(context,  Milliseconds(14040));
+                    pbf_move_left_joystick(context, 205, get_final_y_axis(  30), Milliseconds(735), Milliseconds(0));
+                    pbf_wait(context,  Milliseconds(9000));                                       
+                }else{
+#endif
+                    pbf_wait(context,  3000ms);
+                    pbf_move_left_joystick(context, 180, get_final_y_axis(-108), 1000ms, 0ms);
+                    pbf_wait(context,  2000ms);
+                    pbf_move_left_joystick(context,  40, get_final_y_axis( -78), 1920ms, 0ms);
+                    pbf_wait(context,  1000ms);
+                    pbf_move_left_joystick(context, 110, get_final_y_axis( -78), 2000ms, 0ms);
+                    pbf_wait(context, 14000ms);
+                    pbf_move_left_joystick(context, 205, get_final_y_axis(  37), 1280ms, 0ms);
+                    pbf_wait(context,  9000ms);
+//                }
                 break;
             case FlightPath::BACK_ENTRY_HARD_TURN:
                 pbf_wait(context,  3 * TICKS_PER_SECOND);
@@ -236,7 +278,7 @@ void FlyingTrialFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseCont
             }
         }
 
-        if (!run_rewards(env, context)){
+        if (run_rewards(env, context)){
             stats.m_success++;
         }else{
             stats.m_fail++;

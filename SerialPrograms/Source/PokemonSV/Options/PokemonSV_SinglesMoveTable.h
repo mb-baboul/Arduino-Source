@@ -1,6 +1,6 @@
 /*  Singles Move Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -24,8 +24,8 @@ enum class SinglesMoveType{
     Move4,
     Run,
 };
-const EnumDatabase<SinglesMoveType>& singles_move_enum_database_wild();
-const EnumDatabase<SinglesMoveType>& singles_move_enum_database_trainer();
+const EnumDropdownDatabase<SinglesMoveType>& singles_move_enum_database_wild();
+const EnumDropdownDatabase<SinglesMoveType>& singles_move_enum_database_trainer();
 
 
 struct SinglesMoveEntry{
@@ -46,7 +46,7 @@ public:
     SinglesMoveEntry snapshot() const;
 
 private:
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 private:
     EnumDropdownCell<SinglesMoveType> type;

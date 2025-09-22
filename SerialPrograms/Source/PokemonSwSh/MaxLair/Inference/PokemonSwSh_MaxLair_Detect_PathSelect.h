@@ -1,21 +1,20 @@
 /*  Max Lair Detect Path Select
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSwSh_MaxLair_Detect_PathSelect_H
 #define PokemonAutomation_PokemonSwSh_MaxLair_Detect_PathSelect_H
 
-#include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
 #include "CommonFramework/Tools/ProgramEnvironment.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "PokemonSwSh/MaxLair/Framework/PokemonSwSh_MaxLair_State.h"
 
 namespace PokemonAutomation{
-    class BotBaseContext;
 namespace NintendoSwitch{
 namespace PokemonSwSh{
 namespace MaxLairInternal{
@@ -57,6 +56,7 @@ private:
     ImageFloatBox m_dialog_middle;
 //    ImageFloatBox m_dialog_right;
     ImageFloatBox m_left;
+    ImageFloatBox m_path_box;
 };
 
 
@@ -78,7 +78,11 @@ public:
     ) const;
 
 
-    void read_path(ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context, GlobalState& state);
+    void read_path(
+        ProgramEnvironment& env,
+        VideoStream& stream, ProControllerContext& context,
+        GlobalState& state
+    );
 
 
     //  Determine which side you're on (left or right) in the path.
@@ -96,10 +100,8 @@ public:
     void read_sprites(Logger& logger, const ImageViewRGB32& screen, std::string slugs[4]) const;
     void read_hp(Logger& logger, const ImageViewRGB32& screen, double hp[4]) const;
 
-    static int8_t read_side(const ImageViewRGB32& image, int p_min_rgb_sum);
-
 private:
-    size_t m_player_index;
+//    size_t m_player_index;
     OverlayBoxScope m_path;
     OverlayBoxScope m_sprite0;
     OverlayBoxScope m_sprite1;

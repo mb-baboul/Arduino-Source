@@ -1,10 +1,10 @@
 /*  Dialog Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/ImageTools/SolidColorTest.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonSV_DialogArrowDetector.h"
 #include "PokemonSV_GradientArrowDetector.h"
 #include "PokemonSV_DialogDetector.h"
@@ -33,7 +33,7 @@ void DialogBoxDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_border_top);
     items.add(m_color, m_border_bot);
 }
-bool DialogBoxDetector::detect(const ImageViewRGB32& screen) const{
+bool DialogBoxDetector::detect(const ImageViewRGB32& screen){
     ImageStats stats_box_top = image_stats(extract_box_reference(screen, m_box_top));
 //    cout << stats_box_top.average << stats_box_top.stddev << endl;
     bool white;
@@ -67,7 +67,7 @@ bool DialogBoxDetector::detect(const ImageViewRGB32& screen) const{
 
     ImageStats stats_border_top = image_stats(extract_box_reference(screen, m_border_top));
 //    cout << stats_border_top.average << stats_border_top.stddev << endl;
-    if (stats_border_top.stddev.sum() < 75){
+    if (stats_border_top.stddev.sum() < 50){
         return !m_true_if_detected;
     }
 
@@ -83,15 +83,15 @@ bool DialogBoxDetector::detect(const ImageViewRGB32& screen) const{
 
 
 
-AdvanceDialogDetector::AdvanceDialogDetector(Color color)
-    : m_box(color)
-    , m_arrow(0.710, 0.850, 0.030, 0.042)
+AdvanceDialogDetector::AdvanceDialogDetector(Color color, DialogType type)
+    : m_box(color, true, type)
+    , m_arrow(0.710, 0.850, 0.030, 0.045)
 {}
 void AdvanceDialogDetector::make_overlays(VideoOverlaySet& items) const{
     m_box.make_overlays(items);
     items.add(m_box.color(), m_arrow);
 }
-bool AdvanceDialogDetector::detect(const ImageViewRGB32& screen) const{
+bool AdvanceDialogDetector::detect(const ImageViewRGB32& screen){
     if (!m_box.detect(screen)){
         return false;
     }
@@ -114,7 +114,7 @@ void PromptDialogDetector::make_overlays(VideoOverlaySet& items) const{
     m_box.make_overlays(items);
     items.add(m_box.color(), m_gradient);
 }
-bool PromptDialogDetector::detect(const ImageViewRGB32& screen) const{
+bool PromptDialogDetector::detect(const ImageViewRGB32& screen){
     if (!m_box.detect(screen)){
         return false;
     }

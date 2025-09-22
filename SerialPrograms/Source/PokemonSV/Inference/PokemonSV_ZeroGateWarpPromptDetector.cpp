@@ -1,12 +1,11 @@
 /*  Zero Gate Warp Prompt Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSV_ZeroGateWarpPromptDetector.h"
 
@@ -27,7 +26,7 @@ ZeroGateWarpPromptDetector::ZeroGateWarpPromptDetector(Color color)
 void ZeroGateWarpPromptDetector::make_overlays(VideoOverlaySet& items) const{
     m_arrow.make_overlays(items);
 }
-bool ZeroGateWarpPromptDetector::detect(const ImageViewRGB32& screen) const{
+bool ZeroGateWarpPromptDetector::detect(const ImageViewRGB32& screen){
     return detect_location(screen) >= 0;
 }
 int ZeroGateWarpPromptDetector::detect_location(const ImageViewRGB32& screen) const{
@@ -43,10 +42,10 @@ int ZeroGateWarpPromptDetector::detect_location(const ImageViewRGB32& screen) co
     return index;
 }
 bool ZeroGateWarpPromptDetector::move_cursor(
-    const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context,
+    const ProgramInfo& info, VideoStream& stream, ProControllerContext& context,
     int row
 ) const{
-    VideoOverlaySet overlays(console.overlay());
+    VideoOverlaySet overlays(stream.overlay());
     make_overlays(overlays);
 
     size_t consecutive_detection_fails = 0;
@@ -54,17 +53,18 @@ bool ZeroGateWarpPromptDetector::move_cursor(
     bool target_reached = false;
     while (true){
         context.wait_for_all_requests();
-        VideoSnapshot screen = console.video().snapshot();
+        VideoSnapshot screen = stream.video().snapshot();
         int current = this->detect_location(screen);
 
-        console.log("Current Location: " + std::to_string(current));
+        stream.log("Current Location: " + std::to_string(current));
 
         if (current < 0){
             consecutive_detection_fails++;
             if (consecutive_detection_fails > 10){
                 OperationFailedException::fire(
-                    console, ErrorReport::SEND_ERROR_REPORT,
+                    ErrorReport::SEND_ERROR_REPORT,
                     "ZeroGateWarpPromptDetector::move_cursor(): Unable to detect cursor.",
+                    stream,
                     screen
                 );
             }
@@ -75,8 +75,9 @@ bool ZeroGateWarpPromptDetector::move_cursor(
 
         if (moves >= 10){
             OperationFailedException::fire(
-                console, ErrorReport::SEND_ERROR_REPORT,
+                ErrorReport::SEND_ERROR_REPORT,
                 "Unable to move to target after 10 moves.",
+                stream,
                 screen
             );
         }

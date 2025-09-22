@@ -1,17 +1,16 @@
 /*  Map Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/Compiler.h"
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonBDSP_MapDetector.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -30,7 +29,7 @@ void MapDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_box1);
     items.add(m_color, m_box2);
 }
-bool MapDetector::detect(const ImageViewRGB32& screen) const{
+bool MapDetector::detect(const ImageViewRGB32& screen){
     ImageStats stats0 = image_stats(extract_box_reference(screen, m_box0));
 //    cout << "m_box0: " << stats0.average << stats0.stddev << endl;
     if (!is_solid(stats0, {0.0668203, 0.4447, 0.488479})){

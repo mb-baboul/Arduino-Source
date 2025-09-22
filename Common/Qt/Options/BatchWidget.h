@@ -1,6 +1,6 @@
 /*  Batch Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -14,14 +14,15 @@
 namespace PokemonAutomation{
 
 
-
+//  A Widget to hold multiple derived classes of ConfigWidget.
+//  Construct using a BatchOption.
 class BatchWidget : public QWidget, public ConfigWidget{
 public:
     ~BatchWidget();
     BatchWidget(QWidget& parent, BatchOption& value);
 
     virtual void update_value() override;
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 protected:
     BatchOption& m_value;

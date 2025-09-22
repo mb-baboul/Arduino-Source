@@ -1,25 +1,21 @@
 /*  Tera Card Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_TeraCardDetector_H
 #define PokemonAutomation_PokemonSV_TeraCardDetector_H
 
-#include <atomic>
-#include <mutex>
 #include "Common/Cpp/Color.h"
 #include "Common/Cpp/AbstractLogger.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/Inference/VisualDetector.h"
-//#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
 #include "PokemonSV/Options/PokemonSV_PlayerList.h"
 #include "PokemonSV_TeraTypeReader.h"
 #include "PokemonSV_TeraSilhouetteReader.h"
 
 namespace PokemonAutomation{
-    class AsyncDispatcher;
     struct ProgramInfo;
 namespace NintendoSwitch{
 namespace PokemonSV{
@@ -34,7 +30,7 @@ public:
     TeraCardReader(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     uint8_t stars(
         Logger& logger, const ProgramInfo& info, const ImageViewRGB32& screen
@@ -42,7 +38,7 @@ public:
     std::string tera_type(
         Logger& logger, const ProgramInfo& info, const ImageViewRGB32& screen
     ) const;
-    std::string pokemon_slug(
+    std::set<std::string> pokemon_slug(
         Logger& logger, const ProgramInfo& info, const ImageViewRGB32& screen
     ) const;
 
@@ -88,19 +84,19 @@ struct TeraLobbyNameMatchResult{
 
 class TeraLobbyReader : public StaticScreenDetector{
 public:
-    TeraLobbyReader(Logger& logger, AsyncDispatcher& dispatcher, Color color = COLOR_RED);
+    TeraLobbyReader(Logger& logger, Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
 
     //  Returns true if we are on an active lobby.
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     uint8_t total_players(const ImageViewRGB32& screen) const;
 //    uint8_t ready_players(const ImageViewRGB32& screen) const;
     uint8_t ready_joiners(const ImageViewRGB32& screen, uint8_t host_players);
 
-    int16_t seconds_left(Logger& logger, AsyncDispatcher& dispatcher, const ImageViewRGB32& screen) const;
-    std::string raid_code(Logger& logger, AsyncDispatcher& dispatcher, const ImageViewRGB32& screen) const;
+    int16_t seconds_left(Logger& logger, const ImageViewRGB32& screen) const;
+    std::string raid_code(Logger& logger, const ImageViewRGB32& screen) const;
 
     //  OCR the player names in all the specified languages.
     //  The returned strings are raw OCR output and are unprocessed.
@@ -113,7 +109,6 @@ public:
 
 private:
     Logger& m_logger;
-    AsyncDispatcher& m_dispatcher;
     Color m_color;
     ImageFloatBox m_bottom_right;
     ImageFloatBox m_label;
@@ -131,37 +126,14 @@ private:
 class TeraLobbyWatcher : public DetectorToFinder<TeraLobbyReader>{
 public:
     TeraLobbyWatcher(
-        Logger& logger, AsyncDispatcher& dispatcher,
-        Color color = COLOR_RED, std::chrono::milliseconds duration = std::chrono::milliseconds(250)
+        Logger& logger,
+        Color color = COLOR_RED,
+        std::chrono::milliseconds duration = std::chrono::milliseconds(250)
     )
-         : DetectorToFinder("TeraLobbyFinder", duration, logger, dispatcher, color)
+         : DetectorToFinder("TeraLobbyFinder", duration, logger, color)
     {}
 };
 
-#if 0
-class TeraLobbyReadyWaiter : public TeraLobbyReader, public VisualInferenceCallback{
-public:
-    TeraLobbyReadyWaiter(
-        Logger& logger, AsyncDispatcher& dispatcher,
-        Color color, uint8_t desired_players
-    );
-
-    int8_t last_known_total_players() const{
-        return m_last_known_total_players.load(std::memory_order_relaxed);
-    }
-    int8_t last_known_ready_players() const{
-        return m_last_known_ready_players.load(std::memory_order_relaxed);
-    }
-
-    virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool process_frame(const ImageViewRGB32& frame, WallClock timestamp) override;
-
-private:
-    uint8_t m_desired_players;
-    std::atomic<int8_t> m_last_known_total_players;
-    std::atomic<int8_t> m_last_known_ready_players;
-};
-#endif
 
 
 

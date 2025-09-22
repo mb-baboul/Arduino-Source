@@ -1,17 +1,16 @@
 /*  Date Toucher
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_DateToucher_H
 #define PokemonAutomation_DateToucher_H
 
-#include <chrono>
 #include "Common/Cpp/Concurrency/SpinLock.h"
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
-#include "ClientSource/Connection/BotBase.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
+#include "NintendoSwitch/NintendoSwitch_ConsoleHandle.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -22,18 +21,6 @@ class TimeRollbackHoursOption : public SimpleIntegerOption<uint8_t>{
 public:
     TimeRollbackHoursOption();
 };
-
-#if 0
-class TouchDateIntervalOptionTicks : public TimeExpressionOption<uint32_t>{
-public:
-    TouchDateIntervalOptionTicks()
-        : TimeExpressionOption<uint32_t>(
-            "<b>Rollover Prevention:</b><br>Prevent a den from rolling over by periodically touching the date. If set to zero, this feature is disabled.",
-            "4 * 3600 * TICKS_PER_SECOND"
-        )
-    {}
-};
-#endif
 
 class TouchDateIntervalOption : public ConfigOption{
 public:
@@ -51,7 +38,7 @@ public:
     virtual ConfigWidget* make_QtWidget(QWidget& parent) override;
 
     bool ok_to_touch_now();
-    void touch_now_from_home_if_needed(BotBaseContext& context);
+    void touch_now_from_home_if_needed(ConsoleHandle& console, ProControllerContext& context);
 
 private:
     SimpleIntegerOption<uint8_t> m_hours;

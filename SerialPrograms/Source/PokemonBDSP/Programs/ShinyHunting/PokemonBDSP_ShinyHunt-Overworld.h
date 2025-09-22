@@ -1,6 +1,6 @@
 /*  Shiny Hunt - Overworld
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,7 @@
 #define PokemonAutomation_PokemonBDSP_ShinyHuntOverworld_H
 
 #include "Common/Cpp/Options/StaticTextOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
 #include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
@@ -33,7 +33,7 @@ public:
 class ShinyHuntOverworld : public SingleSwitchProgramInstance{
 public:
     ShinyHuntOverworld();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 
 private:
@@ -50,8 +50,8 @@ private:
     EventNotificationsOption NOTIFICATIONS;
 
     SectionDividerOption m_advanced_options;
-//    TimeExpressionOption<uint16_t> WATCHDOG_TIMER;
-    TimeExpressionOption<uint16_t> EXIT_BATTLE_TIMEOUT;
+//    MillisecondsOption WATCHDOG_TIMER0;
+    MillisecondsOption EXIT_BATTLE_TIMEOUT0;
 };
 
 

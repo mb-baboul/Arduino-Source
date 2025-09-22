@@ -1,6 +1,6 @@
 /*  Pokemon Name Select Widget
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -67,7 +67,7 @@ NameSelectWidget::NameSelectWidget(
     }
     this->addItems(list);
 
-    // Inititalize the widget to at least select sth.
+    // Initialize the widget to at least select sth.
     if (slugs.size() > 0){
         this->setCurrentIndex(0);
     }

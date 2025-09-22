@@ -1,6 +1,6 @@
 /*  Global Settings Panel
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -23,7 +23,7 @@
 
 namespace PokemonAutomation{
 
-
+class CheckForUpdatesOption;
 class ThemeSelectorOption;
 class ResolutionOption;
 class StreamHistoryOption;
@@ -37,6 +37,8 @@ class VideoPipelineOptions;
 class ErrorReportOption;
 
 
+
+
 class FolderInputOption : public StringOption{
 public:
     using StringOption::StringOption;
@@ -47,8 +49,6 @@ public:
         }
     }
 };
-
-
 
 
 struct DebugSettings{
@@ -86,21 +86,24 @@ public:
     virtual JsonValue to_json() const override;
 
 private:
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 public:
-    BooleanCheckBoxOption CHECK_FOR_UPDATES;
+    Pimpl<CheckForUpdatesOption> CHECK_FOR_UPDATES;
 
     StringOption STATS_FILE;
     FolderInputOption TEMP_FOLDER;
 
     Pimpl<ThemeSelectorOption> THEME;
     Pimpl<ResolutionOption> WINDOW_SIZE;
+    Pimpl<ResolutionOption> LOG_WINDOW_SIZE;
+    BooleanCheckBoxOption LOG_WINDOW_STARTUP;
 
     Pimpl<StreamHistoryOption> STREAM_HISTORY;
     Pimpl<SleepSuppressOptions> SLEEP_SUPPRESS;
 
     SectionDividerOption m_discord_settings;
+    BooleanCheckBoxOption RICH_PRESENCE;
     BooleanCheckBoxOption ALL_STATS;
     Pimpl<Integration::DiscordSettingsOption> DISCORD;
 

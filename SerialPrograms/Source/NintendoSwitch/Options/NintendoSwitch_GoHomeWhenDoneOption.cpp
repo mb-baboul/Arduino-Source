@@ -1,6 +1,6 @@
 /*  Go Home When Done
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -20,7 +20,7 @@ GoHomeWhenDoneOption::GoHomeWhenDoneOption(bool default_value)
     )
 {}
 
-void GoHomeWhenDoneOption::run_end_of_program(BotBaseContext& context){
+void GoHomeWhenDoneOption::run_end_of_program(ProControllerContext& context){
     if (*this){
         pbf_wait(context, 5 * TICKS_PER_SECOND);
         pbf_press_button(context, BUTTON_HOME, 20, 125);

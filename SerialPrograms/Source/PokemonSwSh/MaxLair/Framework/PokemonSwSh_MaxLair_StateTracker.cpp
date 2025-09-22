@@ -1,9 +1,10 @@
 /*  Max Lair State Tracker
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
+#include <map>
 #include <mutex>
 #include <condition_variable>
 #include "Common/Compiler.h"

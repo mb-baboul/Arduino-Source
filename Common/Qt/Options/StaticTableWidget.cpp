@@ -1,6 +1,6 @@
 /*  Static Table Widget
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -54,7 +54,7 @@ StaticTableWidget::StaticTableWidget(QWidget& parent, StaticTableOption& value)
     for (const std::string& name : m_value.make_header()){
         header << QString::fromStdString(name);
     }
-    m_table->setColumnCount(header.size());
+    m_table->setColumnCount(int(header.size()));
     m_table->setRowCount((int)table.size());
     m_table->setHorizontalHeaderLabels(header);
 

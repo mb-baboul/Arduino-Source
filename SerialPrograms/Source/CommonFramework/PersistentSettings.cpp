@@ -1,18 +1,18 @@
 /*  Persistent Settings
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <QCoreApplication>
 #include "Common/Cpp/Exceptions.h"
 #include "Common/Cpp/Json/JsonValue.h"
-#include "Common/Cpp/Json/JsonArray.h"
+//#include "Common/Cpp/Json/JsonArray.h"
 #include "Common/Cpp/Json/JsonObject.h"
 #include "CommonFramework/Globals.h"
 #include "CommonFramework/GlobalSettingsPanel.h"
+#include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/Options/Environment/PerformanceOptions.h"
-#include "NintendoSwitch/Framework/NintendoSwitch_VirtualControllerMapping.h"
 #include "PersistentSettings.h"
 
 // #include <iostream>
@@ -37,23 +37,21 @@ void PersistentSettings::write() const{
     JsonObject root;
 
     root["20-GlobalSettings"] = GlobalSettings::instance().to_json();
-    root["50-SwitchKeyboardMapping"] = NintendoSwitch::read_keyboard_mapping();
+//    root["50-SwitchKeyboardMapping"] = NintendoSwitch::read_keyboard_mapping();
 
     root["99-Panels"] = panels.clone();
 
     try{
-        std::string settings_path = SETTINGS_PATH() + QCoreApplication::applicationName().toStdString() + "-Settings.json";
-        root.dump(settings_path);
+        root.dump(PROGRAM_SETTING_JSON_PATH());
     }catch (FileException&){}
 }
 
 
 void PersistentSettings::read(){
-    std::string settings_path = SETTINGS_PATH() + QCoreApplication::applicationName().toStdString() + "-Settings.json";
-    JsonValue json = load_json_file(settings_path);
+    JsonValue json = load_json_file(PROGRAM_SETTING_JSON_PATH());
     JsonObject* obj = json.to_object();
     if (obj == nullptr){
-        throw FileException(nullptr, PA_CURRENT_FUNCTION, "Invalid settings file.", settings_path);
+        throw FileException(nullptr, PA_CURRENT_FUNCTION, "Invalid settings file.", PROGRAM_SETTING_JSON_PATH());
     }
 
     //  Need to load this subset of settings first because they will affect how
@@ -65,14 +63,16 @@ void PersistentSettings::read(){
     }
 
 //    GlobalSettings::instance().PROCESS_PRIORITY0.update_priority_to_option();
-    GlobalSettings::instance().PERFORMANCE->REALTIME_THREAD_PRIORITY.set_on_this_thread();
+    GlobalSettings::instance().PERFORMANCE->REALTIME_THREAD_PRIORITY.set_on_this_thread(global_logger_tagged());
 
+#if 0
     {
         const JsonArray* array = obj->get_array("50-SwitchKeyboardMapping");
         if (array){
             NintendoSwitch::set_keyboard_mapping(*array);
         }
     }
+#endif
     {
         JsonObject* value = obj->get_object("99-Panels");
         if (value){

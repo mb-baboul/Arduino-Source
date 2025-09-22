@@ -1,6 +1,6 @@
 /*  Battle Sprite Watcher
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *  
  *  Watch the sprites appear on the upper right corner of the screen during a mult-pokemon
  *  battle. This is useful to detect if any skittish pokemon escape during the starting
@@ -13,7 +13,7 @@
 #include "CommonFramework/ImageTools/ImageBoxes.h"
 #include "CommonFramework/Logging/Logger.h"
 #include "CommonFramework/VideoPipeline/VideoOverlay.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
 #include "PokemonLA/Inference/Battles/PokemonLA_BattleStartDetector.h"
 
 namespace PokemonAutomation{

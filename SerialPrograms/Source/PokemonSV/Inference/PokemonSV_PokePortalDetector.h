@@ -1,6 +1,6 @@
 /*  Poke Portal Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,12 +9,12 @@
 
 #include "Common/Cpp/Color.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "CommonTools/VisualDetector.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_GradientArrowDetector.h"
 
 namespace PokemonAutomation{
-    class ConsoleHandle;
-    class BotBaseContext;
     struct ProgramInfo;
 namespace NintendoSwitch{
 namespace PokemonSV{
@@ -26,17 +26,17 @@ public:
     PokePortalDetector(Color color = COLOR_RED);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     //  Read where the cursor is. Returns -1 on failure.
-    int detect_location(const ImageViewRGB32& screen) const;
+    int detect_location(const ImageViewRGB32& screen);
 
     //  While sitting on the menu, move the cursor to the desired slot.
     //  Returns true if success.
     bool move_cursor(
-        const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context,
+        const ProgramInfo& info, VideoStream& stream, ProControllerContext& context,
         int row
-    ) const;
+    );
 
 
 private:

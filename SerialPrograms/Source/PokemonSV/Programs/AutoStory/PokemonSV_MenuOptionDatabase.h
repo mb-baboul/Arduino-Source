@@ -1,6 +1,6 @@
 /*  Menu Option Database
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,9 +10,6 @@
 #include <string>
 
 namespace PokemonAutomation{
-    class AsyncDispatcher;
-    class ConsoleHandle;
-    class BotBaseContext;
 namespace NintendoSwitch{
 namespace PokemonSV{
 

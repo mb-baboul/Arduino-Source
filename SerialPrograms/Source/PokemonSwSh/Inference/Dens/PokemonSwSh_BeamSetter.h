@@ -1,6 +1,6 @@
 /*  Beam Setter
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *
  *      Drop a wishing piece and determine if it is red or purple.
@@ -12,10 +12,10 @@
 
 #include <vector>
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 
 namespace PokemonAutomation{
-    class BotBaseContext;
     class ProgramEnvironment;
 namespace NintendoSwitch{
 namespace PokemonSwSh{
@@ -31,11 +31,14 @@ public:
     };
 
 public:
-    BeamSetter(ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context);
+    BeamSetter(
+        ProgramEnvironment& env,
+        VideoStream& stream, ProControllerContext& context
+    );
 
     Detection run(
         bool save_screenshot,
-        uint16_t timeout_ticks,
+        Milliseconds timeout,
         double min_brightness,
         double min_euclidean,
         double min_delta_ratio,
@@ -44,9 +47,8 @@ public:
 
 
 private:
-    // ProgramEnvironment& m_env;
-    ConsoleHandle& m_console;
-    BotBaseContext& m_context;
+    VideoStream& m_stream;
+    ProControllerContext& m_context;
     OverlayBoxScope m_text_box0;
     OverlayBoxScope m_text_box1;
     OverlayBoxScope m_box;

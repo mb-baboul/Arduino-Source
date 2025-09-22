@@ -1,6 +1,6 @@
 /*  Tera Move Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -15,8 +15,8 @@ namespace NintendoSwitch{
 namespace PokemonSV{
 
 
-const EnumDatabase<TeraMoveType>& tera_move_enum_database(){
-    static EnumDatabase<TeraMoveType> database{
+const EnumDropdownDatabase<TeraMoveType>& tera_move_enum_database(){
+    static EnumDropdownDatabase<TeraMoveType> database{
         {TeraMoveType::Wait,            "wait",             "Wait for X seconds."},
         {TeraMoveType::Move1,           "move1",            "Move 1"},
         {TeraMoveType::Move2,           "move2",            "Move 2"},
@@ -28,8 +28,8 @@ const EnumDatabase<TeraMoveType>& tera_move_enum_database(){
     };
     return database;
 }
-const EnumDatabase<TeraTarget>& tera_target_enum_database(){
-    static EnumDatabase<TeraTarget> database{
+const EnumDropdownDatabase<TeraTarget>& tera_target_enum_database(){
+    static EnumDropdownDatabase<TeraTarget> database{
         {TeraTarget::Opponent,  "opponent", "Opponent"},
         {TeraTarget::Player0,   "player0",  "Player 0 (yourself)"},
         {TeraTarget::Player1,   "player1",  "Player 1 (right of yourself)"},
@@ -85,7 +85,7 @@ TeraMoveTableRow::TeraMoveTableRow(EditableTableOption& parent_table)
     PA_ADD_OPTION(target);
     PA_ADD_OPTION(notes);
 
-    TeraMoveTableRow::value_changed(this);
+    TeraMoveTableRow::on_config_value_changed(this);
     type.add_listener(*this);
 }
 std::unique_ptr<EditableTableRow> TeraMoveTableRow::clone() const{
@@ -99,7 +99,7 @@ std::unique_ptr<EditableTableRow> TeraMoveTableRow::clone() const{
 TeraMoveEntry TeraMoveTableRow::snapshot() const{
     return TeraMoveEntry{type, seconds, target};
 }
-void TeraMoveTableRow::value_changed(void* object){
+void TeraMoveTableRow::on_config_value_changed(void* object){
     TeraMoveType type = this->type;
 //    cout << "Enter: type = " << (int)type << endl;
 

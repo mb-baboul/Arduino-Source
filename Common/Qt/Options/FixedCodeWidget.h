@@ -1,6 +1,6 @@
 /*  Fixed Code Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -22,7 +22,7 @@ public:
     FixedCodeWidget(QWidget& parent, FixedCodeOption& value);
 
     virtual void update_value() override;
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 private:
     std::string sanitized_code(const std::string& text) const;

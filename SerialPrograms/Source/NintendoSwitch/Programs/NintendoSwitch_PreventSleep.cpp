@@ -1,11 +1,10 @@
 /*  Prevent Sleep
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "Common/NintendoSwitch/NintendoSwitch_Protocol_PushButtons.h"
-#include "NintendoSwitch/FixedInterval.h"
+#include "NintendoSwitch/Commands/NintendoSwitch_Commands_Superscalar.h"
 #include "NintendoSwitch_PreventSleep.h"
 
 namespace PokemonAutomation{
@@ -18,9 +17,9 @@ PreventSleep_Descriptor::PreventSleep_Descriptor()
         "Nintendo Switch", "Prevent Sleep",
         "ComputerControl/blob/master/Wiki/Programs/NintendoSwitch/PreventSleep.md",
         "Press B every 15 seconds to keep the Switch from sleeping.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::NONE,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -28,9 +27,9 @@ PreventSleep_Descriptor::PreventSleep_Descriptor()
 
 PreventSleep::PreventSleep(){}
 
-void PreventSleep::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void PreventSleep::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     while (true){
-        ssf_press_button2(context, BUTTON_B, 15 * TICKS_PER_SECOND, 10);
+        ssf_press_button(context, BUTTON_B, 15000ms, 80ms);
     }
 }
 

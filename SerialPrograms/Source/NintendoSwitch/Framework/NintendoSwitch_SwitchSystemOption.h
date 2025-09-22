@@ -1,6 +1,6 @@
 /*  Switch System Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  *  This class represents the serializable state of a Switch console.
  *  Specifially, holds the settings of:
@@ -16,35 +16,41 @@
 #define PokemonAutomation_NintendoSwitch_SwitchSystemOption_H
 
 #include "Common/Cpp/Color.h"
-#include "CommonFramework/Globals.h"
 #include "CommonFramework/AudioPipeline/AudioOption.h"
-#include "CommonFramework/ControllerDevices/SerialPortOption.h"
-#include "CommonFramework/VideoPipeline/CameraOption.h"
+#include "CommonFramework/VideoPipeline/VideoSourceDescriptor.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayOption.h"
+#include "CommonFramework/Panels/ProgramDescriptor.h"
+#include "Controllers/ControllerDescriptor.h"
+#include "NintendoSwitch/Options/NintendoSwitch_ModelType.h"
 
 namespace PokemonAutomation{
+    class ControllerRequirements;
 namespace NintendoSwitch{
 
 
-Color pick_color(FeedbackType feedback, PABotBaseLevel size);
+Color pick_color(ProgramControllerClass color_class);
 
 
+// options to control and monitor a Switch. It inlcudes
+// what micro-controller and what video source to use and
+// what video overlay display option to set.
 class SwitchSystemOption{
-    static const std::string JSON_SERIAL;
+    static const std::string JSON_CONTROLLER;
     static const std::string JSON_CAMERA;
+    static const std::string JSON_VIDEO;
     static const std::string JSON_AUDIO;
     static const std::string JSON_OVERLAY;
+    static const std::string JSON_CONSOLE_TYPE;
 
 public:
     SwitchSystemOption(
-        PABotBaseLevel min_pabotbase,
         bool allow_commands_while_running
     );
     SwitchSystemOption(
-        PABotBaseLevel min_pabotbase,
         bool allow_commands_while_running,
         const JsonValue& json
     );
+
     void load_json(const JsonValue& json);
     JsonValue to_json() const;
 
@@ -52,10 +58,11 @@ public:
 public:
     const bool m_allow_commands_while_running;
 
-    SerialPortOption m_serial;
-    CameraOption m_camera;
+    ControllerOption m_controller;
+    VideoSourceOption m_video;
     AudioOption m_audio;
     VideoOverlayOption m_overlay;
+    ConsoleModelCell m_console_type;
 };
 
 

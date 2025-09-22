@@ -1,6 +1,6 @@
 /*  Pokemon Automation Bot Base
  * 
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  * 
  *      This is the main PABotBase class.
  * 
@@ -31,6 +31,7 @@
 #include <thread>
 #include "Common/Cpp/AbstractLogger.h"
 #include "Common/Cpp/Concurrency/SpinLock.h"
+#include "Common/SerialPABotBase/SerialPABotBase_Protocol.h"
 #include "ClientSource/Connection/MessageLogger.h"
 #include "ClientSource/Connection/PABotBaseConnection.h"
 #include "BotBase.h"
@@ -40,8 +41,7 @@
 namespace PokemonAutomation{
 
 
-class PABotBase : public BotBase, private PABotBaseConnection{
-//    static const size_t MAX_PENDING_REQUESTS = PABB_DEVICE_QUEUE_SIZE;
+class PABotBase : public BotBaseController, private PABotBaseConnection{
     static const seqnum_t MAX_SEQNUM_GAP = (seqnum_t)-1 >> 2;
 
 public:
@@ -49,14 +49,14 @@ public:
         Logger& logger,
         std::unique_ptr<StreamConnection> connection,
         MessageLogger* message_logger = nullptr,
-        std::chrono::milliseconds retransmit_delay = std::chrono::milliseconds(PABB_RETRANSMIT_DELAY_MILLIS)
+        std::chrono::milliseconds retransmit_delay = std::chrono::milliseconds(100)
     );
     virtual ~PABotBase();
 
     using PABotBaseConnection::set_sniffer;
 
     void connect();
-    void stop();
+    virtual void stop(std::string error_message = "") override;
 
     std::chrono::time_point<std::chrono::system_clock> last_ack() const{
         return m_last_ack.load(std::memory_order_acquire);
@@ -68,6 +68,7 @@ public:
     virtual State state() const override{
         return m_state.load(std::memory_order_acquire);
     }
+    virtual void notify_all() override;
 
     virtual size_t queue_limit() const override{
         return m_max_pending_requests.load(std::memory_order_relaxed);
@@ -78,20 +79,16 @@ public:
     //  Basic Requests
 
     virtual void wait_for_all_requests(const Cancellable* cancelled = nullptr) override;
-
-    virtual bool try_stop_all_commands() override;
     virtual void stop_all_commands() override;
-
-    virtual bool try_next_command_interrupt() override;
     virtual void next_command_interrupt() override;
 
 
 public:
     //  For Command Implementations
 
-//    using BotBase::try_issue_request;
-    using BotBase::issue_request;
-    using BotBase::issue_request_and_wait;
+//    using BotBaseController::try_issue_request;
+    using BotBaseController::issue_request;
+    using BotBaseController::issue_request_and_wait;
 
 
 private:
@@ -122,8 +119,10 @@ private:
 
     uint64_t oldest_live_seqnum() const;
 
-    template <typename Params> void process_ack_request(BotBaseMessage message);
-    template <typename Params> void process_ack_command(BotBaseMessage message);
+    template <typename Params, bool variable_length = false>
+    void process_ack_request(BotBaseMessage message);
+    template <typename Params>
+    void process_ack_command(BotBaseMessage message);
 
     template <typename Params> void process_command_finished(BotBaseMessage message);
     virtual void on_recv_message(BotBaseMessage message) override;
@@ -138,23 +137,28 @@ private:
     //  Returns the seqnum of the request. If failed, returns zero.
     uint64_t try_issue_request(
         const Cancellable* cancelled,
-        const BotBaseRequest& request, bool silent_remove
+        const BotBaseRequest& request,
+        bool silent_remove, bool do_not_block
     );
     uint64_t try_issue_command(
         const Cancellable* cancelled,
-        const BotBaseRequest& request, bool silent_remove
+        const BotBaseRequest& request,
+        bool silent_remove
     );
 
     //  Returns the seqnum of the request.
     uint64_t issue_request(
         const Cancellable* cancelled,
-        const BotBaseRequest& request, bool silent_remove
+        const BotBaseRequest& request,
+        bool silent_remove, bool do_not_block
     );
     uint64_t issue_command(
         const Cancellable* cancelled,
-        const BotBaseRequest& request, bool silent_remove
+        const BotBaseRequest& request,
+        bool silent_remove
     );
 
+public:
     virtual bool try_issue_request(
         const BotBaseRequest& request,
         const Cancellable* cancelled
@@ -168,7 +172,8 @@ private:
         const Cancellable* cancelled
     ) override;
 
-    BotBaseMessage wait_for_request(uint64_t seqnum);
+private:
+    BotBaseMessage wait_for_request(uint64_t seqnum, const Cancellable* cancelled = nullptr);
 
 private:
     Logger& m_logger;

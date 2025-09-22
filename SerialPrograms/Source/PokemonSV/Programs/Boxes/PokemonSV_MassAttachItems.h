@@ -1,6 +1,6 @@
 /*  Mass Attach Items
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -32,11 +32,11 @@ class MassAttachItems : public SingleSwitchProgramInstance{
 public:
     MassAttachItems();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    void attach_one(BoxDetector& box_detector, SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    void attach_box(BoxDetector& box_detector, SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    void attach_one(BoxDetector& box_detector, SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    void attach_box(BoxDetector& box_detector, SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
 private:
     GoHomeWhenDoneOption GO_HOME_WHEN_DONE;

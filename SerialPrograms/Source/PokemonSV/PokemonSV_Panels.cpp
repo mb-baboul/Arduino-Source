@@ -1,6 +1,6 @@
 /*  Pokemon SV Panels
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -29,10 +29,8 @@
 #include "Programs/Farming/PokemonSV_TournamentFarmer.h"
 #include "Programs/Farming/PokemonSV_TournamentFarmer2.h"
 #include "Programs/Farming/PokemonSV_FlyingTrialFarmer.h"
-#include "Programs/Farming/PokemonSV_WildItemFarmer.h"
 #include "Programs/Farming/PokemonSV_BBQSoloFarmer.h"
 #include "Programs/Farming/PokemonSV_MaterialFarmer.h"
-#include "Programs/ItemPrinter/PokemonSV_AutoItemPrinter.h"
 #include "Programs/ItemPrinter/PokemonSV_ItemPrinterRNG.h"
 
 #include "Programs/Eggs/PokemonSV_EggFetcher.h"
@@ -55,11 +53,17 @@
 #include "Programs/ShinyHunting/PokemonSV_ShinyHunt-Scatterbug.h"
 
 #include "Programs/AutoStory/PokemonSV_AutoStory.h"
+#include "Programs/Farming/PokemonSV_ClaimMysteryGift.h"
 
+#include "Programs/Glitches/PokemonSV_WildItemFarmer.h"
 #include "Programs/Glitches/PokemonSV_RideCloner-1.0.1.h"
 #include "Programs/Glitches/PokemonSV_CloneItems-1.0.1.h"
 
+//  Deprecated
+#include "Programs/ItemPrinter/PokemonSV_AutoItemPrinter.h"
+
 #include "Programs/TestPrograms/PokemonSV_SoundListener.h"
+#include "Programs/FormHunting/PokemonSV_ThreeSegmentDudunsparceFinder.h"
 
 #ifdef PA_OFFICIAL
 #include "../../Internal/SerialPrograms/NintendoSwitch_TestPrograms.h"
@@ -86,7 +90,6 @@ std::vector<PanelEntry> PanelListFactory::make_panels() const{
     ret.emplace_back(make_single_switch_program<ClothingBuyer_Descriptor, ClothingBuyer>());
     ret.emplace_back(make_single_switch_program<AutonomousBallThrower_Descriptor, AutonomousBallThrower>());
     ret.emplace_back(make_single_switch_program<SizeChecker_Descriptor, SizeChecker>());
-    ret.emplace_back(make_single_switch_program<AutoItemPrinter_Descriptor, AutoItemPrinter>());
 
 //    ret.emplace_back("---- Trading ----");
     ret.emplace_back(make_multi_switch_program<SelfBoxTrade_Descriptor, SelfBoxTrade>());
@@ -142,19 +145,23 @@ std::vector<PanelEntry> PanelListFactory::make_panels() const{
     ret.emplace_back(make_single_switch_program<RideCloner101_Descriptor, RideCloner101>());
     ret.emplace_back(make_single_switch_program<CloneItems101_Descriptor, CloneItems101>());
 
+    ret.emplace_back("---- Public Betas ----");
+    ret.emplace_back(make_single_switch_program<AutoStory_Descriptor, AutoStory>());
+    ret.emplace_back(make_single_switch_program<ClaimMysteryGift_Descriptor, ClaimMysteryGift>());
+
+    ret.emplace_back("---- Deprecated Programs ----");
+    ret.emplace_back(make_single_switch_program<AutoItemPrinter_Descriptor, AutoItemPrinter>());
+
     if (PreloadSettings::instance().DEVELOPER_MODE || IS_BETA_VERSION){
         ret.emplace_back("---- Untested/Beta/WIP ----");
     }
     if (IS_BETA_VERSION){
 //        ret.emplace_back("---- Story Automation ----");
-        ret.emplace_back(make_single_switch_program<AutoStory_Descriptor, AutoStory>());
-    }
-    if (PreloadSettings::instance().DEVELOPER_MODE){
-
     }
     if (PreloadSettings::instance().DEVELOPER_MODE){
         ret.emplace_back("---- Developer Tools ----");
         ret.emplace_back(make_single_switch_program<SoundListener_Descriptor, SoundListener>());
+        ret.emplace_back(make_single_switch_program<ThreeSegmentDudunsparceFinder_Descriptor, ThreeSegmentDudunsparceFinder>());
     }
 
 #ifdef PA_OFFICIAL

@@ -1,15 +1,17 @@
 /*  AutoStory
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/Exceptions/OperationFailedException.h"
+#include "CommonFramework/VideoPipeline/VideoOverlay.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "PokemonSV/Inference/Overworld/PokemonSV_DirectionDetector.h"
 #include "PokemonSV/Programs/PokemonSV_GameEntry.h"
 #include "PokemonSV/Programs/PokemonSV_SaveGame.h"
+#include "PokemonSV/Programs/PokemonSV_MenuNavigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV_AutoStoryTools.h"
 #include "PokemonSV_AutoStory_Segment_19.h"
 
@@ -27,30 +29,35 @@ namespace PokemonSV{
 
 
 std::string AutoStory_Segment_19::name() const{
-    return "15.1: Klawf Titan: Battle Klawf";
+    return "19: Klawf Titan: Battle Klawf";
 }
 
 std::string AutoStory_Segment_19::start_text() const{
-    return "Start: At South Province (Area Three) Pokecenter.";
+    return "Start: Defeated Great Tusk/Iron Treads. At South Province (Area Three) Pokecenter.";
 }
 
 std::string AutoStory_Segment_19::end_text() const{
     return "End: Defeated Klawf. At Artazon (West) Pokecenter.";
 }
 
-void AutoStory_Segment_19::run_segment(SingleSwitchProgramEnvironment& env, BotBaseContext& context, AutoStoryOptions options) const{
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
+void AutoStory_Segment_19::run_segment(
+    SingleSwitchProgramEnvironment& env,
+    ProControllerContext& context,
+    AutoStoryOptions options,
+    AutoStoryStats& stats
+) const{
+    
 
-    context.wait_for_all_requests();
-    env.console.overlay().add_log("Start Segment 15.2: Klawf Titan: Battle Klawf", COLOR_ORANGE);
-
-    checkpoint_41(env, context, options.notif_status_update);
-    checkpoint_42(env, context, options.notif_status_update);
-
-    context.wait_for_all_requests();
-    env.console.log("End Segment 15.2: Klawf Titan: Battle Klawf", COLOR_GREEN);
     stats.m_segment++;
     env.update_stats();
+    context.wait_for_all_requests();
+    env.console.log("Start Segment " + name(), COLOR_ORANGE);
+
+    checkpoint_41(env, context, options.notif_status_update, stats);
+    checkpoint_42(env, context, options.notif_status_update, stats);
+
+    context.wait_for_all_requests();
+    env.console.log("End Segment " + name(), COLOR_GREEN);
 
 }
 
@@ -58,24 +65,20 @@ void AutoStory_Segment_19::run_segment(SingleSwitchProgramEnvironment& env, BotB
 
 void checkpoint_41(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){         
         context.wait_for_all_requests();
 
         // section 1
         DirectionDetector direction;
         direction.change_direction(env.program_info(), env.console, context, 0.14);
         do_action_and_monitor_for_battles(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 0, 200, 100);
         });        
 
@@ -86,12 +89,12 @@ void checkpoint_41(
             {ZoomChange::ZOOM_IN, 255, 93, 170}
         );  
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_DIALOG, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 20, 10, false);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 0, 128, 40, 50);
                 realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
             }
@@ -103,12 +106,12 @@ void checkpoint_41(
         // section 3. 
         realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_MARKER, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 30, 10, false);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 0, 128, 40, 50);
                 realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
             }
@@ -121,12 +124,12 @@ void checkpoint_41(
             {ZoomChange::ZOOM_IN, 0, 90, 157}
         );  
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_MARKER, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 30, 10, false);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 255, 50, 50);
                 pbf_move_left_joystick(context, 255, 128, 50, 50);
                 realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
@@ -140,12 +143,12 @@ void checkpoint_41(
             {ZoomChange::ZOOM_IN, 0, 95, 112}
         );  
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_MARKER, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 30, 10, false);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 0, 128, 40, 50);
                 realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
             }
@@ -158,12 +161,12 @@ void checkpoint_41(
             {ZoomChange::ZOOM_IN, 0, 50, 105}
         );  
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_MARKER, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 24, 8, false);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 128, 255, 50, 50);
                 pbf_move_left_joystick(context, 255, 128, 50, 50);
                 realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
@@ -177,12 +180,12 @@ void checkpoint_41(
             {ZoomChange::ZOOM_IN, 0, 40, 110}
         );  
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_MARKER, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 30, 10, false);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 255, 128, 40, 50);
                 realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
             }
@@ -200,7 +203,7 @@ void checkpoint_41(
 
         // section 9
         do_action_and_monitor_for_battles(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_right_joystick(context, 255, 128, 100, 50);
                 direction.change_direction(env.program_info(), env.console, context, 4.467);
                 pbf_move_left_joystick(context, 128, 0, 700, 50);
@@ -222,9 +225,10 @@ void checkpoint_41(
 
 
         // battle Klawf phase 1
-        run_battle_press_A(env.console, context, BattleStopCondition::STOP_OVERWORLD);
+        env.console.log("Battle Klawf Titan phase 1.");
+        run_wild_battle_press_A(env.console, context, BattleStopCondition::STOP_OVERWORLD);
         do_action_and_monitor_for_battles(env.program_info(), env.console, context,
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 direction.change_direction(env.program_info(), env.console, context, 2.83);
                 // pbf_move_left_joystick(context, 128, 0, 800, 50);
         });         
@@ -234,36 +238,25 @@ void checkpoint_41(
 
         clear_dialog(env.console, context, ClearDialogMode::STOP_BATTLE, 30, {CallbackEnum::BATTLE});
         // Klawf battle phase 2
-        run_battle_press_A(env.console, context, BattleStopCondition::STOP_DIALOG, {CallbackEnum::DIALOG_ARROW});
+        env.console.log("Battle Klawf Titan phase 1.");
+        run_wild_battle_press_A(env.console, context, BattleStopCondition::STOP_DIALOG, {CallbackEnum::DIALOG_ARROW});
         // get ride upgrade
         mash_button_till_overworld(env.console, context, BUTTON_A);        
 
        
-        break;
-    }catch (...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }         
-    }
+    });
 
 }
 
 void checkpoint_42(
     SingleSwitchProgramEnvironment& env, 
-    BotBaseContext& context, 
-    EventNotificationOption& notif_status_update
+    ProControllerContext& context, 
+    EventNotificationOption& notif_status_update,
+    AutoStoryStats& stats
 ){
-    AutoStoryStats& stats = env.current_stats<AutoStoryStats>();
-    bool first_attempt = true;
-    while (true){
-    try{
-        if (first_attempt){
-            checkpoint_save(env, context, notif_status_update);
-            first_attempt = false;
-        }         
+    
+    checkpoint_reattempt_loop(env, context, notif_status_update, stats,
+    [&](size_t attempt_number){         
         context.wait_for_all_requests();
 
         // section 1
@@ -273,12 +266,12 @@ void checkpoint_42(
             {ZoomChange::ZOOM_IN, 0, 80, 110}
         );  
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_MARKER, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 24, 12, false);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 0, 128, 40, 50);
                 realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
             }
@@ -291,12 +284,12 @@ void checkpoint_42(
             {ZoomChange::ZOOM_IN, 0, 80, 38}
         );  
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_MARKER, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 36, 12, false);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 255, 128, 40, 50);
                 realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
             }
@@ -309,12 +302,12 @@ void checkpoint_42(
             {ZoomChange::ZOOM_IN, 65, 0, 45}
         );  
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_MARKER, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 24, 12, false);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 255, 128, 40, 50);
                 realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
             }
@@ -327,12 +320,12 @@ void checkpoint_42(
             {ZoomChange::ZOOM_IN, 0, 0, 0}
         );  
         handle_when_stationary_in_overworld(env.program_info(), env.console, context, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 overworld_navigation(env.program_info(), env.console, context, 
                     NavigationStopCondition::STOP_MARKER, NavigationMovementMode::DIRECTIONAL_ONLY, 
                     128, 0, 30, 10, false);
             }, 
-            [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){           
+            [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
                 pbf_move_left_joystick(context, 0, 128, 40, 50);
                 realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_OLD_MARKER);
             }
@@ -340,7 +333,7 @@ void checkpoint_42(
        
         // section 5. set marker past pokecenter
         handle_unexpected_battles(env.program_info(), env.console, context,
-        [&](const ProgramInfo& info, ConsoleHandle& console, BotBaseContext& context){                        
+        [&](const ProgramInfo& info, VideoStream& stream, ProControllerContext& context){
             realign_player(env.program_info(), env.console, context, PlayerRealignMode::REALIGN_NEW_MARKER, 255, 255, 30);
         });      
         overworld_navigation(env.program_info(), env.console, context, 
@@ -350,15 +343,7 @@ void checkpoint_42(
 
         fly_to_overlapping_flypoint(env.program_info(), env.console, context);  
 
-        break;
-    }catch (...){
-        context.wait_for_all_requests();
-        env.console.log("Resetting from checkpoint.");
-        reset_game(env.program_info(), env.console, context);
-        stats.m_reset++;
-        env.update_stats();
-    }         
-    }
+    });
 
 }
 

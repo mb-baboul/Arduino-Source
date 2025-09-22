@@ -1,6 +1,6 @@
 /*  Turbo Macro
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -25,12 +25,14 @@ class TurboMacro : public SingleSwitchProgramInstance{
 public:
     TurboMacro();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    void run_macro(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-
-    void execute_action(ConsoleHandle& console, BotBaseContext& context, const TurboMacroRow& row);
+    void run_macro(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    void execute_action(
+        VideoStream& stream, ProControllerContext& context,
+        const TurboMacroRow& row
+    );
 
 private:
     SimpleIntegerOption<uint32_t> LOOP;

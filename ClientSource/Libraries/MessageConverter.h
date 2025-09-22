@@ -1,6 +1,6 @@
 /*  Message Pretty Printing
  * 
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  * 
  */
 
@@ -15,8 +15,6 @@ void register_message_converter(uint8_t type, MessageConverter converter);
 
 std::string message_to_string(const BotBaseMessage& message);
 
-
-std::string program_name(uint8_t id);
 
 
 }

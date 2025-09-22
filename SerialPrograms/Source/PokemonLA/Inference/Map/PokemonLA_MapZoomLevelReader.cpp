@@ -1,6 +1,6 @@
 /*  Map Zoom Level Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,12 +8,12 @@
 #include "CommonFramework/ImageTypes/ImageRGB32.h"
 #include "CommonFramework/ImageTools/ImageStats.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/ImageTools/ImageFilter.h"
+#include "CommonTools/Images/ImageFilter.h"
 #include "PokemonLA_MapZoomLevelReader.h"
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -59,7 +59,7 @@ int read_map_zoom_level(const ImageViewRGB32& screen){
                 max_yellow = yellow;
             }
         }
-        // std::cout << "Compability color " << stats.average << " " << stats.stddev << std::endl;
+        // std::cout << "Compatibility color " << stats.average << " " << stats.stddev << std::endl;
     }
 
     return max_yellow_index;

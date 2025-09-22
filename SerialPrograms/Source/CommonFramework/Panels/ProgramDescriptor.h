@@ -1,6 +1,6 @@
 /*  Program Descriptor
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -12,6 +12,19 @@
 namespace PokemonAutomation{
 
 class StatsTracker;
+
+
+enum class ProgramControllerClass{
+    StandardController_NoRestrictions,              //  Blue
+    StandardController_PerformanceClassSensitive,   //  Green
+    StandardController_RequiresPrecision,           //  Purple
+    StandardController_WithRestrictions,            //  Red
+    SpecializedController,                          //  Pink
+};
+enum class AllowCommandsWhenRunning{
+    DISABLE_COMMANDS,
+    ENABLE_COMMANDS,
+};
 
 
 class ProgramDescriptor : public PanelDescriptor{

@@ -1,20 +1,16 @@
 /*  Clothing Top Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_ClothingTop_H
 #define PokemonAutomation_PokemonSV_ClothingTop_H
 
-#include "CommonFramework/Language.h"
-#include "CommonFramework/Inference/VisualDetector.h"
-#include "PokemonSV/Inference/PokemonSV_WhiteButtonDetector.h"
+#include "CommonTools/VisualDetector.h"
 #include "PokemonSV/Inference/Dialogs/PokemonSV_GradientArrowDetector.h"
 
 namespace PokemonAutomation{
-    class ConsoleHandle;
-    class BotBaseContext;
     struct ProgramInfo;
 namespace NintendoSwitch{
 namespace PokemonSV{
@@ -24,7 +20,7 @@ public:
     ClothingTopDetector(Color color);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     GradientArrowDetector m_arrow;

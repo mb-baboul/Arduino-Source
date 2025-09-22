@@ -1,6 +1,6 @@
 /*  Box Egg Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -10,8 +10,8 @@
 #include "Common/Cpp/Color.h"
 #include "Common/Cpp/Containers/FixedLimitVector.h"
 #include "CommonFramework/ImageTools/ImageBoxes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
 #include "PokemonSV/Inference/Boxes/PokemonSV_BoxDetection.h"
 
 namespace PokemonAutomation{
@@ -25,7 +25,7 @@ public:
     BoxCurrentEggDetector(Color color = COLOR_BLUE);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;
@@ -39,7 +39,7 @@ public:
     BoxEggDetector(BoxCursorLocation side, uint8_t row, uint8_t col, Color color = COLOR_YELLOW);
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
 private:
     Color m_color;

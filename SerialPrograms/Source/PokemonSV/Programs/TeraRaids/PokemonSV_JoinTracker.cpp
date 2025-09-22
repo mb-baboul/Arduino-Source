@@ -1,18 +1,17 @@
 /*  Join Tracker
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <cmath>
-#include <fstream>
 #include <QFile>
 #include "Common/Cpp/Exceptions.h"
 #include "Common/Cpp/PrettyPrint.h"
 #include "Common/Qt/StringToolsQt.h"
 #include "CommonFramework/GlobalSettingsPanel.h"
-#include "CommonFramework/OCR/OCR_StringNormalization.h"
-#include "CommonFramework/OCR/OCR_TextMatcher.h"
+#include "CommonTools/OCR/OCR_StringNormalization.h"
+#include "CommonTools/OCR/OCR_TextMatcher.h"
 #include "PokemonSV_JoinTracker.h"
 
 //#include <iostream>
@@ -319,10 +318,10 @@ void MultiLanguageJoinTracker::dump(const std::string& filename) const{
 
 
 TeraLobbyJoinWatcher2::TeraLobbyJoinWatcher2(
-    Logger& logger, AsyncDispatcher& dispatcher, Color color,
+    Logger& logger, Color color,
     uint8_t host_players
 )
-    : TeraLobbyReader(logger, dispatcher, color)
+    : TeraLobbyReader(logger, color)
     , VisualInferenceCallback("TeraLobbyJoinWatcher2")
     , m_host_players(host_players)
 {}
@@ -347,13 +346,13 @@ bool TeraLobbyJoinWatcher2::process_frame(const ImageViewRGB32& frame, WallClock
 
 
 TeraLobbyNameWatcher::TeraLobbyNameWatcher(
-    Logger& logger, AsyncDispatcher& dispatcher,
+    Logger& logger,
     Color color,
     RaidJoinReportOption& report_settings,
     RaidPlayerBanList& ban_settings,
     uint8_t host_players
 )
-    : TeraLobbyReader(logger, dispatcher, color)
+    : TeraLobbyReader(logger, color)
     , VisualInferenceCallback("TeraLobbyNameWatcher")
     , m_logger(logger)
     , m_report_settings(report_settings)

@@ -1,6 +1,6 @@
 /*  Generate Pokemon Name OCR Data (Pokedex)
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -33,9 +33,9 @@ GenerateNameOCRDataPokedex_Descriptor::GenerateNameOCRDataPokedex_Descriptor()
         STRING_POKEMON + " SwSh", "Generate " + STRING_POKEMON + " Name OCR Data",
         "",
         "Generate " + STRING_POKEMON + " Name OCR data by iterating the " + STRING_POKEDEX + ".",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -115,7 +115,7 @@ void GenerateNameOCRDataPokedex::dump_images(
 //    OCR::make_OCR_filter(image).apply(image);
 }
 
-void GenerateNameOCRDataPokedex::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void GenerateNameOCRDataPokedex::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
 
     std::string dex_name;
     size_t dex_size = 0;

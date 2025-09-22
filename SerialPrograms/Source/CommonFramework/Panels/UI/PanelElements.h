@@ -1,6 +1,6 @@
 /*  Panel Elements
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -11,11 +11,13 @@
 #include <QLabel>
 #include "Common/Qt/CollapsibleGroupBox.h"
 #include "CommonFramework/Globals.h"
-#include "CommonFramework/ControllerDevices/SerialPortGlobals.h"
+#include "CommonFramework/Panels/ProgramDescriptor.h"
+//#include "Controllers/ControllerCapability.h"
 
 class QPushButton;
 
 namespace PokemonAutomation{
+
 
 
 
@@ -30,8 +32,7 @@ CollapsibleGroupBox* make_panel_header(
     const std::string& display_name,
     const std::string& doc_link,
     const std::string& description,
-    FeedbackType feedback,
-    PABotBaseLevel serial_level
+    ProgramControllerClass color_class
 );
 
 

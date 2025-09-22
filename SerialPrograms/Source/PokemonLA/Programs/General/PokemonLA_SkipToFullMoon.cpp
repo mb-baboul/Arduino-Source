@@ -1,13 +1,13 @@
 /*  Skip to Full Moon
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/OperationFailedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
 #include "CommonFramework/VideoPipeline/VideoFeed.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
+#include "CommonTools/Async/InferenceRoutines.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
 #include "PokemonLA/Inference/Objects/PokemonLA_ArcPhoneDetector.h"
@@ -28,9 +28,9 @@ SkipToFullMoon_Descriptor::SkipToFullMoon_Descriptor()
         STRING_POKEMON + " LA", "Skip to Full Moon",
         "ComputerControl/blob/master/Wiki/Programs/PokemonLA/SkipToFullMoon.md",
         "Skip nights until full moon.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::REQUIRED,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -45,7 +45,7 @@ SkipToFullMoon::SkipToFullMoon()
 }
 
 
-void SkipToFullMoon::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void SkipToFullMoon::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     //  Connect the controller.
     pbf_press_button(context, BUTTON_LCLICK, 5, 5);
 
@@ -58,8 +58,9 @@ void SkipToFullMoon::program(SingleSwitchProgramEnvironment& env, BotBaseContext
 
         if (compatibility == ItemCompatibility::NONE){
             OperationFailedException::fire(
-                env.console, ErrorReport::SEND_ERROR_REPORT,
-                "Unable to detect item compatibility."
+                ErrorReport::SEND_ERROR_REPORT,
+                "Unable to detect item compatibility.",
+                env.console
             );
         }
 
@@ -99,14 +100,14 @@ void SkipToFullMoon::program(SingleSwitchProgramEnvironment& env, BotBaseContext
         // if (ret != 0){
         //     std::cout << "ERROR! Cannot detect the dialogue ellipse" << std::endl;
         // }
-        // Press B to clear the "You Pokemon happy and healty" dialogue.
+        // Press B to clear the "You Pokemon happy and healthy" dialogue.
         // pbf_press_button(context, BUTTON_B, 20, 100);
 
 
         ArcPhoneDetector arc_phone_detector(env.console, env.console, std::chrono::milliseconds(100), stop_on_detected);
-        run_until(
+        run_until<ProControllerContext>(
             env.console, context,
-            [](BotBaseContext& local_context){
+            [](ProControllerContext& local_context){
                 // pbf_mash_button(local_context, BUTTON_B, 7 * TICKS_PER_SECOND);
                 for(size_t i = 0; i < 15; i++){
                      pbf_press_button(local_context, BUTTON_B, 20, 80);

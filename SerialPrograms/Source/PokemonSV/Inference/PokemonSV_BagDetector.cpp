@@ -1,11 +1,11 @@
 /*  Bag Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/ImageTools/SolidColorTest.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/SolidColorTest.h"
 #include "PokemonSV_PokemonSummaryReader.h"
 #include "PokemonSV_BagDetector.h"
 
@@ -30,7 +30,7 @@ void BagDetector::make_overlays(VideoOverlaySet& items) const{
     items.add(m_color, m_top_blue_right);
     items.add(m_color, m_bottom);
 }
-bool BagDetector::detect(const ImageViewRGB32& screen) const{
+bool BagDetector::detect(const ImageViewRGB32& screen){
     ImageStats top_blue_left = image_stats(extract_box_reference(screen, m_top_blue_left));
 //    cout << top_blue_left.average << top_blue_left.stddev << endl;
     if (!is_solid(top_blue_left, {0.0745162, 0.311321, 0.614163}, 0.30, 10)){

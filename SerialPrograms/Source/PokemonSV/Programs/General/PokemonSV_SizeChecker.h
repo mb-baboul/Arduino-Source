@@ -1,6 +1,6 @@
 /*  Size Checker
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -35,11 +35,11 @@ public:
 class SizeChecker : public SingleSwitchProgramInstance{
 public:
     SizeChecker();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    void enter_check_mode(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
-    void exit_check_mode(SingleSwitchProgramEnvironment& env, BotBaseContext& context, VideoSnapshot screen);
+    void enter_check_mode(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
+    void exit_check_mode(SingleSwitchProgramEnvironment& env, ProControllerContext& context, VideoSnapshot screen);
 
 private:
     GoHomeWhenDoneOption GO_HOME_WHEN_DONE;

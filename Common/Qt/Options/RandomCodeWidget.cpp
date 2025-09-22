@@ -1,6 +1,6 @@
 /*  Random Code Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -133,7 +133,7 @@ void RandomCodeWidget::update_value(){
     m_box_code->setText(QString::fromStdString(current.code_string()));
     update_labels();
 }
-void RandomCodeWidget::value_changed(void* object){
+void RandomCodeWidget::on_config_value_changed(void* object){
     QMetaObject::invokeMethod(this, [this]{
         update_value();
     }, Qt::QueuedConnection);

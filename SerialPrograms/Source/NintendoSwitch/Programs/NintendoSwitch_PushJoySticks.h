@@ -1,6 +1,6 @@
 /*  Push Joy Sticks
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -24,7 +24,7 @@ class PushJoySticks : public SingleSwitchProgramInstance{
 public:
     PushJoySticks();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     SimpleIntegerOption<uint8_t> LEFT_X;

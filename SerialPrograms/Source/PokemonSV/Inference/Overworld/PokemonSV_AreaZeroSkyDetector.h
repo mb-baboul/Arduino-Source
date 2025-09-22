@@ -1,6 +1,6 @@
 /*  Area Zero Sky Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,8 +9,10 @@
 
 #include "Common/Cpp/Concurrency/SpinLock.h"
 #include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
-#include "CommonFramework/InferenceInfra/VisualInferenceCallback.h"
-#include "CommonFramework/Inference/VisualDetector.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "CommonTools/InferenceCallbacks/VisualInferenceCallback.h"
+#include "CommonTools/VisualDetector.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 
 namespace PokemonAutomation{
 namespace Kernels{
@@ -18,9 +20,7 @@ namespace Waterfill{
     class WaterfillObject;
 }
 }
-class BotBaseContext;
 class ProgramEnvironment;
-class ConsoleHandle;
 namespace NintendoSwitch{
 namespace PokemonSV{
 
@@ -29,7 +29,7 @@ namespace PokemonSV{
 class AreaZeroSkyDetector : public StaticScreenDetector{
 public:
     virtual void make_overlays(VideoOverlaySet& items) const override{}
-    virtual bool detect(const ImageViewRGB32& screen) const override;
+    virtual bool detect(const ImageViewRGB32& screen) override;
 
     bool detect(Kernels::Waterfill::WaterfillObject& object, const ImageViewRGB32& screen) const;
 };
@@ -54,7 +54,7 @@ private:
 
 
 void find_and_center_on_sky(
-    ProgramEnvironment& env, ConsoleHandle& console, BotBaseContext& context
+    ProgramEnvironment& env, VideoStream& stream, ProControllerContext& context
 );
 
 

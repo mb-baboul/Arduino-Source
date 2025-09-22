@@ -1,6 +1,6 @@
 /*  Beam Reset
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,7 @@
 #define PokemonAutomation_PokemonSwSh_BeamReset_H
 
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "NintendoSwitch/Options/NintendoSwitch_StartInGripMenuOption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
 
@@ -28,12 +28,12 @@ class BeamReset : public SingleSwitchProgramInstance{
 public:
     BeamReset();
 
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     StartInGripOrGameOption START_LOCATION;
 
-    TimeExpressionOption<uint16_t> DELAY_BEFORE_RESET;
+    MillisecondsOption DELAY_BEFORE_RESET0;
     BooleanCheckBoxOption EXTRA_LINE;
 };
 

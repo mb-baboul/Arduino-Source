@@ -1,15 +1,16 @@
 /*  Trade Routines
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_TradeRoutines_H
 #define PokemonAutomation_PokemonBDSP_TradeRoutines_H
 
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/ConsoleHandle.h"
-#include "CommonFramework/Tools/MultiConsoleErrors.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/MultiConsoleErrors.h"
+#include "CommonFramework/Tools/VideoStream.h"
+#include "NintendoSwitch/Controllers/NintendoSwitch_ProController.h"
 #include "NintendoSwitch/NintendoSwitch_MultiSwitchProgram.h"
 
 namespace PokemonAutomation{
@@ -28,7 +29,7 @@ struct TradeStats : public StatsTracker{
 
 
 void trade_current_pokemon(
-    ConsoleHandle& console, BotBaseContext& context,
+    VideoStream& stream, ProControllerContext& context,
     MultiConsoleErrorState& tracker,
     TradeStats& stats
 );

@@ -1,10 +1,10 @@
 /*  Nature Reader
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
-#include "CommonFramework/OCR/OCR_Routines.h"
+#include "CommonTools/OCR/OCR_Routines.h"
 #include "Pokemon_NatureReader.h"
 
 namespace PokemonAutomation{

@@ -1,6 +1,6 @@
 /*  Custom Path Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -12,6 +12,7 @@
 #include "Common/Cpp/Options/StaticTextOption.h"
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
 #include "Common/Cpp/Options/FloatingPointOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
 #include "Common/Cpp/Options/EditableTableOption.h"
 #include "PokemonLA_TravelLocation.h"
@@ -33,7 +34,7 @@ enum class PathAction{
     START_LISTEN,
     END_LISTEN,
 };
-const EnumDatabase<PathAction>& PathAction_Database();
+const EnumDropdownDatabase<PathAction>& PathAction_Database();
 
 enum class PathMount{
     NO_MOUNT,
@@ -43,7 +44,7 @@ enum class PathMount{
     SNEASLER,
     BRAVIARY,
 };
-const EnumDatabase<PathMount>& PathMount_Database();
+const EnumDropdownDatabase<PathMount>& PathMount_Database();
 
 enum class PathSpeed{
     NORMAL_SPEED,
@@ -53,7 +54,7 @@ enum class PathSpeed{
     DASH_B_SPAM,
     DIVE,
 };
-const EnumDatabase<PathSpeed>& PathSpeed_Database();
+const EnumDropdownDatabase<PathSpeed>& PathSpeed_Database();
 
 
 
@@ -64,7 +65,7 @@ public:
     void operator=(const CustomPathCell& x);
     CustomPathCell(EnumDropdownCell<PathAction>& action);
 
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 private:
     EnumDropdownCell<PathAction>& m_action;
@@ -72,17 +73,17 @@ private:
 public:
     StaticTextOption text;
     EnumDropdownCell<PathMount> mount;
-    SimpleIntegerOption<uint16_t> move_forward_ticks;
+    MillisecondsOption move_forward;
     EnumDropdownCell<PathSpeed> move_speed;
     FloatingPointOption left_x;
     FloatingPointOption left_y;
-    SimpleIntegerOption<uint16_t> jump_wait_ticks;
-    SimpleIntegerOption<uint16_t> wait_ticks;
+    MillisecondsOption jump_wait;
+    MillisecondsOption wait;
 };
 
-class CustomPathTableRow2 : public EditableTableRow{
+class CustomPathTableRow : public EditableTableRow{
 public:
-    CustomPathTableRow2(EditableTableOption& parent_table);
+    CustomPathTableRow(EditableTableOption& parent_table);
     virtual std::unique_ptr<EditableTableRow> clone() const override;
 
     virtual void load_json(const JsonValue& json) override;
@@ -93,9 +94,9 @@ public:
     CustomPathCell parameters;
 };
 
-class CustomPathTable2 : public EditableTableOption_t<CustomPathTableRow2>{
+class CustomPathTable : public EditableTableOption_t<CustomPathTableRow>{
 public:
-    CustomPathTable2();
+    CustomPathTable();
     virtual std::vector<std::string> make_header() const override;
 
 private:
@@ -107,19 +108,19 @@ private:
 
 
 // A program option to build a custom path to navigate the map
-class CustomPathTable : public BatchOption{
+class CustomPathTableFromJubilife : public BatchOption{
 public:
-    CustomPathTable();
+    CustomPathTableFromJubilife();
 
-    const TravelLocationOption& travel_location() const{ return TRAVEL_LOCATION; }
+    const WildTravelLocationOption& travel_location() const{ return TRAVEL_LOCATION; }
 
     virtual ConfigWidget* make_QtWidget(QWidget& parent) override;
 
 public:
     friend class CustomPathTableWidget;
 
-    TravelLocationOption TRAVEL_LOCATION;
-    CustomPathTable2 PATH;
+    WildTravelLocationOption TRAVEL_LOCATION;
+    CustomPathTable PATH;
 };
 
 

@@ -1,24 +1,21 @@
 /*  Dialog Triangle Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <stdint.h>
-
 #include "Common/Cpp/Color.h"
 #include "Common/Cpp/AbstractLogger.h"
-#include "CommonFramework/ImageMatch/WaterfillTemplateMatcher.h"
-#include "CommonFramework/ImageTools/WaterfillUtilities.h"
-#include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
 #include "Kernels/Waterfill/Kernels_Waterfill_Types.h"
+#include "CommonFramework/VideoPipeline/VideoOverlayScopes.h"
+#include "CommonTools/Images/WaterfillUtilities.h"
+#include "CommonTools/ImageMatch/WaterfillTemplateMatcher.h"
 #include "PokemonSwSh_DialogTriangleDetector.h"
 
-#include <utility>
-#include <vector>
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -87,7 +84,7 @@ bool DialogTriangleDetector::process_frame(const ImageViewRGB32& frame, WallCloc
     );
 
     if (detected){
-        m_logger.log("Detected dialog black traingle.", COLOR_PURPLE);
+        m_logger.log("Detected dialog black triangle.", COLOR_PURPLE);
     }
 
     m_detected.store(detected, std::memory_order_release);

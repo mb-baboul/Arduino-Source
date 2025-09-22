@@ -1,6 +1,6 @@
 /*  Command Row
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -13,27 +13,34 @@
 #include <QCheckBox>
 #include "CommonFramework/Globals.h"
 #include "CommonFramework/VideoPipeline/VideoOverlaySession.h"
-#include "NintendoSwitch/Framework/NintendoSwitch_VirtualController.h"
+#include "Controllers/ControllerSession.h"
+#include "NintendoSwitch/Options/NintendoSwitch_ModelType.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
 
 
-class CommandRow : public QWidget, public VirtualController, public VideoOverlaySession::Listener{
+// UI that shows the checkerboxes to control whether to show video overlay elements.
+// e.g. checkerbox to toggle on/off overlay boxes
+class CommandRow :
+    public QWidget,
+    public VideoOverlaySession::ContentListener,
+    public ControllerSession::Listener
+{
     Q_OBJECT
 
 public:
     ~CommandRow();
     CommandRow(
         QWidget& parent,
-        BotBaseHandle& botbase,
+        ControllerSession& controller,
         VideoOverlaySession& session,
+        ConsoleModelCell& console_type,
         bool allow_commands_while_running
     );
 
-    //  Returns false if key is not handled. (pass it up to next handler)
-    bool on_key_press(Qt::Key key);
-    bool on_key_release(Qt::Key key);
+    void on_key_press(const QKeyEvent& key);
+    void on_key_release(const QKeyEvent& key);
 
 signals:
     void load_profile();
@@ -47,28 +54,32 @@ public:
     void on_state_changed(ProgramState state);
 
 private:
-    virtual void enabled_boxes(bool enabled) override;
-    virtual void enabled_text (bool enabled) override;
-    virtual void enabled_log  (bool enabled) override;
-    virtual void enabled_stats(bool enabled) override;
+    virtual void on_overlay_enabled_boxes  (bool enabled) override;
+    virtual void on_overlay_enabled_text   (bool enabled) override;
+    virtual void on_overlay_enabled_images (bool enabled) override;
+    virtual void on_overlay_enabled_log    (bool enabled) override;
+    virtual void on_overlay_enabled_stats  (bool enabled) override;
+    virtual void ready_changed(bool ready) override;
 
 private:
-    BotBaseHandle& m_botbase;
+    ControllerSession& m_controller;
     VideoOverlaySession& m_session;
     bool m_allow_commands_while_running;
-    QComboBox* m_command_box;
-    QLabel* m_status;
+    QComboBox* m_command_box = nullptr;
+    QLabel* m_status = nullptr;
 
-    QCheckBox* m_overlay_log;
-    QCheckBox* m_overlay_text;
-    QCheckBox* m_overlay_boxes;
-    QCheckBox* m_overlay_stats;
+    QCheckBox* m_overlay_log = nullptr;
+    QCheckBox* m_overlay_text = nullptr;
+    QCheckBox* m_overlay_images = nullptr;
+    QCheckBox* m_overlay_boxes = nullptr;
+    QCheckBox* m_overlay_stats = nullptr;
 
-    QPushButton* m_load_profile_button;
-    QPushButton* m_save_profile_button;
-    QPushButton* m_screenshot_button;
-    QPushButton* m_video_button;
+    QPushButton* m_load_profile_button = nullptr;
+    QPushButton* m_save_profile_button = nullptr;
+    QPushButton* m_screenshot_button = nullptr;
+    QPushButton* m_video_button = nullptr;
     bool m_last_known_focus;
+    ProgramState m_last_known_state;
 };
 
 

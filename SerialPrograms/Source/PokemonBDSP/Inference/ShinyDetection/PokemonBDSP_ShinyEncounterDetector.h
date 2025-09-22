@@ -1,16 +1,15 @@
 /*  Shiny Encounter Detector
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonBDSP_ShinyEncounterDetector_H
 #define PokemonAutomation_PokemonBDSP_ShinyEncounterDetector_H
 
-#include "CommonFramework/Notifications/ProgramInfo.h"
 #include "CommonFramework/Notifications/EventNotificationOption.h"
+#include "CommonFramework/Tools/VideoStream.h"
 #include "Pokemon/Pokemon_DataTypes.h"
-#include "Pokemon/Options/Pokemon_EncounterBotOptions.h"
 #include "PokemonBDSP/Inference/PokemonBDSP_DialogDetector.h"
 #include "PokemonSwSh/Inference/Battles/PokemonSwSh_BattleDialogTracker.h"
 #include "PokemonBDSP/Inference/Battles/PokemonBDSP_BattleMenuDetector.h"
@@ -18,11 +17,10 @@
 
 namespace PokemonAutomation{
     class CancellableScope;
-    class BotBaseContext;
-    class ConsoleHandle;
     class ProgramEnvironment;
 namespace NintendoSwitch{
 namespace PokemonBDSP{
+
 using namespace Pokemon;
 
 
@@ -63,8 +61,8 @@ public:
     const ShinySparkleAggregator& sparkles_wild_right() const{ return m_best_wild_right; }
     const ShinySparkleAggregator& sparkles_own() const{ return m_best_own; }
 
-    const WallClock& wild_animtion_end_timestmap() const { return m_wild_animation_end_timestamp; }
-    const WallClock& your_animation_end_timestamp() const { return m_your_animation_end_timestamp; }
+    const WallClock& wild_animation_end_timestmap() const { return m_wild_animation_end_timestamp; }
+    const WallClock& your_animation_start_timestamp() const { return m_your_animation_start_timestamp; }
 
     virtual void make_overlays(VideoOverlaySet& items) const override;
     virtual bool process_frame(const VideoSnapshot& frame) override;
@@ -81,7 +79,7 @@ private:
     BattleDialogDetector m_dialog_detector;
     EncounterDialogTracker m_dialog_tracker;
     WallClock m_wild_animation_end_timestamp;
-    WallClock m_your_animation_end_timestamp;
+    WallClock m_your_animation_start_timestamp;
 
     ImageFloatBox m_box_wild_left;
     ImageFloatBox m_box_wild_right;
@@ -121,7 +119,7 @@ private:
 // When a shiny sound is detected, it adds 5.0 to the heighest overall alpha value.
 void detect_shiny_battle(
     ProgramEnvironment& env,
-    ConsoleHandle& console, CancellableScope& scope,
+    VideoStream& stream, CancellableScope& scope,
     DoublesShinyDetection& wild_result,
     ShinyDetectionResult& your_result,
     EventNotificationOption& settings,

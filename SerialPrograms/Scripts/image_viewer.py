@@ -8,9 +8,9 @@ PokemonAutomation visual inference methods.
 Single left clicking on a pixel shows you the info of that pixel. Note it may also print the
 alpha channel value.
 
-- Press 'w', 's', 'a', 'd' to move the slected pixels around.
+- Press 'w', 's', 'a', 'd' to move the selected pixels around.
 
-To draw a box: left click and drag the rectange.
+To draw a box: left click and drag the rectangle.
 You can draw multiple boxes on the screen.
 
 - Press 'i' to dump the information of those boxes so you can copy them into the code,
@@ -42,7 +42,7 @@ class ImageViewer:
 		self.mouse_down = False
 		self.mouse_move_counter = 0
 		self.nc = image.shape[2]  # num_channel
-		# The size of the cross used to highlight a slected pixel
+		# The size of the cross used to highlight a selected pixel
 		self.cross_size = max(1, min(self.width, self.height) // 200)
 
 	def _solid_color(self, color):
@@ -220,7 +220,7 @@ class ImageViewer:
 				if len(self.highlight_list) > 0:
 					self.cur_highlight_index = -1 if self.cur_highlight_index == len(self.highlight_list)-1 else self.cur_highlight_index+1
 					print(f"Change highlight index to {self.cur_highlight_index}/{len(self.highlight_list)}")
-			elif key == 127: # backspace, remove selected rectangle
+			elif key == 127 or key == 8: # DEL or backspace (BS), remove selected rectangle
 				mouse_down = False
 				mouse_move_counter = 0
 				if len(self.rects) > 0:

@@ -1,6 +1,6 @@
 /*  Nintendo Switch Settings
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,10 +8,13 @@
 #define PokemonAutomation_NintendoSwitch_Settings_H
 
 #include "Common/Cpp/ImageResolution.h"
+#include "Common/Cpp/Options/StaticTextOption.h"
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
-#include "Common/Cpp/Options/StringOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "CommonFramework/Panels/SettingsPanel.h"
+#include "Options/NintendoSwitch_CodeEntrySettingsOption.h"
+#include "Controllers/NintendoSwitch_ControllerSettings.h"
+#include "Controllers/NintendoSwitch_KeyboardMapping.h"
 
 namespace PokemonAutomation{
 namespace NintendoSwitch{
@@ -20,18 +23,49 @@ namespace NintendoSwitch{
 extern const Resolution DEFAULT_RESOLUTION;
 
 
+class TimingOptions : public GroupOption{
+public:
+    TimingOptions();
+
+public:
+    MillisecondsOption WIRED_MICROCONTROLLER;
+    MillisecondsOption WIRELESS_ESP32;
+    MillisecondsOption SYSBOTBASE;
+};
+
 
 class ConsoleSettings : public BatchOption{
     ConsoleSettings();
+    virtual void load_json(const JsonValue& json) override;
 public:
     static ConsoleSettings& instance();
 
-    TimeExpressionOption<uint16_t> CONNECT_CONTROLLER_DELAY;
-    TimeExpressionOption<uint16_t> SETTINGS_TO_HOME_DELAY;
+    ControllerSettingsTable CONTROLLER_SETTINGS;
+
+    BooleanCheckBoxOption TRUST_USER_CONSOLE_SELECTION;
+    MillisecondsOption SETTINGS_TO_HOME_DELAY0;
     BooleanCheckBoxOption START_GAME_REQUIRES_INTERNET;
-    TimeExpressionOption<uint16_t> START_GAME_INTERNET_CHECK_DELAY;
+    MillisecondsOption START_GAME_INTERNET_CHECK_DELAY0;
     BooleanCheckBoxOption TOLERATE_SYSTEM_UPDATE_MENU_FAST;
     BooleanCheckBoxOption TOLERATE_SYSTEM_UPDATE_MENU_SLOW;
+
+    BooleanCheckBoxOption ENABLE_ESP32_RECONNECT;
+    BooleanCheckBoxOption ENABLE_SBB3_PINGS;
+    BooleanCheckBoxOption ENABLE_SBB3_LOGGING;
+
+    TimingOptions TIMING_OPTIONS;
+
+    DigitEntryTimingsOption     SWITCH1_DIGIT_ENTRY0;
+    KeyboardEntryTimingsOption  SWITCH1_KEYBOARD_ENTRY0;
+    DigitEntryTimingsOption     SWITCH2_DIGIT_ENTRY0;
+    KeyboardEntryTimingsOption  SWITCH2_KEYBOARD_ENTRY0;
+    KeyboardControllerTimingsOption KEYBOARD_CONTROLLER_TIMINGS;
+
+    SectionDividerOption KEYBOARD_SECTION;
+    KeyboardMappingOption KEYBOARD_MAPPINGS;
+
+private:
+    bool m_loaded;
 };
 
 

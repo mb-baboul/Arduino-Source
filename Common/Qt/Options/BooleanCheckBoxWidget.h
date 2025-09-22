@@ -1,6 +1,6 @@
 /*  Boolean Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -21,7 +21,7 @@ public:
     BooleanCheckBoxCellWidget(QWidget& parent, BooleanCheckBoxCell& value);
 
     virtual void update_value() override;
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 private:
     BooleanCheckBoxCell& m_value;
@@ -37,7 +37,7 @@ public:
     BooleanCheckBoxOptionWidget(QWidget& parent, BooleanCheckBoxOption& value);
 
     virtual void update_value() override;
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 private:
     BooleanCheckBoxOption& m_value;

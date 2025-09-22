@@ -1,6 +1,6 @@
 /*  Text Edit Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -45,9 +45,9 @@ public:
             connect(
                 this, &QTextEdit::textChanged,
                 [this]{
-                    std::string new_value = (std::string)m_parent.m_value;
+                    const std::string old_value = (std::string)m_parent.m_value;
                     std::string text = this->toPlainText().toStdString();
-                    if (new_value == text){
+                    if (old_value == text){
                         return;
                     }
 //                    cout << new_value << " : " << text << endl;
@@ -105,7 +105,7 @@ void TextEditWidget::update_value(){
     }
     m_box->setText(QString::fromStdString(m_value));
 }
-void TextEditWidget::value_changed(void* object){
+void TextEditWidget::on_config_value_changed(void* object){
     QMetaObject::invokeMethod(m_box, [this]{
         update_value();
     }, Qt::QueuedConnection);

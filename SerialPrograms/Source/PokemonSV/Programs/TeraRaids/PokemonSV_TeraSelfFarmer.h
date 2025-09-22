@@ -1,6 +1,6 @@
 /*  Tera Farmer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,9 +9,8 @@
 
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
-//#include "Common/Cpp/Options/EnumDropdownOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
-#include "CommonFramework/Options/LanguageOCROption.h"
+#include "CommonTools/Options/LanguageOCROption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
 #include "PokemonSV/Options/PokemonSV_TeraRollFilter.h"
 #include "PokemonSV/Options/PokemonSV_TeraAIOption.h"
@@ -52,11 +51,11 @@ class TeraSelfFarmer : public SingleSwitchProgramInstance, public ConfigOption::
 public:
     ~TeraSelfFarmer();
     TeraSelfFarmer();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
-    virtual void value_changed(void* object) override;
-    bool run_raid(SingleSwitchProgramEnvironment& env, BotBaseContext& context);
+    virtual void on_config_value_changed(void* object) override;
+    bool run_raid(SingleSwitchProgramEnvironment& env, ProControllerContext& context);
 
 private:
     friend class TeraFarmerCatchOnWin;

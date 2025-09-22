@@ -1,6 +1,6 @@
 /*  Egg Fetcher
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -8,7 +8,7 @@
 #define PokemonAutomation_PokemonBDSP_EggFetcher_H
 
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
-#include "Common/Cpp/Options/TimeExpressionOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "CommonFramework/Notifications/EventNotificationsTable.h"
 #include "NintendoSwitch/Options/NintendoSwitch_GoHomeWhenDoneOption.h"
 #include "NintendoSwitch/NintendoSwitch_SingleSwitchProgram.h"
@@ -35,14 +35,14 @@ public:
 class EggFetcher : public SingleSwitchProgramInstance{
 public:
     EggFetcher();
-    virtual void program(SingleSwitchProgramEnvironment& env, BotBaseContext& context) override;
+    virtual void program(SingleSwitchProgramEnvironment& env, ProControllerContext& context) override;
 
 private:
     GoHomeWhenDoneOption GO_HOME_WHEN_DONE;
 
     ShortcutDirectionOption SHORTCUT;
     SimpleIntegerOption<uint16_t> MAX_FETCH_ATTEMPTS;
-    TimeExpressionOption<uint16_t> TRAVEL_TIME_PER_FETCH;
+    MillisecondsOption TRAVEL_TIME_PER_FETCH0;
 
     EventNotificationOption NOTIFICATION_STATUS_UPDATE;
     EventNotificationsOption NOTIFICATIONS;

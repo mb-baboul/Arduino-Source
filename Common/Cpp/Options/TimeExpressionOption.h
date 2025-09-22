@@ -1,12 +1,13 @@
 /*  Time Expression Option
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_Options_TimeExpressionOption_H
 #define PokemonAutomation_Options_TimeExpressionOption_H
 
+//#include "Common/Cpp/Time.h"
 #include "Common/Cpp/Containers/Pimpl.h"
 #include "Common/Cpp/Options/ConfigOption.h"
 
@@ -49,6 +50,7 @@ public:
     std::string current_text() const;
 
     operator Type() const;
+//    operator Milliseconds() const;
     Type get() const;
     std::string set(std::string text);
 

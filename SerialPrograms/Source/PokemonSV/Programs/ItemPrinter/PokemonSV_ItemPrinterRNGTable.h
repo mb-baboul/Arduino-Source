@@ -1,12 +1,14 @@
 /*  Item Printer RNG Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #ifndef PokemonAutomation_PokemonSV_ItemPrinterRNGTable_H
 #define PokemonAutomation_PokemonSV_ItemPrinterRNGTable_H
 
+#include <deque>
+#include <mutex>
 #include "Common/Cpp/Options/BooleanCheckBoxOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
 #include "Common/Cpp/Options/DateOption.h"
@@ -40,15 +42,21 @@ public:
     ItemPrinterRngRowSnapshot snapshot() const;
 
     virtual std::unique_ptr<EditableTableRow> clone() const override;
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
-    void set_seed_based_on_desired_item();
+//    void set_seed_based_on_desired_item();
 
 public:
     BooleanCheckBoxCell chain;
     DateTimeCell date;
     EnumDropdownCell<ItemPrinterJobs> jobs;
     EnumDropdownCell<ItemPrinter::PrebuiltOptions> desired_item;
+
+private:
+    //  Brutal work-around for circular callback dependency.
+    SpinLock m_pending_lock;
+    std::deque<void*> m_pending;
+    std::mutex m_update_lock;
 };
 
 
@@ -68,7 +76,6 @@ struct ItemPrinterDesiredItemRowSnapshot{
 
 class ItemPrinterDesiredItemRow : public EditableTableRow, public ConfigOption::Listener{
 public:
-
     ItemPrinterDesiredItemRow(EditableTableOption& parent_table);
 
     ItemPrinterDesiredItemRow(
@@ -79,11 +86,11 @@ public:
     ItemPrinterDesiredItemRowSnapshot snapshot() const;
 
     virtual std::unique_ptr<EditableTableRow> clone() const override;
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 public:
     EnumDropdownCell<ItemPrinter::PrebuiltOptions> desired_item;
-    SimpleIntegerOption<uint16_t> desired_quantity;
+    SimpleIntegerCell<uint16_t> desired_quantity;
 
 };
 

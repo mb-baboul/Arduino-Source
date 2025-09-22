@@ -1,17 +1,17 @@
 /*  Material Farmer
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include "CommonFramework/Exceptions/ProgramFinishedException.h"
 #include "CommonFramework/Notifications/ProgramNotifications.h"
-#include "CommonFramework/InferenceInfra/InferenceRoutines.h"
-#include "CommonFramework/Tools/StatsTracking.h"
-#include "CommonFramework/Tools/VideoResolutionCheck.h"
+#include "CommonFramework/ProgramStats/StatsTracking.h"
+#include "CommonTools/Async/InferenceRoutines.h"
+#include "CommonTools/StartupChecks/VideoResolutionCheck.h"
 #include "NintendoSwitch/Commands/NintendoSwitch_Commands_PushButtons.h"
 #include "Pokemon/Pokemon_Strings.h"
-#include "PokemonSV/Programs/PokemonSV_Navigation.h"
+#include "PokemonSV/Programs/PokemonSV_WorldNavigation.h"
 #include "PokemonSV_MaterialFarmer.h"
 
 // #include <iostream>
@@ -30,9 +30,9 @@ MaterialFarmer_Descriptor::MaterialFarmer_Descriptor()
         STRING_POKEMON + " SV", "Material Farmer",
         "ComputerControl/blob/master/Wiki/Programs/PokemonSV/MaterialFarmer.md",
         "Farm materials - Happiny dust from Chanseys/Blisseys, for Item Printer.",
+        ProgramControllerClass::StandardController_NoRestrictions,
         FeedbackType::VIDEO_AUDIO,
-        AllowCommandsWhenRunning::DISABLE_COMMANDS,
-        PABotBaseLevel::PABOTBASE_12KB
+        AllowCommandsWhenRunning::DISABLE_COMMANDS
     )
 {}
 
@@ -65,7 +65,7 @@ MaterialFarmer::MaterialFarmer()
 }
 
 
-void MaterialFarmer::program(SingleSwitchProgramEnvironment& env, BotBaseContext& context){
+void MaterialFarmer::program(SingleSwitchProgramEnvironment& env, ProControllerContext& context){
     assert_16_9_720p_min(env.logger(), env.console);
 
     //  Connect the controller.

@@ -1,16 +1,12 @@
 /*  Pokemon Scarlet/Violet Pokemon Sprites
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
 #include <QImageReader>
-#include "Common/Cpp/Exceptions.h"
-#include "Common/Cpp/Json/JsonValue.h"
-#include "Common/Cpp/Json/JsonArray.h"
-#include "Common/Cpp/Json/JsonObject.h"
 #include "CommonFramework/Globals.h"
-#include "CommonFramework/ImageMatch/ImageCropper.h"
+#include "CommonTools/ImageMatch/ImageCropper.h"
 #include "PokemonSV_PokemonSprites.h"
 
 namespace PokemonAutomation{

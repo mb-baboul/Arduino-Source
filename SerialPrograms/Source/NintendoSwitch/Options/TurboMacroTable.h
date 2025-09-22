@@ -1,6 +1,6 @@
 /*  Turbo Macro Table
  *
- *  From: https://github.com/PokemonAutomation/Arduino-Source
+ *  From: https://github.com/PokemonAutomation/
  *
  */
 
@@ -9,6 +9,7 @@
 
 #include "Common/Cpp/Options/BatchOption.h"
 #include "Common/Cpp/Options/SimpleIntegerOption.h"
+#include "Common/Cpp/Options/TimeDurationOption.h"
 #include "Common/Cpp/Options/EnumDropdownOption.h"
 #include "Common/Cpp/Options/EditableTableOption.h"
 
@@ -38,7 +39,7 @@ enum class TurboMacroAction{
     DPADDOWN,
     WAIT
 };
-const EnumDatabase<TurboMacroAction>& TurboMacroAction_Database();
+const EnumDropdownDatabase<TurboMacroAction>& TurboMacroAction_Database();
 
 
 class TurboMacroCell : public BatchOption, private ConfigOption::Listener{
@@ -47,7 +48,7 @@ public:
     void operator=(const TurboMacroCell& x);
     TurboMacroCell(EnumDropdownCell<TurboMacroAction>& action);
 
-    virtual void value_changed(void* object) override;
+    virtual void on_config_value_changed(void* object) override;
 
 private:
     EnumDropdownCell<TurboMacroAction>& m_action;
@@ -56,9 +57,12 @@ public:
     SimpleIntegerOption<uint8_t> x_axis;
     SimpleIntegerOption<uint8_t> y_axis;
 
-    SimpleIntegerOption<uint16_t> button_hold_ticks;
-    SimpleIntegerOption<uint16_t> button_release_ticks;
-    SimpleIntegerOption<uint16_t> wait_ticks;
+    MillisecondsOption button_hold;
+    MillisecondsOption button_release;
+    MillisecondsOption wait;
+//    SimpleIntegerOption<uint16_t> button_hold_ticks;
+//    SimpleIntegerOption<uint16_t> button_release_ticks;
+//    SimpleIntegerOption<uint16_t> wait_ticks;
 };
 
 
